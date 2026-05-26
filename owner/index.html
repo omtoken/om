@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OM Owner 管理面板</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/om.png">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e17;--bg2:#111827;--bg3:#1a2235;--bg4:#232d42;
+  --accent:#f59e0b;--accent2:#d97706;--accent-glow:rgba(245,158,11,.15);
+  --green:#10b981;--red:#ef4444;--blue:#3b82f6;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --border:#1e293b;--radius:16px;--radius-sm:10px;
+}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+button{cursor:pointer;border:none;font-family:inherit}
+.app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+.scroll-area{flex:1;overflow-y:auto;padding:16px 16px 32px}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg2);gap:8px}
+.header-logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.header-logo img{width:34px;height:34px;border-radius:50%}
+.header-logo span{font-size:1.2rem;font-weight:800;letter-spacing:.5px}
+.header-tag{font-size:.7rem;font-weight:700;color:var(--accent);background:var(--accent-glow);padding:3px 8px;border-radius:6px;margin-left:2px}
+.wallet-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-weight:700;padding:9px 14px;border-radius:var(--radius-sm);font-size:.8rem;transition:transform .15s;white-space:nowrap;flex-shrink:0}
+.wallet-btn:active{transform:scale(.96)}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.card-title{font-size:1.1rem;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+/* STAT */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-box{background:var(--bg3);border-radius:var(--radius-sm);padding:14px}
+.stat-label{font-size:.75rem;color:var(--text3);font-weight:600;letter-spacing:.5px;margin-bottom:4px}
+.stat-value{font-size:1.15rem;font-weight:800;color:var(--text);word-break:break-all}
+.stat-value.accent{color:var(--accent)}
+.stat-value.green{color:var(--green)}
+.stat-value.red{color:var(--red)}
+
+/* BUTTONS */
+.btn-primary{width:100%;padding:16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-size:1rem;font-weight:800;letter-spacing:.5px;transition:opacity .15s,transform .15s}
+.btn-primary:active{transform:scale(.98);opacity:.9}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-danger{width:100%;padding:16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--red),#dc2626);color:#fff;font-size:1rem;font-weight:800;letter-spacing:.5px;transition:opacity .15s,transform .15s}
+.btn-danger:active{transform:scale(.98);opacity:.9}
+.btn-danger:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-green{width:100%;padding:16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--green),#059669);color:#fff;font-size:1rem;font-weight:800;letter-spacing:.5px;transition:opacity .15s,transform .15s}
+.btn-green:active{transform:scale(.98);opacity:.9}
+.btn-green:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* INPUT */
+.input-group{margin-bottom:14px}
+.input-group label{display:block;font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:6px}
+.input-group input{width:100%;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:1rem;font-weight:600;outline:none;transition:border-color .2s}
+.input-group input:focus{border-color:var(--accent)}
+.input-group input::placeholder{color:var(--text3)}
+
+/* INFO LIST */
+.info-list{list-style:none}
+.info-list li{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:.9rem}
+.info-list li:last-child{border-bottom:none}
+.info-list .label{color:var(--text2);font-weight:600}
+.info-list .value{font-weight:700;text-align:right;word-break:break-all;max-width:55%}
+.info-list .value.mono{font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:.78rem}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
+.badge-green{background:rgba(16,185,129,.12);color:var(--green)}
+.badge-red{background:rgba(239,68,68,.12);color:var(--red)}
+.badge-yellow{background:var(--accent-glow);color:var(--accent)}
+
+/* HELP TIP */
+.help-tip{background:var(--bg3);border-left:3px solid var(--accent);border-radius:0 var(--radius-sm) var(--radius-sm) 0;padding:12px 14px;margin-top:14px;font-size:.8rem;color:var(--text2);line-height:1.6}
+.help-tip strong{color:var(--accent);font-weight:700}
+
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* TOAST */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:12px 24px;border-radius:var(--radius-sm);font-weight:700;font-size:.9rem;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none;max-width:90%;text-align:center}
+.toast.show{opacity:1}
+
+/* NOT OWNER WARNING */
+.not-owner-banner{display:none;align-items:center;gap:10px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px}
+.not-owner-banner svg{width:22px;height:22px;color:var(--red);flex-shrink:0}
+.not-owner-banner .text{font-size:.85rem;font-weight:600;color:var(--red)}
+
+@media(min-width:600px){
+  .app{border-left:1px solid var(--border);border-right:1px solid var(--border)}
+  html{background:#05080f}
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .35s ease}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-logo">
+      <img src="https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/om.png" alt="OM">
+      <span>OM</span>
+      <span class="header-tag">Owner 管理</span>
+    </div>
+    <button class="wallet-btn" id="connectBtn" onclick="connectWallet()">连接钱包</button>
+  </div>
+
+  <div class="scroll-area">
+
+    <!-- NOT OWNER WARNING -->
+    <div class="not-owner-banner" id="notOwnerBanner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span class="text">当前钱包不是合约 Owner，无法执行管理操作</span>
+    </div>
+
+    <!-- ====== 合约状态总览 ====== -->
+    <div class="card fade-in">
+      <div class="card-title"><span class="dot"></span>合约状态总览</div>
+      <ul class="info-list">
+        <li><span class="label">当前 Owner</span><span class="value mono" id="currentOwner">未连接</span></li>
+        <li><span class="label">合约 USDT 余额</span><span class="value" id="contractUSDT">--</span></li>
+        <li><span class="label">合约 BNB 余额</span><span class="value" id="contractBNB">--</span></li>
+        <li><span class="label">质押日利率</span><span class="value" id="currentRate">--</span></li>
+        <li><span class="label">Approve 开关</span><span class="value" id="approveStatus">--</span></li>
+        <li><span class="label">总质押量</span><span class="value" id="totalStaked">--</span></li>
+        <li><span class="label">当前纪元</span><span class="value" id="currentEpoch">--</span></li>
+        <li><span class="label">当前挖矿奖励</span><span class="value" id="currentReward">--</span></li>
+      </ul>
+      <div class="help-tip">
+        这里显示合约的实时状态。<strong>USDT 余额</strong>是用户支付解锁费累积的金额，<strong>BNB 余额</strong>是合约收到的原生代币。
+      </div>
+    </div>
+
+    <!-- ====== 提取 USDT ====== -->
+    <div class="card fade-in">
+      <div class="card-title"><span class="dot"></span>提取 USDT</div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-label">可提取 USDT</div>
+          <div class="stat-value green" id="withdrawableUSDT">--</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">提取到</div>
+          <div class="stat-value" style="font-size:.75rem;color:var(--text2)" id="withdrawTo">Owner 钱包</div>
+        </div>
+      </div>
+      <button class="btn-green" onclick="withdrawUSDT()">提取全部 USDT</button>
+      <div class="help-tip">
+        点击后会将合约内<strong>所有 USDT</strong> 一次性转到你的 Owner 钱包地址。这些 USDT 来自用户支付的 10 USDT 解锁费。如果余额为 0 则交易会失败。
+      </div>
+    </div>
+
+    <!-- ====== 提取 BNB ====== -->
+    <div class="card fade-in">
+      <div class="card-title"><span class="dot"></span>提取 BNB</div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-label">可提取 BNB</div>
+          <div class="stat-value green" id="withdrawableBNB">--</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">提取到</div>
+          <div class="stat-value" style="font-size:.75rem;color:var(--text2)">Owner 钱包</div>
+        </div>
+      </div>
+      <button class="btn-green" onclick="withdrawBNB()">提取全部 BNB</button>
+      <div class="help-tip">
+        点击后会将合约内<strong>所有 BNB</strong> 一次性转到你的 Owner 钱包。如果合约没有 BNB 余额则交易会失败。
+      </div>
+    </div>
+
+    <!-- ====== 设置质押日利率 ====== -->
+    <div class="card fade-in">
+      <div class="card-title"><span class="dot"></span>设置质押日利率</div>
+      <div class="stat-box" style="margin-bottom:14px">
+        <div class="stat-label">当前日利率</div>
+        <div class="stat-value accent" id="rateDisplay">--</div>
+      </div>
+      <div class="input-group">
+        <label>新的日利率（填写整数，100 = 1%，50 = 0.5%，0 = 暂停收益）</label>
+        <input type="number" id="rateInput" placeholder="例如：100 表示 1%，范围 0~100" min="0" max="100">
+      </div>
+      <button class="btn-primary" onclick="setRate()">确认修改利率</button>
+      <div class="help-tip">
+        <strong>取值范围：0 ~ 100</strong>（对应 0% ~ 1%）。<br>
+        举例：填 <strong>100</strong> = 日利率 1%，填 <strong>50</strong> = 日利率 0.5%，填 <strong>0</strong> = 暂停质押收益。<br>
+        修改后立即生效，已质押用户的后续收益按新利率计算。
+      </div>
+    </div>
+
+    <!-- ====== Approve 开关 ====== -->
+    <div class="card fade-in">
+      <div class="card-title"><span class="dot"></span>Approve 开关</div>
+      <div class="stat-box" style="margin-bottom:14px">
+        <div class="stat-label">当前状态</div>
+        <div class="stat-value" id="approveDisplay">--</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-green" onclick="setApprove(true)">开启 Approve</button>
+        <button class="btn-danger" onclick="setApprove(false)">关闭 Approve</button>
+      </div>
+      <div class="help-tip">
+        控制普通用户是否可以对 OM 代币进行 <strong>approve</strong> 授权操作。<br>
+        <strong>开启</strong>：用户可以正常授权第三方合约（如 DEX）使用他们的 OM 代币，开启后用户才能在 PancakeSwap 等 DEX 上交易。<br>
+        <strong>关闭</strong>：用户无法授权，也就无法在 DEX 卖出代币。<br>
+        注意：OMMining 合约本身不受此限制，质押功能始终正常。
+      </div>
+    </div>
+
+    <!-- ====== 转让所有权 ====== -->
+    <div class="card fade-in">
+      <div class="card-title"><span class="dot"></span>转让所有权</div>
+      <div class="input-group">
+        <label>新 Owner 地址</label>
+        <input type="text" id="newOwnerInput" placeholder="0x... 输入新的管理员钱包地址">
+      </div>
+      <button class="btn-danger" onclick="transferOwnership()">确认转让所有权</button>
+      <div class="help-tip">
+        <strong>高危操作！</strong>转让后，你将<strong>永久失去</strong>对合约的管理权限（提取资金、修改利率、开关 Approve 等全部权限）。<br>
+        新地址会成为唯一的 Owner。此操作<strong>不可撤销</strong>，请务必确认新地址正确。<br>
+        注意：此合约已禁用 renounceOwnership（放弃所有权），Owner 必须转让给一个有效地址。
+      </div>
+    </div>
+
+    <!-- ====== 合约信息 ====== -->
+    <div class="card fade-in">
+      <div class="card-title"><span class="dot"></span>合约信息</div>
+      <ul class="info-list">
+        <li><span class="label">OMMining 合约</span><span class="value mono"><a href="https://bscscan.com/address/0xB7583313969a033Afe6cF6654cd9a861350fca83" target="_blank">0xB758...ca83</a></span></li>
+        <li><span class="label">OMToken 合约</span><span class="value mono"><a href="https://bscscan.com/address/0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17" target="_blank">0xe960...2a17</a></span></li>
+        <li><span class="label">网络</span><span class="value">BSC 主网</span></li>
+        <li><span class="label">USDT 合约</span><span class="value mono">0x55d3...7955</span></li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const MINING_ADDR='0xB7583313969a033Afe6cF6654cd9a861350fca83';
+const TOKEN_ADDR='0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17';
+const USDT_ADDR='0x55d398326f99059fF775485246999027B3197955';
+const BSC_CHAIN='0x38';
+
+const ERC20_ABI=['function balanceOf(address) view returns (uint256)'];
+const TOKEN_ABI=['function approveEnabled() view returns (bool)'];
+const MINING_ABI=[
+  'function owner() view returns (address)',
+  'function currentEpoch() view returns (uint256)',
+  'function currentReward() view returns (uint256)',
+  'function dailyInterestRate() view returns (uint256)',
+  'function totalStaked() view returns (uint256)',
+  'function withdrawUSDT()',
+  'function withdrawNative()',
+  'function setDailyInterestRate(uint256 _rate)',
+  'function setApproveEnabled(bool enabled)',
+  'function transferOwnership(address newOwner)'
+];
+
+let provider,signer,userAddr;
+let miningContract,tokenContract,usdtContract;
+let contractOwner='';
+
+function showToast(msg,dur){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),dur||3000);
+}
+
+async function connectWallet(){
+  if(!window.ethereum){showToast('请安装 MetaMask 钱包');return;}
+  try{
+    await window.ethereum.request({method:'eth_requestAccounts'});
+    const cid=await window.ethereum.request({method:'eth_chainId'});
+    if(cid!==BSC_CHAIN){
+      try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:BSC_CHAIN}]});}
+      catch(e){showToast('请切换到 BSC 主网');return;}
+    }
+    provider=new ethers.BrowserProvider(window.ethereum);
+    signer=await provider.getSigner();
+    userAddr=await signer.getAddress();
+    miningContract=new ethers.Contract(MINING_ADDR,MINING_ABI,signer);
+    tokenContract=new ethers.Contract(TOKEN_ADDR,TOKEN_ABI,signer);
+    usdtContract=new ethers.Contract(USDT_ADDR,ERC20_ABI,signer);
+    document.getElementById('connectBtn').textContent=userAddr.slice(0,6)+'...'+userAddr.slice(-4);
+    showToast('钱包已连接');
+    refreshData();
+  }catch(e){showToast('连接失败');console.error(e);}
+}
+
+async function refreshData(){
+  if(!userAddr)return;
+  try{
+    const[owner,epoch,reward,rate,total,usdtBal,approveOn]=await Promise.all([
+      miningContract.owner(),
+      miningContract.currentEpoch(),
+      miningContract.currentReward(),
+      miningContract.dailyInterestRate(),
+      miningContract.totalStaked(),
+      usdtContract.balanceOf(MINING_ADDR),
+      tokenContract.approveEnabled()
+    ]);
+    const bnbBal=await provider.getBalance(MINING_ADDR);
+    contractOwner=owner;
+    const fmt=v=>parseFloat(ethers.formatEther(v)).toLocaleString(undefined,{maximumFractionDigits:4});
+    const isOwner=userAddr.toLowerCase()===owner.toLowerCase();
+
+    document.getElementById('currentOwner').textContent=owner.slice(0,8)+'...'+owner.slice(-6);
+    document.getElementById('contractUSDT').textContent=fmt(usdtBal)+' USDT';
+    document.getElementById('contractBNB').textContent=fmt(bnbBal)+' BNB';
+    document.getElementById('currentRate').textContent=(Number(rate)/100).toFixed(2)+'%';
+    document.getElementById('approveStatus').innerHTML=approveOn
+      ?'<span class="badge badge-green">已开启</span>'
+      :'<span class="badge badge-red">已关闭</span>';
+    document.getElementById('totalStaked').textContent=fmt(total)+' OM';
+    document.getElementById('currentEpoch').textContent=epoch.toString();
+    document.getElementById('currentReward').textContent=fmt(reward)+' OM';
+
+    document.getElementById('withdrawableUSDT').textContent=fmt(usdtBal)+' USDT';
+    document.getElementById('withdrawableBNB').textContent=fmt(bnbBal)+' BNB';
+    document.getElementById('rateDisplay').textContent=Number(rate)+' （'+((Number(rate)/100).toFixed(2))+'%）';
+    document.getElementById('approveDisplay').innerHTML=approveOn
+      ?'<span class="badge badge-green">已开启 - 用户可授权交易</span>'
+      :'<span class="badge badge-red">已关闭 - 用户无法授权</span>';
+    document.getElementById('withdrawTo').textContent=userAddr.slice(0,6)+'...'+userAddr.slice(-4);
+
+    const banner=document.getElementById('notOwnerBanner');
+    banner.style.display=isOwner?'none':'flex';
+  }catch(e){console.error('刷新失败:',e);}
+}
+
+async function withdrawUSDT(){
+  if(!signer){showToast('请先连接钱包');return;}
+  try{showToast('正在提取 USDT...');const tx=await miningContract.withdrawUSDT();await tx.wait();showToast('USDT 提取成功！');refreshData();}
+  catch(e){showToast(e.reason||'交易失败');console.error(e);}
+}
+
+async function withdrawBNB(){
+  if(!signer){showToast('请先连接钱包');return;}
+  try{showToast('正在提取 BNB...');const tx=await miningContract.withdrawNative();await tx.wait();showToast('BNB 提取成功！');refreshData();}
+  catch(e){showToast(e.reason||'交易失败');console.error(e);}
+}
+
+async function setRate(){
+  if(!signer){showToast('请先连接钱包');return;}
+  const val=document.getElementById('rateInput').value;
+  if(val===''||isNaN(val)){showToast('请输入有效数字');return;}
+  const n=parseInt(val);
+  if(n<0||n>100){showToast('范围 0~100（0%~1%）');return;}
+  try{showToast('正在修改利率...');const tx=await miningContract.setDailyInterestRate(n);await tx.wait();showToast('利率修改成功！');document.getElementById('rateInput').value='';refreshData();}
+  catch(e){showToast(e.reason||'交易失败');console.error(e);}
+}
+
+async function setApprove(enabled){
+  if(!signer){showToast('请先连接钱包');return;}
+  const action=enabled?'开启':'关闭';
+  try{showToast('正在'+action+' Approve...');const tx=await miningContract.setApproveEnabled(enabled);await tx.wait();showToast('Approve 已'+action+'！');refreshData();}
+  catch(e){showToast(e.reason||'交易失败');console.error(e);}
+}
+
+async function transferOwnership(){
+  if(!signer){showToast('请先连接钱包');return;}
+  const addr=document.getElementById('newOwnerInput').value.trim();
+  if(!ethers.isAddress(addr)){showToast('请输入有效的钱包地址');return;}
+  if(addr.toLowerCase()===userAddr.toLowerCase()){showToast('新地址不能和当前 Owner 相同');return;}
+  if(!confirm('⚠️ 确定要将所有权转让给\n'+addr+'\n吗？\n\n此操作不可撤销！转让后你将失去所有管理权限。')){return;}
+  try{showToast('正在转让所有权...');const tx=await miningContract.transferOwnership(addr);await tx.wait();showToast('所有权已转让！');document.getElementById('newOwnerInput').value='';refreshData();}
+  catch(e){showToast(e.reason||'交易失败');console.error(e);}
+}
+
+if(window.ethereum){
+  window.ethereum.on('accountsChanged',()=>location.reload());
+  window.ethereum.on('chainChanged',()=>location.reload());
+}
+
+setInterval(()=>{if(userAddr)refreshData();},30000);
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
+</body>
+</html>
