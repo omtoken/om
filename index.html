@@ -1,807 +1,628 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OM Network</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>OM DApp - Mining & Staking</title>
+<link rel="icon" type="image/png" href="https://bscscan.com/token/images/mantra_32.png">
 <style>
-/* === RESET & VARIABLES === */
+/* === RESET & BASE === */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#06080f;--bg-surface:rgba(13,17,30,0.72);--bg-elevated:rgba(20,26,46,0.6);
-  --border:rgba(255,255,255,0.06);--border-active:rgba(99,179,255,0.25);
-  --accent:#4da6ff;--accent-dim:rgba(77,166,255,0.1);--accent-glow:rgba(77,166,255,0.25);
-  --purple:#a78bfa;--purple-dim:rgba(167,139,250,0.08);
-  --green:#34d399;--green-dim:rgba(52,211,153,0.1);
-  --red:#f87171;--red-dim:rgba(248,113,113,0.1);
-  --amber:#fbbf24;--amber-dim:rgba(251,191,36,0.08);
-  --text:#e2e8f0;--text-secondary:#8896ab;--text-muted:#4a5568;
-  --radius:14px;--radius-sm:10px;--radius-xs:7px;
-  --font:'Sora',system-ui,sans-serif;--mono:'IBM Plex Mono',monospace;
-  --shadow:0 1px 3px rgba(0,0,0,0.3),0 8px 32px rgba(0,0,0,0.2);
+  --bg:#0a0e17;--bg2:#111827;--bg3:#1a2235;--bg4:#232d42;
+  --accent:#f59e0b;--accent2:#d97706;--accent-glow:rgba(245,158,11,.15);
+  --green:#10b981;--red:#ef4444;--blue:#3b82f6;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --border:#1e293b;--radius:16px;--radius-sm:10px;
 }
-html{font-size:14px;scroll-behavior:smooth}
-body{font-family:var(--font);color:var(--text);background:var(--bg);min-height:100vh;overflow-x:hidden;line-height:1.55;-webkit-font-smoothing:antialiased}
-
-/* === BACKGROUND === */
-body::before{content:'';position:fixed;inset:0;z-index:-2;
-  background:radial-gradient(ellipse 70% 50% at 30% 0%,rgba(77,166,255,0.04),transparent 60%),
-    radial-gradient(ellipse 50% 40% at 75% 100%,rgba(167,139,250,0.03),transparent 50%),var(--bg)}
-.noise{position:fixed;inset:0;z-index:-1;opacity:0.018;pointer-events:none;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+button{cursor:pointer;border:none;font-family:inherit}
 
 /* === LAYOUT === */
-.app{max-width:1080px;margin:0 auto;padding:0 20px 100px}
+.app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+.tab-content{flex:1;overflow-y:auto;padding:16px 16px 100px}
 
 /* === HEADER === */
-.header{display:flex;align-items:center;padding:16px 0;position:sticky;top:0;z-index:100;
-  backdrop-filter:blur(24px) saturate(1.4);-webkit-backdrop-filter:blur(24px) saturate(1.4);
-  border-bottom:1px solid var(--border);margin-bottom:36px}
-.logo{display:flex;align-items:center;gap:12px}
-.logo-icon{width:38px;height:38px;border-radius:10px;overflow:hidden;
-  border:1px solid rgba(77,166,255,0.15);box-shadow:0 0 16px rgba(77,166,255,0.08)}
-.logo-icon img{width:100%;height:100%;object-fit:cover}
-.logo-name{font-size:1.15rem;font-weight:700;letter-spacing:0.5px;color:var(--text)}
-.logo-tag{font-size:0.6rem;font-weight:500;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-muted);margin-top:-1px}
-.header-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.header{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.header-logo{display:flex;align-items:center;gap:10px}
+.header-logo img{width:36px;height:36px;border-radius:50%}
+.header-logo span{font-size:1.25rem;font-weight:800;letter-spacing:.5px}
+.header-chain{font-size:.75rem;color:var(--accent);background:var(--accent-glow);padding:4px 10px;border-radius:20px;font-weight:700}
+.wallet-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-weight:700;padding:10px 18px;border-radius:var(--radius-sm);font-size:.875rem;transition:transform .15s}
+.wallet-btn:active{transform:scale(.96)}
 
-/* === NETWORK BADGE === */
-.net-badge{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;
-  background:var(--green-dim);border:1px solid rgba(52,211,153,0.15);font-size:0.7rem;font-weight:600;color:var(--green)}
-.net-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 2s infinite}
-@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:0.4}}
-
-/* === BUTTONS === */
-.btn{font-family:var(--font);font-size:0.8rem;font-weight:600;border:none;border-radius:var(--radius-xs);
-  cursor:pointer;padding:10px 20px;transition:all 0.2s ease;display:inline-flex;align-items:center;justify-content:center;gap:6px;position:relative;white-space:nowrap}
-.btn:disabled{opacity:0.35;cursor:not-allowed;pointer-events:none}
-.btn-primary{background:var(--accent);color:#000;box-shadow:0 0 20px rgba(77,166,255,0.15)}
-.btn-primary:hover:not(:disabled){box-shadow:0 0 32px rgba(77,166,255,0.3);filter:brightness(1.1);transform:translateY(-1px)}
-.btn-ghost{background:var(--accent-dim);color:var(--accent);border:1px solid rgba(77,166,255,0.12)}
-.btn-ghost:hover:not(:disabled){background:rgba(77,166,255,0.15);border-color:var(--accent)}
-.btn-danger{background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.15)}
-.btn-danger:hover:not(:disabled){background:rgba(248,113,113,0.18)}
-.btn-sm{padding:7px 14px;font-size:0.72rem}
-.btn-connect{background:var(--accent);color:#000;font-weight:700;border-radius:20px;padding:8px 20px;font-size:0.78rem}
-.btn-connect:hover{filter:brightness(1.1);transform:translateY(-1px)}
-.btn-connect.connected{background:var(--bg-surface);color:var(--accent);border:1px solid var(--border-active)}
-.btn-connect.connected:hover{background:var(--bg-elevated)}
-.btn-lang{background:transparent;color:var(--text-muted);border:1px solid var(--border);border-radius:20px;
-  padding:6px 14px;font-size:0.68rem;font-weight:500;letter-spacing:0.5px}
-.btn-lang:hover{color:var(--text-secondary);border-color:rgba(255,255,255,0.12)}
-.btn-loading{pointer-events:none}
-.btn-loading::after{content:'';width:13px;height:13px;border:2px solid transparent;border-top-color:currentColor;
-  border-radius:50%;animation:spin 0.55s linear infinite;margin-left:4px;flex-shrink:0}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* === HERO BANNER === */
-.hero{text-align:center;margin-bottom:36px;padding:28px 0 20px;position:relative}
-.hero h1{font-size:2.2rem;font-weight:800;letter-spacing:-0.5px;
-  background:linear-gradient(135deg,var(--text) 30%,var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero p{color:var(--text-secondary);font-size:0.88rem;margin-top:6px;font-weight:400;max-width:500px;margin-inline:auto}
-.hero-line{width:48px;height:2px;background:linear-gradient(90deg,var(--accent),var(--purple));margin:16px auto 0;border-radius:1px}
-
-/* === STATS GRID === */
-.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px}
-@media(max-width:900px){.stats{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:560px){.stats{grid-template-columns:repeat(2,1fr)}}
-.stat{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-sm);
-  padding:18px 16px;backdrop-filter:blur(12px);text-align:center;transition:border-color 0.25s}
-.stat:hover{border-color:var(--border-active)}
-.stat-label{font-size:0.62rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px}
-.stat-val{font-family:var(--mono);font-size:1.05rem;font-weight:600;color:var(--accent)}
-.stat-val.purple{color:var(--purple)}
-.stat-val.amber{color:var(--amber)}
-.stat-sub{font-size:0.62rem;color:var(--text-muted);font-family:var(--mono);margin-top:3px}
+/* === BOTTOM TAB BAR === */
+.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;background:var(--bg2);border-top:1px solid var(--border);z-index:100;padding:6px 0 env(safe-area-inset-bottom,8px)}
+.tab-bar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;background:none;color:var(--text3);font-size:.7rem;font-weight:600;transition:color .2s}
+.tab-bar button.active{color:var(--accent)}
+.tab-bar button svg{width:24px;height:24px}
 
 /* === CARDS === */
-.card{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);
-  padding:28px;backdrop-filter:blur(16px);transition:border-color 0.3s,box-shadow 0.3s;position:relative}
-.card:hover{border-color:var(--border-active);box-shadow:0 4px 40px rgba(77,166,255,0.03)}
-.card-head{display:flex;align-items:center;gap:10px;margin-bottom:20px}
-.card-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1rem}
-.card-icon.blue{background:var(--accent-dim);color:var(--accent)}
-.card-icon.purple{background:var(--purple-dim);color:var(--purple)}
-.card-icon.green{background:var(--green-dim);color:var(--green)}
-.card-icon.amber{background:var(--amber-dim);color:var(--amber)}
-.card-label{font-size:0.72rem;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-secondary)}
-.card-top-line{position:absolute;top:-1px;left:15%;right:15%;height:1px;
-  background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0.35}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.card-title{font-size:1.1rem;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
 
-/* === MAIN GRID === */
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.full-span{grid-column:1/-1}
-@media(max-width:768px){.grid-2{grid-template-columns:1fr}.header{flex-wrap:wrap;gap:10px}.header-actions{width:100%;justify-content:flex-end}}
+/* === STAT ROWS === */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-box{background:var(--bg3);border-radius:var(--radius-sm);padding:14px}
+.stat-label{font-size:.75rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat-value{font-size:1.25rem;font-weight:800;color:var(--text)}
+.stat-value.accent{color:var(--accent)}
+.stat-value.green{color:var(--green)}
+.stat-full{grid-column:1/-1}
 
-/* === INPUTS === */
-.field{margin-bottom:14px}
-.field label{display:block;font-size:0.7rem;font-weight:500;color:var(--text-muted);margin-bottom:5px;letter-spacing:0.5px}
-.field input{width:100%;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:var(--radius-xs);
-  padding:11px 14px;color:var(--text);font-family:var(--mono);font-size:0.82rem;outline:none;transition:all 0.2s}
-.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
-.field input::placeholder{color:var(--text-muted)}
-.field input:disabled{opacity:0.5;cursor:not-allowed}
+/* === BUTTONS === */
+.btn-primary{width:100%;padding:16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-size:1rem;font-weight:800;letter-spacing:.5px;transition:opacity .15s,transform .15s}
+.btn-primary:active{transform:scale(.98);opacity:.9}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-secondary{width:100%;padding:14px;border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:.95rem;font-weight:700;border:1px solid var(--border);transition:all .15s}
+.btn-secondary:active{background:var(--bg4)}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-/* === PCT ROW === */
-.pct-row{display:flex;gap:5px;margin-bottom:14px}
-.pct-btn{flex:1;padding:6px 0;font-size:0.65rem;font-weight:600;font-family:var(--mono);
-  background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:var(--radius-xs);
-  color:var(--text-secondary);cursor:pointer;transition:all 0.2s;text-align:center}
-.pct-btn:hover{background:var(--accent-dim);color:var(--accent);border-color:rgba(77,166,255,0.2)}
-.pct-btn.max{color:var(--amber);border-color:rgba(251,191,36,0.12)}
-.pct-btn.max:hover{background:var(--amber-dim);border-color:rgba(251,191,36,0.25)}
+/* === INPUT === */
+.input-group{margin-bottom:14px}
+.input-group label{display:block;font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:6px}
+.input-group input{width:100%;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:1rem;font-weight:600;outline:none;transition:border-color .2s}
+.input-group input:focus{border-color:var(--accent)}
+.input-group input::placeholder{color:var(--text3)}
+.input-max{position:relative}
+.input-max button{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--accent-glow);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:.75rem;font-weight:700}
 
-/* === TABS === */
-.tabs{display:flex;gap:3px;margin-bottom:20px;background:rgba(0,0,0,0.2);border-radius:var(--radius-xs);padding:3px}
-.tab{flex:1;padding:8px;text-align:center;font-size:0.75rem;font-weight:600;border-radius:5px;
-  cursor:pointer;color:var(--text-muted);transition:all 0.2s;border:none;background:transparent;font-family:var(--font)}
-.tab.active{background:var(--accent-dim);color:var(--accent)}
-.tab:hover:not(.active){color:var(--text-secondary)}
+/* === INFO LIST === */
+.info-list{list-style:none}
+.info-list li{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:.9rem}
+.info-list li:last-child{border-bottom:none}
+.info-list .label{color:var(--text2);font-weight:600}
+.info-list .value{font-weight:700;text-align:right;word-break:break-all;max-width:55%}
+.info-list .value.mono{font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:.78rem}
 
-/* === INFO ROWS === */
-.info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
-.info-row:last-child{border-bottom:none}
-.info-k{font-size:0.78rem;color:var(--text-secondary)}
-.info-v{font-family:var(--mono);font-size:0.78rem;font-weight:500;text-align:right;word-break:break-all}
+/* === STATUS BADGE === */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
+.badge-green{background:rgba(16,185,129,.12);color:var(--green)}
+.badge-yellow{background:var(--accent-glow);color:var(--accent)}
+.badge-red{background:rgba(239,68,68,.12);color:var(--red)}
 
-/* === BADGES === */
-.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:0.7rem;font-weight:600}
-.badge-locked{background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.15)}
-.badge-unlocked{background:var(--green-dim);color:var(--green);border:1px solid rgba(52,211,153,0.15)}
-.badge-bound{background:var(--green-dim);color:var(--green);border:1px solid rgba(52,211,153,0.15)}
+/* === PROGRESS BAR === */
+.progress-bar{width:100%;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin:8px 0}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .5s}
 
 /* === COUNTDOWN === */
-.countdown{font-family:var(--mono);font-size:1.5rem;font-weight:700;color:var(--accent);text-align:center;
-  letter-spacing:3px;text-shadow:0 0 24px var(--accent-glow);margin:8px 0}
-.countdown.ready{color:var(--green);text-shadow:0 0 20px rgba(52,211,153,0.25)}
+.countdown{font-size:1.5rem;font-weight:800;color:var(--accent);text-align:center;padding:10px 0;font-variant-numeric:tabular-nums}
 
-/* === REWARD BOX === */
-.reward-box{text-align:center;padding:16px;background:rgba(77,166,255,0.03);border-radius:var(--radius-sm);
-  border:1px solid var(--accent-dim);margin-bottom:14px}
-.reward-val{font-family:var(--mono);font-size:1.2rem;font-weight:700;color:var(--accent)}
-.reward-sub{font-size:0.68rem;color:var(--text-muted);margin-top:3px}
+/* === DIVIDER === */
+.divider{height:1px;background:var(--border);margin:16px 0}
 
-/* === PENDING REWARDS === */
-.pending{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;
-  background:var(--purple-dim);border:1px solid rgba(167,139,250,0.1);border-radius:var(--radius-sm);margin-top:16px}
-.pending-val{font-family:var(--mono);font-weight:600;color:var(--purple)}
-.pending-label{font-size:0.68rem;color:var(--text-muted)}
-
-/* === REFERRER BOUND STATUS === */
-.ref-status{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-xs);
-  margin-bottom:14px;font-size:0.78rem}
-.ref-status.bound{background:var(--green-dim);border:1px solid rgba(52,211,153,0.12);color:var(--green)}
-.ref-status.unbound{background:rgba(255,255,255,0.02);border:1px solid var(--border);color:var(--text-muted)}
+/* === TAB PANELS === */
+.panel{display:none}
+.panel.active{display:block}
 
 /* === TOAST === */
-.toast-box{position:fixed;top:20px;right:20px;z-index:10000;display:flex;flex-direction:column;gap:8px}
-.toast{padding:14px 20px;border-radius:var(--radius-sm);font-size:0.8rem;backdrop-filter:blur(20px);
-  border:1px solid;min-width:280px;max-width:400px;animation:slideIn 0.3s ease;font-weight:500}
-.toast-success{background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.2);color:var(--green)}
-.toast-error{background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.2);color:var(--red)}
-.toast-info{background:rgba(77,166,255,0.08);border-color:rgba(77,166,255,0.15);color:var(--accent)}
-@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:12px 24px;border-radius:var(--radius-sm);font-weight:700;font-size:.9rem;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
 
-/* === OWNER PANEL === */
-.owner-panel{margin-top:20px;border-color:rgba(251,191,36,0.12)!important;background:rgba(251,191,36,0.02)!important}
-.owner-panel .card-top-line{background:linear-gradient(90deg,transparent,var(--amber),transparent)}
-.owner-row{display:flex;gap:10px;align-items:end;margin-bottom:14px;flex-wrap:wrap}
-.owner-row .field{flex:1;min-width:150px;margin-bottom:0}
+/* === DESKTOP === */
+@media(min-width:600px){
+  .app{border-left:1px solid var(--border);border-right:1px solid var(--border)}
+  .tab-bar{border-radius:0}
+  html{background:#05080f}
+}
 
-/* === TOGGLE === */
-.toggle-row{display:flex;align-items:center;gap:10px}
-.toggle{width:42px;height:22px;border-radius:11px;background:rgba(255,255,255,0.06);border:1px solid var(--border);
-  cursor:pointer;position:relative;transition:all 0.3s}
-.toggle.on{background:var(--accent-dim);border-color:var(--accent)}
-.toggle::after{content:'';width:16px;height:16px;border-radius:50%;background:var(--text-muted);
-  position:absolute;top:2px;left:2px;transition:all 0.3s}
-.toggle.on::after{left:22px;background:var(--accent)}
-
-/* === WALLET REQUIRED OVERLAY === */
-.wallet-gate{position:relative}
-.wallet-gate.locked::after{content:'';position:absolute;inset:0;background:rgba(6,8,15,0.5);
-  border-radius:var(--radius);backdrop-filter:blur(2px);z-index:2}
-.wallet-gate.locked .gate-msg{display:flex}
-.gate-msg{display:none;position:absolute;inset:0;z-index:3;align-items:center;justify-content:center;
-  flex-direction:column;gap:8px;color:var(--text-secondary);font-size:0.82rem;font-weight:500}
-.gate-msg svg{opacity:0.4}
-
-/* === MISC === */
-.divider{height:1px;background:var(--border);margin:18px 0}
-.hidden{display:none!important}
-.addr{font-family:var(--mono);font-size:0.72rem}
-.section-gap{margin-top:16px}
-
-/* === SCROLLBAR === */
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.14)}
-
-/* === CONNECT PROMPT === */
-.connect-prompt{text-align:center;padding:48px 20px;color:var(--text-muted)}
-.connect-prompt p{font-size:0.88rem;margin-bottom:16px}
+/* === ANIMATIONS === */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.pulse{animation:pulse 2s infinite}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{animation:fadeIn .35s ease}
 </style>
 </head>
 <body>
-<div class="noise"></div>
-<div class="toast-box" id="toasts"></div>
-
 <div class="app">
   <!-- HEADER -->
-  <header class="header">
-    <div class="logo">
-      <div class="logo-icon"><img src="https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/om.png" alt="OM"></div>
-      <div>
-        <div class="logo-name">OM Network</div>
-        <div class="logo-tag" data-i18n="headerSub">BSC Mainnet</div>
-      </div>
+  <div class="header">
+    <div class="header-logo">
+      <img src="https://bscscan.com/token/images/mantra_32.png" alt="OM">
+      <span>OM</span>
     </div>
-    <div class="header-actions">
-      <div class="net-badge"><span class="net-dot"></span>BSC</div>
-      <button class="btn btn-lang" onclick="toggleLang()" id="langBtn">中文</button>
-      <button class="btn btn-connect" id="connectBtn" onclick="connectWallet()" data-i18n="connectWallet">Connect Wallet</button>
-    </div>
-  </header>
-
-  <!-- HERO -->
-  <div class="hero">
-    <h1 data-i18n="heroTitle">Mine. Stake. Earn.</h1>
-    <p data-i18n="heroDesc">Check in daily to mine OM tokens, stake for yield, and build your network.</p>
-    <div class="hero-line"></div>
+    <span class="header-chain">BSC Mainnet</span>
+    <button class="wallet-btn" id="connectBtn" onclick="connectWallet()">Connect</button>
   </div>
 
-  <!-- STATS (always visible, public data) -->
-  <div class="stats">
-    <div class="stat"><div class="stat-label" data-i18n="epoch">Epoch</div><div class="stat-val" id="statEpoch">--</div></div>
-    <div class="stat"><div class="stat-label" data-i18n="currentReward">Reward</div><div class="stat-val purple" id="statReward">--</div><div class="stat-sub">OM / check-in</div></div>
-    <div class="stat"><div class="stat-label" data-i18n="totalSupply">Supply</div><div class="stat-val" id="statSupply">--</div><div class="stat-sub" id="statSupplyPct"></div></div>
-    <div class="stat"><div class="stat-label" data-i18n="nextHalving">Halving</div><div class="stat-val amber" id="statHalving">--</div></div>
-    <div class="stat"><div class="stat-label" data-i18n="totalStaked">Staked</div><div class="stat-val purple" id="statTotalStaked">--</div><div class="stat-sub">OM</div></div>
-  </div>
-
-  <!-- MAIN GRID -->
-  <div class="grid-2">
-
-    <!-- MINING CARD -->
-    <div class="card wallet-gate" id="miningCard">
-      <div class="card-top-line"></div>
-      <div class="card-head"><div class="card-icon blue">&#9881;</div><span class="card-label" data-i18n="mining">Mining</span></div>
-      <div class="reward-box">
-        <div class="reward-val" id="miningReward">-- OM</div>
-        <div class="reward-sub" data-i18n="rewardPerCheckin">Reward per check-in</div>
+  <!-- TAB CONTENT -->
+  <div class="tab-content">
+    <!-- ====== MINING PANEL ====== -->
+    <div class="panel active" id="panel-mining">
+      <!-- Mining Status Card -->
+      <div class="card fade-in">
+        <div class="card-title"><span class="dot"></span>Mining Overview</div>
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-label">Current Reward</div>
+            <div class="stat-value accent" id="currentReward">50 OM</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Epoch</div>
+            <div class="stat-value" id="currentEpoch">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Cooldown</div>
+            <div class="stat-value" id="cooldownTimer">Ready</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Status</div>
+            <div class="stat-value"><span class="badge badge-yellow" id="miningStatus">Not Connected</span></div>
+          </div>
+        </div>
+        <button class="btn-primary" id="checkInBtn" onclick="checkIn()" disabled>Sign In to Mine</button>
       </div>
-      <div id="checkinCountdown" class="countdown">--:--:--</div>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:18px" id="checkinBtn" onclick="doCheckIn()" disabled data-i18n="checkIn">Check In</button>
 
-      <div class="divider"></div>
-
-      <!-- Referrer section -->
-      <div class="card-head" style="margin-bottom:12px"><div class="card-icon green">&#128279;</div><span class="card-label" data-i18n="referrer">Referrer</span></div>
-      <div id="refBoundStatus" class="ref-status unbound">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>
-        <span id="refStatusText" data-i18n="notRegistered">Not registered yet</span>
-      </div>
-      <div id="refInputArea">
-        <div class="field">
-          <label data-i18n="referrerAddr">Referrer Address</label>
+      <!-- Register Card -->
+      <div class="card fade-in">
+        <div class="card-title"><span class="dot"></span>Register</div>
+        <div class="input-group">
+          <label>Referrer Address</label>
           <input type="text" id="referrerInput" placeholder="0x...">
         </div>
-        <button class="btn btn-ghost" style="width:100%" id="registerBtn" onclick="doRegister()" data-i18n="register">Bind Referrer</button>
+        <button class="btn-secondary" onclick="register()">Register with Referrer</button>
       </div>
 
-      <!-- Gate overlay -->
-      <div class="gate-msg">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-        <span data-i18n="connectToUse">Connect wallet to interact</span>
+      <!-- Unlock Card -->
+      <div class="card fade-in">
+        <div class="card-title"><span class="dot"></span>Unlock Transfer</div>
+        <p style="font-size:.85rem;color:var(--text2);margin-bottom:14px;line-height:1.5;font-weight:500">
+          Pay <strong style="color:var(--accent)">10 USDT</strong> to unlock token transfers and enable staking. USDT approval required.
+        </p>
+        <div class="btn-row">
+          <button class="btn-secondary" onclick="approveUSDT()">Approve USDT</button>
+          <button class="btn-primary" onclick="payToUnlock()">Unlock</button>
+        </div>
       </div>
     </div>
 
-    <!-- ACCOUNT CARD -->
-    <div class="card wallet-gate" id="accountCard">
-      <div class="card-top-line"></div>
-      <div class="card-head">
-        <div class="card-icon purple">&#128100;</div>
-        <span class="card-label" data-i18n="account">Account</span>
-        <span id="lockBadge" class="badge badge-locked" style="margin-left:auto" data-i18n="locked">Locked</span>
+    <!-- ====== STAKING PANEL ====== -->
+    <div class="panel" id="panel-staking">
+      <!-- Staking Overview -->
+      <div class="card fade-in">
+        <div class="card-title"><span class="dot"></span>Staking Overview</div>
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-label">Your Staked</div>
+            <div class="stat-value accent" id="stakedAmount">0 OM</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Pending Rewards</div>
+            <div class="stat-value green" id="pendingRewards">0 OM</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Daily Rate</div>
+            <div class="stat-value" id="dailyRate">1%</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Total Staked</div>
+            <div class="stat-value" id="totalStaked">0 OM</div>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="claimRewards()" style="margin-bottom:10px">Claim Rewards</button>
       </div>
 
-      <div class="info-row"><span class="info-k" data-i18n="balance">Balance</span><span class="info-v" id="infoBalance">--</span></div>
-      <div class="info-row"><span class="info-k" data-i18n="available">Available</span><span class="info-v" id="infoAvailable">--</span></div>
-      <div class="info-row"><span class="info-k" data-i18n="lockedAmt">Locked</span><span class="info-v" id="infoLocked">--</span></div>
-      <div class="info-row"><span class="info-k" data-i18n="myStaked">Staked</span><span class="info-v" id="infoStaked">--</span></div>
-      <div class="info-row"><span class="info-k" data-i18n="myReferrer">Referrer</span><span class="info-v addr" id="infoReferrer">--</span></div>
-
-      <div class="divider"></div>
-
-      <!-- Unlock section -->
-      <div class="card-head" style="margin-bottom:12px"><div class="card-icon amber">&#128275;</div><span class="card-label" data-i18n="unlock">Unlock</span></div>
-      <div class="info-row"><span class="info-k" data-i18n="unlockFee">Fee</span><span class="info-v">10 USDT</span></div>
-      <div class="info-row"><span class="info-k" data-i18n="usdtBalance">USDT Balance</span><span class="info-v" id="usdtBalance">--</span></div>
-      <button class="btn btn-primary" style="width:100%;margin-top:12px" id="unlockBtn" onclick="doUnlock()" data-i18n="payUnlock">Pay 10 USDT to Unlock</button>
-
-      <div class="gate-msg">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-        <span data-i18n="connectToUse">Connect wallet to interact</span>
+      <!-- Stake / Unstake -->
+      <div class="card fade-in">
+        <div class="card-title"><span class="dot"></span>Stake OM</div>
+        <div class="input-group">
+          <label>Amount to Stake</label>
+          <div class="input-max">
+            <input type="number" id="stakeInput" placeholder="0.00">
+            <button onclick="setMaxStake()">MAX</button>
+          </div>
+        </div>
+        <div class="btn-row" style="margin-bottom:14px">
+          <button class="btn-secondary" onclick="approveOM()">Approve OM</button>
+          <button class="btn-primary" onclick="stakeOM()">Stake</button>
+        </div>
+        <div class="divider"></div>
+        <div class="card-title" style="margin-top:4px"><span class="dot"></span>Unstake OM</div>
+        <div class="input-group">
+          <label>Amount to Unstake</label>
+          <div class="input-max">
+            <input type="number" id="unstakeInput" placeholder="0.00">
+            <button onclick="setMaxUnstake()">MAX</button>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="unstakeOM()">Unstake</button>
       </div>
     </div>
 
-    <!-- STAKING CARD -->
-    <div class="card full-span wallet-gate" id="stakingCard">
-      <div class="card-top-line"></div>
-      <div class="card-head"><div class="card-icon purple">&#128176;</div><span class="card-label" data-i18n="staking">Staking</span></div>
-
-      <div class="tabs">
-        <button class="tab active" id="tabStake" onclick="switchTab('stake')" data-i18n="stake">Stake</button>
-        <button class="tab" id="tabUnstake" onclick="switchTab('unstake')" data-i18n="unstake">Unstake</button>
+    <!-- ====== ACCOUNT PANEL ====== -->
+    <div class="panel" id="panel-account">
+      <!-- Wallet Info -->
+      <div class="card fade-in">
+        <div class="card-title"><span class="dot"></span>Wallet</div>
+        <ul class="info-list">
+          <li><span class="label">Address</span><span class="value mono" id="walletAddr">Not Connected</span></li>
+          <li><span class="label">OM Balance</span><span class="value" id="omBalance">--</span></li>
+          <li><span class="label">Available</span><span class="value" id="availBalance">--</span></li>
+          <li><span class="label">Locked</span><span class="value" id="lockedBalance">--</span></li>
+          <li><span class="label">Unlock Status</span><span class="value" id="unlockStatus">--</span></li>
+          <li><span class="label">Referrer</span><span class="value mono" id="referrerAddr">--</span></li>
+        </ul>
       </div>
 
-      <div id="stakePanel">
-        <div class="field">
-          <label data-i18n="stakeAmount">Amount to Stake (available: <span id="stakeAvailLabel">--</span> OM)</label>
-          <input type="text" id="stakeInput" placeholder="0.0">
+      <!-- Epoch & Halving Info -->
+      <div class="card fade-in">
+        <div class="card-title"><span class="dot"></span>Epoch & Rewards</div>
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-label">Current Epoch</div>
+            <div class="stat-value accent" id="acctEpoch">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Current Reward</div>
+            <div class="stat-value" id="acctReward">50 OM</div>
+          </div>
         </div>
-        <div class="pct-row">
-          <button class="pct-btn" onclick="setPct('stake',25)">25%</button>
-          <button class="pct-btn" onclick="setPct('stake',50)">50%</button>
-          <button class="pct-btn" onclick="setPct('stake',75)">75%</button>
-          <button class="pct-btn max" onclick="setPct('stake',100)">MAX</button>
+        <div class="stat-box" style="background:var(--bg3);border-radius:var(--radius-sm);padding:14px">
+          <div class="stat-label">Next Halving Countdown</div>
+          <div class="countdown" id="halvingCountdown">--:--:--</div>
+          <div class="progress-bar"><div class="progress-fill" id="halvingProgress" style="width:0%"></div></div>
         </div>
-        <button class="btn btn-primary" style="width:100%" id="stakeBtn" onclick="doStake()" data-i18n="stakeBtn">Stake</button>
       </div>
 
-      <div id="unstakePanel" class="hidden">
-        <div class="field">
-          <label data-i18n="unstakeAmount">Amount to Unstake (staked: <span id="unstakeAvailLabel">--</span> OM)</label>
-          <input type="text" id="unstakeInput" placeholder="0.0">
-        </div>
-        <div class="pct-row">
-          <button class="pct-btn" onclick="setPct('unstake',25)">25%</button>
-          <button class="pct-btn" onclick="setPct('unstake',50)">50%</button>
-          <button class="pct-btn" onclick="setPct('unstake',75)">75%</button>
-          <button class="pct-btn max" onclick="setPct('unstake',100)">MAX</button>
-        </div>
-        <button class="btn btn-primary" style="width:100%" id="unstakeBtn" onclick="doUnstake()" data-i18n="unstakeBtn">Unstake</button>
-      </div>
-
-      <div class="pending">
-        <div>
-          <div class="pending-label" data-i18n="pendingRewards">Pending Rewards</div>
-          <div class="pending-val" id="pendingRewards">0 OM</div>
-        </div>
-        <button class="btn btn-sm btn-ghost" id="claimBtn" onclick="doClaim()" data-i18n="claim">Claim</button>
-      </div>
-
-      <div class="gate-msg">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-        <span data-i18n="connectToUse">Connect wallet to interact</span>
+      <!-- Contract Info -->
+      <div class="card fade-in">
+        <div class="card-title"><span class="dot"></span>Contract Info</div>
+        <ul class="info-list">
+          <li><span class="label">OMToken</span><span class="value mono"><a href="https://bscscan.com/address/0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17" target="_blank">0xe960...2a17</a></span></li>
+          <li><span class="label">OMMining</span><span class="value mono"><a href="https://bscscan.com/address/0xB7583313969a033Afe6cF6654cd9a861350fca83" target="_blank">0xB758...ca83</a></span></li>
+          <li><span class="label">Network</span><span class="value">BSC Mainnet</span></li>
+          <li><span class="label">Max Supply</span><span class="value">1,000,000,000 OM</span></li>
+          <li><span class="label">Halving Cycle</span><span class="value">60 Days</span></li>
+          <li><span class="label">Unlock Fee</span><span class="value">10 USDT</span></li>
+        </ul>
       </div>
     </div>
   </div>
 
-  <!-- OWNER PANEL -->
-  <div class="card owner-panel hidden" id="ownerPanel">
-    <div class="card-top-line"></div>
-    <div class="card-head"><div class="card-icon amber">&#128737;</div><span class="card-label" data-i18n="ownerPanel">Owner Panel</span></div>
-    <div class="owner-row">
-      <div class="field"><label data-i18n="dailyRate">Daily Interest Rate (bps, max 100 = 1%)</label><input type="number" id="rateInput" placeholder="100" min="0" max="100"></div>
-      <button class="btn btn-primary btn-sm" id="setRateBtn" onclick="doSetRate()" data-i18n="setRate">Set Rate</button>
-    </div>
-    <div class="toggle-row" style="margin-bottom:16px">
-      <span style="font-size:0.78rem;color:var(--text-secondary)" data-i18n="approveEnabled">Approve Enabled</span>
-      <div class="toggle" id="approveToggle" onclick="doToggleApprove()"></div>
-      <span id="approveStatus" style="font-size:0.72rem;color:var(--text-muted)">--</span>
-    </div>
-    <div class="divider"></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-danger" id="withdrawUsdtBtn" onclick="doWithdrawUSDT()" data-i18n="withdrawUsdt">Withdraw USDT</button>
-      <button class="btn btn-danger" id="withdrawBnbBtn" onclick="doWithdrawBNB()" data-i18n="withdrawBnb">Withdraw BNB</button>
-    </div>
+  <!-- BOTTOM TAB BAR -->
+  <div class="tab-bar">
+    <button class="active" onclick="switchTab('mining',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      Mining
+    </button>
+    <button onclick="switchTab('staking',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 100 4h4a2 2 0 110 4H8"/><path d="M12 18V6"/></svg>
+      Staking
+    </button>
+    <button onclick="switchTab('account',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Account
+    </button>
   </div>
 </div>
 
-<script>
-// ========== CONFIG ==========
-const MINING_ADDRESS = '0xB7583313969a033Afe6cF6654cd9a861350fca83';
-const TOKEN_ADDRESS  = '0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17';
-const USDT_ADDRESS   = '0x55d398326f99059fF775485246999027B3197955';
-const BSC_CHAIN_ID   = '0x38';
-const BSC_RPC        = 'https://bsc-dataseed.binance.org/';
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
 
-// ========== ABIs ==========
-const MINING_ABI = [
-  'function register(address _referrer) external',
-  'function checkIn() external',
-  'function payToUnlock() external',
-  'function stake(uint256 amount) external',
-  'function unstake(uint256 amount) external',
-  'function claimStakingRewards() external',
-  'function setDailyInterestRate(uint256 _rate) external',
-  'function setApproveEnabled(bool enabled) external',
-  'function withdrawUSDT() external',
-  'function withdrawNative() external',
-  'function currentReward() view returns (uint256)',
-  'function currentEpoch() view returns (uint256)',
-  'function nextCheckInTime(address) view returns (uint256)',
-  'function nextHalvingTime() view returns (uint256)',
-  'function pendingStakingRewards(address) view returns (uint256)',
-  'function stakedAmount(address) view returns (uint256)',
-  'function totalStaked() view returns (uint256)',
-  'function referrer(address) view returns (address)',
-  'function dailyInterestRate() view returns (uint256)',
-  'function startTime() view returns (uint256)',
-  'function owner() view returns (address)',
+<script>
+/* ============================================
+   CONSTANTS & ABI
+   ============================================ */
+const MINING_ADDR = '0xB7583313969a033Afe6cF6654cd9a861350fca83';
+const TOKEN_ADDR  = '0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17';
+const USDT_ADDR   = '0x55d398326f99059fF775485246999027B3197955';
+const BSC_CHAIN   = '0x38';
+
+const ERC20_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function approve(address,uint256) returns (bool)',
+  'function allowance(address,address) view returns (uint256)'
 ];
 const TOKEN_ABI = [
   'function balanceOf(address) view returns (uint256)',
-  'function availableBalance(address) view returns (uint256)',
-  'function currentLockedAmount(address) view returns (uint256)',
   'function isUnlocked(address) view returns (bool)',
   'function lockedBalance(address) view returns (uint256)',
-  'function totalSupply() view returns (uint256)',
-  'function MAX_SUPPLY() view returns (uint256)',
-  'function allowance(address,address) view returns (uint256)',
-  'function approve(address spender, uint256 amount) returns (bool)',
-  'function approveEnabled() view returns (bool)',
+  'function currentLockedAmount(address) view returns (uint256)',
+  'function availableBalance(address) view returns (uint256)',
+  'function approve(address,uint256) returns (bool)'
 ];
-const ERC20_ABI = [
-  'function balanceOf(address) view returns (uint256)',
-  'function allowance(address,address) view returns (uint256)',
-  'function approve(address spender, uint256 amount) returns (bool)',
+const MINING_ABI = [
+  'function currentEpoch() view returns (uint256)',
+  'function currentReward() view returns (uint256)',
+  'function nextCheckInTime(address) view returns (uint256)',
+  'function nextHalvingTime() view returns (uint256)',
+  'function pendingStakingRewards(address) view returns (uint256)',
+  'function referrer(address) view returns (address)',
+  'function lastCheckIn(address) view returns (uint256)',
+  'function stakedAmount(address) view returns (uint256)',
+  'function totalStaked() view returns (uint256)',
+  'function dailyInterestRate() view returns (uint256)',
+  'function startTime() view returns (uint256)',
+  'function register(address)',
+  'function checkIn()',
+  'function payToUnlock()',
+  'function stake(uint256)',
+  'function unstake(uint256)',
+  'function claimStakingRewards()'
 ];
 
-// ========== i18n ==========
-const LANG = {
-  en: {
-    headerSub:'BSC Mainnet',heroTitle:'Mine. Stake. Earn.',heroDesc:'Check in daily to mine OM tokens, stake for yield, and build your network.',
-    connectWallet:'Connect Wallet',connectToUse:'Connect wallet to interact',
-    epoch:'Epoch',currentReward:'Reward',totalSupply:'Supply',nextHalving:'Halving',totalStaked:'Staked',
-    mining:'Mining',rewardPerCheckin:'Reward per check-in',checkIn:'Check In',
-    referrer:'Referrer',referrerAddr:'Referrer Address',register:'Bind Referrer',
-    notRegistered:'Not registered yet',alreadyBound:'Referrer bound',boundTo:'Bound to: ',
-    account:'Account',locked:'Locked',unlocked:'Unlocked',
-    balance:'Balance',available:'Available',lockedAmt:'Locked',myStaked:'Staked',myReferrer:'Referrer',
-    unlock:'Unlock',unlockFee:'Fee',usdtBalance:'USDT Balance',payUnlock:'Pay 10 USDT to Unlock',alreadyUnlocked:'Already Unlocked',
-    staking:'Staking',stake:'Stake',unstake:'Unstake',stakeAmount:'Amount to Stake',unstakeAmount:'Amount to Unstake',
-    stakeBtn:'Stake',unstakeBtn:'Unstake',pendingRewards:'Pending Rewards',claim:'Claim',
-    ownerPanel:'Owner Panel',dailyRate:'Daily Interest Rate (bps, max 100 = 1%)',setRate:'Set Rate',
-    approveEnabled:'Approve Enabled',withdrawUsdt:'Withdraw USDT',withdrawBnb:'Withdraw BNB',
-    readyToCheckin:'Ready!',txSent:'Transaction sent',txConfirmed:'Transaction confirmed',
-    txFailed:'Transaction failed',wrongNetwork:'Please switch to BSC network',
-    walletNotFound:'No wallet found. Please install MetaMask.',connected:'Connected',
-    approving:'Approving...',needApproveFirst:'Approving USDT first...',
-  },
-  zh: {
-    headerSub:'BSC 主网',heroTitle:'挖矿 · 质押 · 收益',heroDesc:'每日签到挖矿 OM 代币，质押获取收益，建立你的网络。',
-    connectWallet:'连接钱包',connectToUse:'连接钱包以使用',
-    epoch:'纪元',currentReward:'奖励',totalSupply:'供应量',nextHalving:'减半',totalStaked:'总质押',
-    mining:'挖矿',rewardPerCheckin:'每次签到奖励',checkIn:'签到',
-    referrer:'推荐人',referrerAddr:'推荐人地址',register:'绑定推荐人',
-    notRegistered:'尚未注册',alreadyBound:'已绑定推荐人',boundTo:'绑定: ',
-    account:'账户',locked:'已锁定',unlocked:'已解锁',
-    balance:'余额',available:'可用余额',lockedAmt:'锁仓量',myStaked:'质押中',myReferrer:'推荐人',
-    unlock:'解锁',unlockFee:'费用',usdtBalance:'USDT 余额',payUnlock:'支付 10 USDT 解锁',alreadyUnlocked:'已解锁',
-    staking:'质押',stake:'质押',unstake:'解除质押',stakeAmount:'质押数量',unstakeAmount:'解除质押数量',
-    stakeBtn:'质押',unstakeBtn:'解除质押',pendingRewards:'待领取奖励',claim:'领取',
-    ownerPanel:'管理面板',dailyRate:'日利率 (基点, 最大100 = 1%)',setRate:'设置利率',
-    approveEnabled:'授权开关',withdrawUsdt:'提取 USDT',withdrawBnb:'提取 BNB',
-    readyToCheckin:'可签到！',txSent:'交易已发送',txConfirmed:'交易已确认',
-    txFailed:'交易失败',wrongNetwork:'请切换到 BSC 网络',
-    walletNotFound:'未检测到钱包，请安装 MetaMask。',connected:'已连接',
-    approving:'授权中...',needApproveFirst:'正在授权 USDT...',
+let provider, signer, userAddr;
+let miningContract, tokenContract, usdtContract;
+
+/* ============================================
+   TAB SWITCHING
+   ============================================ */
+function switchTab(name, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+/* ============================================
+   TOAST
+   ============================================ */
+function showToast(msg, dur) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur || 3000);
+}
+
+/* ============================================
+   WALLET CONNECTION
+   ============================================ */
+async function connectWallet() {
+  if (typeof window.ethereum === 'undefined') {
+    showToast('Please install MetaMask');
+    return;
   }
-};
-let currentLang = 'en';
-function t(key){return LANG[currentLang][key]||LANG.en[key]||key}
-function applyLang(){
-  document.querySelectorAll('[data-i18n]').forEach(el=>{
-    const k=el.getAttribute('data-i18n');
-    if(LANG[currentLang][k]) el.textContent=LANG[currentLang][k];
-  });
-  document.getElementById('langBtn').textContent=currentLang==='en'?'中文':'EN';
-  // Re-apply dynamic text
-  if(isUserUnlocked!==null){
-    const b=document.getElementById('lockBadge');
-    b.textContent=isUserUnlocked?t('unlocked'):t('locked');
-    b.className='badge '+(isUserUnlocked?'badge-unlocked':'badge-locked');
-    const ub=document.getElementById('unlockBtn');
-    ub.textContent=isUserUnlocked?t('alreadyUnlocked'):t('payUnlock');
-  }
-  updateRefStatus();
-}
-function toggleLang(){currentLang=currentLang==='en'?'zh':'en';applyLang()}
-
-// ========== STATE ==========
-const {ethers}=window;
-let provider,signer,userAddress;
-let readProvider; // public RPC read-only
-let miningContract,miningRead,tokenContract,tokenRead,usdtContract,usdtRead;
-let ownerAddress=null,isUserUnlocked=null;
-let userStakedRaw=0n,userAvailableRaw=0n;
-let userReferrer=null;
-let refreshTimer=null,countdownTimer=null;
-let nextCheckinTs=0,halvingTs=0;
-const MAX_UINT=ethers.MaxUint256;
-
-// ========== UTILS ==========
-function fmtBig(val,dec=18,dp=4){
-  if(val===undefined||val===null)return'--';
-  const s=ethers.formatUnits(val,dec);const p=s.split('.');
-  if(dp===0)return Number(p[0]).toLocaleString();
-  const f=(p[1]||'').slice(0,dp).replace(/0+$/,'');
-  return(f?Number(p[0]).toLocaleString()+'.'+f:Number(p[0]).toLocaleString());
-}
-function fmtBigFull(val,dec=18){if(val===undefined||val===null)return'0';return ethers.formatUnits(val,dec)}
-function shortAddr(a){return a?a.slice(0,6)+'...'+a.slice(-4):'--'}
-function fmtCountdown(s){if(s<=0)return null;const h=Math.floor(s/3600);const m=Math.floor((s%3600)/60);const sec=Math.floor(s%60);
-  return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`}
-
-// ========== TOAST ==========
-function toast(msg,type='info'){
-  const c=document.getElementById('toasts');const d=document.createElement('div');
-  d.className='toast toast-'+type;d.textContent=msg;c.appendChild(d);
-  setTimeout(()=>{d.style.opacity='0';d.style.transition='opacity 0.3s';setTimeout(()=>d.remove(),300)},4000);
-}
-
-// ========== PUBLIC DATA (no wallet needed) ==========
-async function loadPublicData(){
-  try{
-    readProvider=new ethers.JsonRpcProvider(BSC_RPC);
-    miningRead=new ethers.Contract(MINING_ADDRESS,MINING_ABI,readProvider);
-    tokenRead=new ethers.Contract(TOKEN_ADDRESS,TOKEN_ABI,readProvider);
-    usdtRead=new ethers.Contract(USDT_ADDRESS,ERC20_ABI,readProvider);
-    const [epoch,reward,supply,maxSupply,halving,totalStk]=await Promise.all([
-      miningRead.currentEpoch(),miningRead.currentReward(),tokenRead.totalSupply(),
-      tokenRead.MAX_SUPPLY(),miningRead.nextHalvingTime(),miningRead.totalStaked()
-    ]);
-    document.getElementById('statEpoch').textContent=epoch.toString();
-    document.getElementById('statReward').textContent=fmtBig(reward);
-    document.getElementById('miningReward').textContent=fmtBig(reward)+' OM';
-    document.getElementById('statSupply').textContent=fmtBig(supply,18,0);
-    const pct=maxSupply>0n?Number((supply*10000n)/maxSupply)/100:0;
-    document.getElementById('statSupplyPct').textContent=pct.toFixed(2)+'% / 1B';
-    document.getElementById('statTotalStaked').textContent=fmtBig(totalStk);
-    halvingTs=Number(halving);
-    startCountdown();
-  }catch(e){console.error('Public data error:',e)}
-}
-
-// ========== WALLET ==========
-async function connectWallet(){
-  if(!window.ethereum){toast(t('walletNotFound'),'error');return}
-  try{
-    await window.ethereum.request({method:'eth_requestAccounts'});
-    const chainId=await window.ethereum.request({method:'eth_chainId'});
-    if(chainId!==BSC_CHAIN_ID){
-      try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:BSC_CHAIN_ID}]})}
-      catch(e){
-        if(e.code===4902){await window.ethereum.request({method:'wallet_addEthereumChain',params:[{
-          chainId:BSC_CHAIN_ID,chainName:'BNB Smart Chain',nativeCurrency:{name:'BNB',symbol:'BNB',decimals:18},
-          rpcUrls:['https://bsc-dataseed.binance.org/'],blockExplorerUrls:['https://bscscan.com/']}]})}
-        else{toast(t('wrongNetwork'),'error');return}
+  try {
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    if (chainId !== BSC_CHAIN) {
+      try {
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BSC_CHAIN }] });
+      } catch (e) {
+        showToast('Please switch to BSC Mainnet');
+        return;
       }
     }
-    provider=new ethers.BrowserProvider(window.ethereum);
-    signer=await provider.getSigner();
-    userAddress=await signer.getAddress();
-    // Signer-connected contracts
-    miningContract=new ethers.Contract(MINING_ADDRESS,MINING_ABI,signer);
-    tokenContract=new ethers.Contract(TOKEN_ADDRESS,TOKEN_ABI,signer);
-    usdtContract=new ethers.Contract(USDT_ADDRESS,ERC20_ABI,signer);
-    // Also update read contracts to use browser provider for freshness
-    miningRead=new ethers.Contract(MINING_ADDRESS,MINING_ABI,provider);
-    tokenRead=new ethers.Contract(TOKEN_ADDRESS,TOKEN_ABI,provider);
-    usdtRead=new ethers.Contract(USDT_ADDRESS,ERC20_ABI,provider);
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    userAddr = await signer.getAddress();
 
-    const btn=document.getElementById('connectBtn');
-    btn.textContent=shortAddr(userAddress);btn.classList.add('connected');
-    // Remove wallet gate overlays
-    document.querySelectorAll('.wallet-gate').forEach(el=>el.classList.remove('locked'));
-    await refreshData();
-    if(refreshTimer)clearInterval(refreshTimer);
-    refreshTimer=setInterval(refreshData,15000);
+    miningContract = new ethers.Contract(MINING_ADDR, MINING_ABI, signer);
+    tokenContract  = new ethers.Contract(TOKEN_ADDR, TOKEN_ABI, signer);
+    usdtContract   = new ethers.Contract(USDT_ADDR, ERC20_ABI, signer);
 
-    window.ethereum.on('accountsChanged',()=>location.reload());
-    window.ethereum.on('chainChanged',()=>location.reload());
-  }catch(e){console.error(e);toast(e.message||t('txFailed'),'error')}
-}
+    document.getElementById('connectBtn').textContent = userAddr.slice(0,6) + '...' + userAddr.slice(-4);
+    document.getElementById('miningStatus').textContent = 'Connected';
+    document.getElementById('miningStatus').className = 'badge badge-green';
+    document.getElementById('checkInBtn').disabled = false;
 
-// ========== DATA REFRESH ==========
-async function refreshData(){
-  if(!userAddress)return;
-  try{
-    const [epoch,reward,supply,maxSupply,halving,totalStk,staked,
-      balance,available,locked,unlocked,ref,pending,usdtBal,
-      rate,owner]=await Promise.all([
-      miningRead.currentEpoch(),miningRead.currentReward(),tokenRead.totalSupply(),
-      tokenRead.MAX_SUPPLY(),miningRead.nextHalvingTime(),miningRead.totalStaked(),
-      miningRead.stakedAmount(userAddress),tokenRead.balanceOf(userAddress),
-      tokenRead.availableBalance(userAddress),tokenRead.currentLockedAmount(userAddress),
-      tokenRead.isUnlocked(userAddress),miningRead.referrer(userAddress),
-      miningRead.pendingStakingRewards(userAddress),usdtRead.balanceOf(userAddress),
-      miningRead.dailyInterestRate(),miningRead.owner()
-    ]);
-    let nextCheckin;
-    try{nextCheckin=await miningRead.nextCheckInTime(userAddress)}catch{nextCheckin=0n}
-
-    // Stats
-    document.getElementById('statEpoch').textContent=epoch.toString();
-    document.getElementById('statReward').textContent=fmtBig(reward);
-    document.getElementById('miningReward').textContent=fmtBig(reward)+' OM';
-    document.getElementById('statSupply').textContent=fmtBig(supply,18,0);
-    const pct=maxSupply>0n?Number((supply*10000n)/maxSupply)/100:0;
-    document.getElementById('statSupplyPct').textContent=pct.toFixed(2)+'% / 1B';
-    document.getElementById('statTotalStaked').textContent=fmtBig(totalStk);
-    halvingTs=Number(halving);nextCheckinTs=Number(nextCheckin);
-
-    // Account
-    isUserUnlocked=unlocked;
-    const badge=document.getElementById('lockBadge');
-    badge.textContent=unlocked?t('unlocked'):t('locked');
-    badge.className='badge '+(unlocked?'badge-unlocked':'badge-locked');
-    const ub=document.getElementById('unlockBtn');
-    if(unlocked){ub.textContent=t('alreadyUnlocked');ub.disabled=true}
-    else{ub.textContent=t('payUnlock');ub.disabled=false}
-
-    document.getElementById('usdtBalance').textContent=fmtBig(usdtBal)+' USDT';
-    document.getElementById('infoBalance').textContent=fmtBig(balance)+' OM';
-    document.getElementById('infoAvailable').textContent=fmtBig(available)+' OM';
-    document.getElementById('infoLocked').textContent=fmtBig(locked)+' OM';
-    document.getElementById('infoStaked').textContent=fmtBig(staked)+' OM';
-
-    // Referrer status
-    userReferrer=ref;
-    updateRefStatus();
-    document.getElementById('infoReferrer').textContent=ref===ethers.ZeroAddress?'--':shortAddr(ref);
-
-    document.getElementById('pendingRewards').textContent=fmtBig(pending)+' OM';
-    userStakedRaw=staked;userAvailableRaw=available;
-    document.getElementById('stakeAvailLabel').textContent=fmtBig(available);
-    document.getElementById('unstakeAvailLabel').textContent=fmtBig(staked);
-
-    // Owner panel
-    ownerAddress=owner;
-    const panel=document.getElementById('ownerPanel');
-    if(userAddress.toLowerCase()===owner.toLowerCase()){
-      panel.classList.remove('hidden');
-      document.getElementById('rateInput').placeholder=rate.toString();
-      try{
-        const ae=await tokenRead.approveEnabled();
-        const tog=document.getElementById('approveToggle');
-        const st=document.getElementById('approveStatus');
-        if(ae){tog.classList.add('on');st.textContent='ON'}
-        else{tog.classList.remove('on');st.textContent='OFF'}
-      }catch{}
-    }else{panel.classList.add('hidden')}
-
-    startCountdown();
-  }catch(e){console.error('Refresh error:',e)}
-}
-
-function updateRefStatus(){
-  const box=document.getElementById('refBoundStatus');
-  const txt=document.getElementById('refStatusText');
-  const inputArea=document.getElementById('refInputArea');
-  if(userReferrer && userReferrer!==ethers.ZeroAddress){
-    box.className='ref-status bound';
-    txt.textContent=t('boundTo')+shortAddr(userReferrer);
-    inputArea.classList.add('hidden');
-  }else{
-    box.className='ref-status unbound';
-    txt.textContent=t(userAddress?'notRegistered':'notRegistered');
-    inputArea.classList.remove('hidden');
+    showToast('Wallet Connected');
+    refreshData();
+  } catch (e) {
+    showToast('Connection failed');
+    console.error(e);
   }
 }
 
-// ========== COUNTDOWN ==========
-function startCountdown(){
-  if(countdownTimer)clearInterval(countdownTimer);
-  countdownTimer=setInterval(()=>{
-    const now=Math.floor(Date.now()/1000);
-    const cdEl=document.getElementById('checkinCountdown');
-    const btn=document.getElementById('checkinBtn');
-    if(userAddress){
-      if(nextCheckinTs>0&&nextCheckinTs>now){
-        cdEl.textContent=fmtCountdown(nextCheckinTs-now);cdEl.classList.remove('ready');btn.disabled=true;
-      }else{cdEl.textContent=t('readyToCheckin');cdEl.classList.add('ready');btn.disabled=false}
-    }else{cdEl.textContent='--:--:--';cdEl.classList.remove('ready');btn.disabled=true}
-    if(halvingTs>0&&halvingTs>now){
-      const s=halvingTs-now;const d=Math.floor(s/86400);const h=Math.floor((s%86400)/3600);const m=Math.floor((s%3600)/60);
-      document.getElementById('statHalving').textContent=d+'d '+h+'h '+m+'m';
-    }else{document.getElementById('statHalving').textContent='--'}
-  },1000);
+/* ============================================
+   DATA REFRESH
+   ============================================ */
+async function refreshData() {
+  if (!userAddr) return;
+  try {
+    const [epoch, reward, nextCI, nextHalv, pending, ref, staked, total, rate, startTime, bal, avail, locked, unlocked] = await Promise.all([
+      miningContract.currentEpoch(),
+      miningContract.currentReward(),
+      miningContract.nextCheckInTime(userAddr),
+      miningContract.nextHalvingTime(),
+      miningContract.pendingStakingRewards(userAddr),
+      miningContract.referrer(userAddr),
+      miningContract.stakedAmount(userAddr),
+      miningContract.totalStaked(),
+      miningContract.dailyInterestRate(),
+      miningContract.startTime(),
+      tokenContract.balanceOf(userAddr),
+      tokenContract.availableBalance(userAddr),
+      tokenContract.currentLockedAmount(userAddr),
+      tokenContract.isUnlocked(userAddr)
+    ]);
+
+    const fmt = (v) => parseFloat(ethers.formatEther(v)).toLocaleString(undefined, {maximumFractionDigits:4});
+
+    // Mining panel
+    document.getElementById('currentReward').textContent = fmt(reward) + ' OM';
+    document.getElementById('currentEpoch').textContent = epoch.toString();
+
+    // Staking panel
+    document.getElementById('stakedAmount').textContent = fmt(staked) + ' OM';
+    document.getElementById('pendingRewards').textContent = fmt(pending) + ' OM';
+    document.getElementById('dailyRate').textContent = (Number(rate) / 100).toFixed(2) + '%';
+    document.getElementById('totalStaked').textContent = fmt(total) + ' OM';
+
+    // Account panel
+    document.getElementById('walletAddr').textContent = userAddr.slice(0,8) + '...' + userAddr.slice(-6);
+    document.getElementById('omBalance').textContent = fmt(bal) + ' OM';
+    document.getElementById('availBalance').textContent = fmt(avail) + ' OM';
+    document.getElementById('lockedBalance').textContent = fmt(locked) + ' OM';
+    document.getElementById('unlockStatus').innerHTML = unlocked
+      ? '<span class="badge badge-green">Unlocked</span>'
+      : '<span class="badge badge-red">Locked</span>';
+    document.getElementById('referrerAddr').textContent = (ref === '0x0000000000000000000000000000000000000000')
+      ? 'Not Registered'
+      : ref.slice(0,8) + '...' + ref.slice(-6);
+    document.getElementById('acctEpoch').textContent = epoch.toString();
+    document.getElementById('acctReward').textContent = fmt(reward) + ' OM';
+
+    // Cooldown
+    updateCooldown(Number(nextCI));
+
+    // Halving countdown
+    window._halvingTarget = Number(nextHalv);
+    window._startTime = Number(startTime);
+    window._halvingPeriod = 60 * 86400;
+  } catch (e) {
+    console.error('Refresh error:', e);
+  }
 }
 
-// ========== TX HELPER ==========
-async function sendTx(btnId,fn){
-  const btn=document.getElementById(btnId);const orig=btn.textContent;
-  btn.classList.add('btn-loading');btn.disabled=true;
-  try{const tx=await fn();toast(t('txSent'),'info');await tx.wait();toast(t('txConfirmed'),'success');await refreshData()}
-  catch(e){console.error(e);toast(e.reason||e.shortMessage||e.message||t('txFailed'),'error')}
-  finally{btn.classList.remove('btn-loading');btn.disabled=false;btn.textContent=orig}
+function updateCooldown(nextCI) {
+  const el = document.getElementById('cooldownTimer');
+  if (nextCI === 0) { el.textContent = 'Ready'; return; }
+  const now = Math.floor(Date.now() / 1000);
+  if (now >= nextCI) { el.textContent = 'Ready'; el.style.color = 'var(--green)'; return; }
+  const diff = nextCI - now;
+  const h = Math.floor(diff / 3600);
+  const m = Math.floor((diff % 3600) / 60);
+  const s = diff % 60;
+  el.textContent = `${h}h ${m}m ${s}s`;
+  el.style.color = 'var(--red)';
 }
 
-// ========== SMART APPROVE + ACTION (merged flow) ==========
-async function ensureAllowance(tokenCtx,tokenReadCtx,spender,needed,btnId,label){
-  const allow=await tokenReadCtx.allowance(userAddress,spender);
-  if(allow>=needed)return true;
-  const btn=document.getElementById(btnId);
-  const orig=btn.textContent;
-  btn.textContent=label||t('approving');btn.classList.add('btn-loading');
-  try{const tx=await tokenCtx.approve(spender,MAX_UINT);toast(t('txSent'),'info');await tx.wait();
-    toast(t('txConfirmed'),'success');return true}
-  catch(e){console.error(e);toast(e.reason||e.shortMessage||e.message||t('txFailed'),'error');return false}
-  finally{btn.classList.remove('btn-loading');btn.textContent=orig}
+/* Halving & cooldown timer */
+setInterval(() => {
+  if (window._halvingTarget) {
+    const now = Math.floor(Date.now() / 1000);
+    const diff = window._halvingTarget - now;
+    const el = document.getElementById('halvingCountdown');
+    if (diff <= 0) { el.textContent = 'Halving Now!'; return; }
+    const d = Math.floor(diff / 86400);
+    const h = Math.floor((diff % 86400) / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    const s = diff % 60;
+    el.textContent = `${d}d ${h}h ${m}m ${s}s`;
+
+    const elapsed = now - (window._halvingTarget - window._halvingPeriod);
+    const pct = Math.min(100, (elapsed / window._halvingPeriod) * 100);
+    document.getElementById('halvingProgress').style.width = pct + '%';
+  }
+}, 1000);
+
+/* Auto refresh every 30s */
+setInterval(() => { if (userAddr) refreshData(); }, 30000);
+
+/* ============================================
+   CONTRACT INTERACTIONS
+   ============================================ */
+async function register() {
+  if (!signer) { showToast('Connect wallet first'); return; }
+  const ref = document.getElementById('referrerInput').value.trim();
+  if (!ethers.isAddress(ref)) { showToast('Invalid referrer address'); return; }
+  try {
+    showToast('Sending transaction...');
+    const tx = await miningContract.register(ref);
+    await tx.wait();
+    showToast('Registered successfully!');
+    refreshData();
+  } catch (e) { showToast(e.reason || 'Transaction failed'); }
 }
 
-// ========== USER ACTIONS ==========
-function doRegister(){
-  const ref=document.getElementById('referrerInput').value.trim();
-  if(!ethers.isAddress(ref)){toast('Invalid referrer address','error');return}
-  sendTx('registerBtn',()=>miningContract.register(ref));
-}
-function doCheckIn(){sendTx('checkinBtn',()=>miningContract.checkIn())}
-
-async function doUnlock(){
-  const needed=ethers.parseUnits('10',18);
-  const ok=await ensureAllowance(usdtContract,usdtRead,MINING_ADDRESS,needed,'unlockBtn',t('needApproveFirst'));
-  if(!ok)return;
-  sendTx('unlockBtn',()=>miningContract.payToUnlock());
+async function checkIn() {
+  if (!signer) { showToast('Connect wallet first'); return; }
+  try {
+    showToast('Sending transaction...');
+    const tx = await miningContract.checkIn();
+    await tx.wait();
+    showToast('Check-in successful!');
+    refreshData();
+  } catch (e) { showToast(e.reason || 'Transaction failed'); }
 }
 
-async function doStake(){
-  const v=document.getElementById('stakeInput').value.trim();
-  if(!v||v==='0'){toast('Enter amount','error');return}
-  const amt=ethers.parseUnits(v,18);
-  const ok=await ensureAllowance(tokenContract,tokenRead,MINING_ADDRESS,amt,'stakeBtn');
-  if(!ok)return;
-  sendTx('stakeBtn',()=>miningContract.stake(amt));
-}
-function doUnstake(){
-  const v=document.getElementById('unstakeInput').value.trim();
-  if(!v||v==='0'){toast('Enter amount','error');return}
-  sendTx('unstakeBtn',()=>miningContract.unstake(ethers.parseUnits(v,18)));
-}
-function doClaim(){sendTx('claimBtn',()=>miningContract.claimStakingRewards())}
-
-// ========== OWNER ==========
-function doSetRate(){
-  const v=parseInt(document.getElementById('rateInput').value);
-  if(isNaN(v)||v<0||v>100){toast('Rate 0-100','error');return}
-  sendTx('setRateBtn',()=>miningContract.setDailyInterestRate(v));
-}
-function doToggleApprove(){
-  const tog=document.getElementById('approveToggle');const on=tog.classList.contains('on');
-  sendTx('approveToggle',()=>miningContract.setApproveEnabled(!on));
-}
-function doWithdrawUSDT(){sendTx('withdrawUsdtBtn',()=>miningContract.withdrawUSDT())}
-function doWithdrawBNB(){sendTx('withdrawBnbBtn',()=>miningContract.withdrawNative())}
-
-// ========== TABS ==========
-function switchTab(tab){
-  document.getElementById('tabStake').classList.toggle('active',tab==='stake');
-  document.getElementById('tabUnstake').classList.toggle('active',tab==='unstake');
-  document.getElementById('stakePanel').classList.toggle('hidden',tab!=='stake');
-  document.getElementById('unstakePanel').classList.toggle('hidden',tab!=='unstake');
+async function approveUSDT() {
+  if (!signer) { showToast('Connect wallet first'); return; }
+  try {
+    showToast('Approving USDT...');
+    const tx = await usdtContract.approve(MINING_ADDR, ethers.parseEther('10'));
+    await tx.wait();
+    showToast('USDT approved!');
+  } catch (e) { showToast(e.reason || 'Approval failed'); }
 }
 
-// ========== PCT ==========
-function setPct(mode,pct){
-  const raw=mode==='stake'?userAvailableRaw:userStakedRaw;
-  if(raw<=0n)return;
-  const val=pct===100?fmtBigFull(raw):fmtBigFull((raw*BigInt(pct))/100n);
-  document.getElementById(mode==='stake'?'stakeInput':'unstakeInput').value=val;
+async function payToUnlock() {
+  if (!signer) { showToast('Connect wallet first'); return; }
+  try {
+    showToast('Sending transaction...');
+    const tx = await miningContract.payToUnlock();
+    await tx.wait();
+    showToast('Unlocked successfully!');
+    refreshData();
+  } catch (e) { showToast(e.reason || 'Transaction failed'); }
 }
 
-// ========== INIT ==========
-applyLang();
-// Lock interactive cards until wallet connected
-document.querySelectorAll('.wallet-gate').forEach(el=>el.classList.add('locked'));
-// Load public data immediately
-loadPublicData();
+async function approveOM() {
+  if (!signer) { showToast('Connect wallet first'); return; }
+  const amt = document.getElementById('stakeInput').value;
+  if (!amt || Number(amt) <= 0) { showToast('Enter an amount'); return; }
+  try {
+    showToast('Approving OM...');
+    const tx = await tokenContract.approve(MINING_ADDR, ethers.parseEther(amt));
+    await tx.wait();
+    showToast('OM approved!');
+  } catch (e) { showToast(e.reason || 'Approval failed'); }
+}
+
+async function stakeOM() {
+  if (!signer) { showToast('Connect wallet first'); return; }
+  const amt = document.getElementById('stakeInput').value;
+  if (!amt || Number(amt) <= 0) { showToast('Enter an amount'); return; }
+  try {
+    showToast('Staking...');
+    const tx = await miningContract.stake(ethers.parseEther(amt));
+    await tx.wait();
+    showToast('Staked successfully!');
+    document.getElementById('stakeInput').value = '';
+    refreshData();
+  } catch (e) { showToast(e.reason || 'Staking failed'); }
+}
+
+async function unstakeOM() {
+  if (!signer) { showToast('Connect wallet first'); return; }
+  const amt = document.getElementById('unstakeInput').value;
+  if (!amt || Number(amt) <= 0) { showToast('Enter an amount'); return; }
+  try {
+    showToast('Unstaking...');
+    const tx = await miningContract.unstake(ethers.parseEther(amt));
+    await tx.wait();
+    showToast('Unstaked successfully!');
+    document.getElementById('unstakeInput').value = '';
+    refreshData();
+  } catch (e) { showToast(e.reason || 'Unstaking failed'); }
+}
+
+async function claimRewards() {
+  if (!signer) { showToast('Connect wallet first'); return; }
+  try {
+    showToast('Claiming rewards...');
+    const tx = await miningContract.claimStakingRewards();
+    await tx.wait();
+    showToast('Rewards claimed!');
+    refreshData();
+  } catch (e) { showToast(e.reason || 'Claim failed'); }
+}
+
+async function setMaxStake() {
+  if (!userAddr) return;
+  try {
+    const avail = await tokenContract.availableBalance(userAddr);
+    document.getElementById('stakeInput').value = ethers.formatEther(avail);
+  } catch(e) {}
+}
+async function setMaxUnstake() {
+  if (!userAddr) return;
+  try {
+    const s = await miningContract.stakedAmount(userAddr);
+    document.getElementById('unstakeInput').value = ethers.formatEther(s);
+  } catch(e) {}
+}
+
+/* Listen for account / chain changes */
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', () => location.reload());
+  window.ethereum.on('chainChanged', () => location.reload());
+}
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
 </body>
 </html>
