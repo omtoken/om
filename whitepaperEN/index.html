@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OM Token — Whitepaper</title>
+<style>
+/* --- RESET & BASE --- */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/fontsource/fonts/geist-sans@latest/latin-400-normal.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/fontsource/fonts/geist-sans@latest/latin-600-normal.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'Geist';src:url('https://cdn.jsdelivr.net/fontsource/fonts/geist-sans@latest/latin-700-normal.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'GeistMono';src:url('https://cdn.jsdelivr.net/fontsource/fonts/geist-mono@latest/latin-400-normal.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
+
+:root{
+  --bg-deep:#06060e;
+  --bg-card:rgba(255,255,255,.03);
+  --bg-card-hover:rgba(255,255,255,.06);
+  --border:rgba(255,255,255,.07);
+  --border-bright:rgba(255,255,255,.12);
+  --text-primary:rgba(255,255,255,.92);
+  --text-secondary:rgba(255,255,255,.55);
+  --text-tertiary:rgba(255,255,255,.3);
+  --accent:#7c5cfc;
+  --accent-glow:rgba(124,92,252,.25);
+  --accent-bright:#a78bfa;
+  --warn:#ff4d4d;
+  --warn-glow:rgba(255,77,77,.18);
+  --warn-orange:#ff8c00;
+  --success:#00e5a0;
+  --sidebar-w:260px;
+  --header-h:64px;
+}
+
+html{scroll-behavior:smooth;scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg-deep)}
+body{font-family:'Geist',ui-sans-serif,system-ui,sans-serif;background:var(--bg-deep);color:var(--text-primary);line-height:1.7;font-size:15px;overflow-x:hidden}
+::selection{background:var(--accent);color:#fff}
+
+/* --- NOISE OVERLAY --- */
+body::before{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.035;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* --- SIDEBAR --- */
+.sidebar{position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;background:rgba(6,6,14,.95);border-right:1px solid var(--border);backdrop-filter:blur(20px);z-index:100;display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:none}
+.sidebar::-webkit-scrollbar{display:none}
+.sidebar-logo{padding:28px 24px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.sidebar-logo .om-ring{width:38px;height:38px;border-radius:50%;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:var(--accent);box-shadow:0 0 20px var(--accent-glow)}
+.sidebar-logo span{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-secondary)}
+.sidebar-nav{padding:16px 0;flex:1}
+.sidebar-nav a{display:flex;align-items:center;gap:10px;padding:9px 24px;font-size:13px;color:var(--text-secondary);text-decoration:none;transition:all .2s;border-left:2px solid transparent}
+.sidebar-nav a:hover{color:var(--text-primary);background:var(--bg-card);border-left-color:var(--accent)}
+.sidebar-nav a.active{color:var(--accent-bright);border-left-color:var(--accent);background:var(--bg-card)}
+.sidebar-nav a .num{font-family:'GeistMono',monospace;font-size:11px;color:var(--text-tertiary);min-width:22px}
+.sidebar-nav a.warn-link{color:var(--warn)}
+.sidebar-footer{padding:16px 24px;border-top:1px solid var(--border);font-size:11px;color:var(--text-tertiary);line-height:1.6}
+
+/* --- MAIN --- */
+.main{margin-left:var(--sidebar-w);min-height:100vh}
+
+/* --- HERO --- */
+.hero{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;overflow:hidden}
+.hero-bg{position:absolute;inset:0;background:
+  radial-gradient(ellipse 80% 60% at 50% 40%,rgba(124,92,252,.12) 0%,transparent 70%),
+  radial-gradient(ellipse 60% 50% at 30% 70%,rgba(60,20,180,.08) 0%,transparent 60%),
+  radial-gradient(ellipse 40% 40% at 80% 30%,rgba(0,229,160,.04) 0%,transparent 50%);
+}
+.hero-grid{position:absolute;inset:0;background-size:60px 60px;background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);mask-image:radial-gradient(ellipse 70% 60% at 50% 50%,black 20%,transparent 70%)}
+.hero-content{position:relative;z-index:2;max-width:700px;padding:0 32px}
+.hero-badge{display:inline-block;padding:6px 16px;border:1px solid var(--border-bright);border-radius:100px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-bright);margin-bottom:32px;background:var(--bg-card)}
+.hero-title{font-size:clamp(48px,8vw,96px);font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:16px;background:linear-gradient(135deg,#fff 0%,var(--accent-bright) 50%,var(--success) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:18px;color:var(--text-secondary);max-width:500px;margin:0 auto 40px;line-height:1.6}
+.hero-version{font-family:'GeistMono',monospace;font-size:12px;color:var(--text-tertiary);letter-spacing:.1em}
+.hero-scroll{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);width:24px;height:40px;border:2px solid var(--text-tertiary);border-radius:12px;display:flex;justify-content:center}
+.hero-scroll::after{content:'';width:4px;height:8px;background:var(--text-tertiary);border-radius:2px;margin-top:8px;animation:scrollPulse 1.8s ease-in-out infinite}
+@keyframes scrollPulse{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(8px);opacity:1}}
+
+/* --- SECTIONS --- */
+.section{padding:100px 64px;max-width:900px;margin:0 auto;border-top:1px solid var(--border)}
+.section:first-of-type{border-top:none}
+.section-num{font-family:'GeistMono',monospace;font-size:12px;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px}
+.section h2{font-size:32px;font-weight:700;letter-spacing:-.02em;margin-bottom:24px;line-height:1.2}
+.section h3{font-size:20px;font-weight:600;margin:32px 0 12px;color:var(--text-primary)}
+.section p{color:var(--text-secondary);margin-bottom:16px}
+.section ul,.section ol{color:var(--text-secondary);margin:0 0 16px 20px}
+.section li{margin-bottom:8px}
+.section li strong{color:var(--text-primary)}
+
+/* --- INFO CARDS --- */
+.info-card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:24px 28px;margin:24px 0}
+.info-card.warn{border-color:rgba(255,77,77,.25);background:var(--warn-glow)}
+.info-card.success{border-color:rgba(0,229,160,.2);background:rgba(0,229,160,.06)}
+.info-card-label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.info-card.warn .info-card-label{color:var(--warn)}
+.info-card.success .info-card-label{color:var(--success)}
+.info-card p{color:var(--text-secondary);margin-bottom:0;font-size:14px;line-height:1.7}
+.info-card code{font-family:'GeistMono',monospace;background:rgba(255,255,255,.06);padding:2px 7px;border-radius:4px;font-size:13px;color:var(--accent-bright)}
+
+/* --- TABLES --- */
+table{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px}
+thead th{text-align:left;padding:12px 16px;border-bottom:2px solid var(--border-bright);color:var(--text-secondary);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+tbody td{padding:10px 16px;border-bottom:1px solid var(--border);color:var(--text-secondary)}
+tbody tr:hover{background:var(--bg-card)}
+tbody td:first-child{font-family:'GeistMono',monospace;color:var(--accent-bright)}
+
+/* --- BURN SECTION --- */
+.burn-section{position:relative;overflow:hidden}
+.burn-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 100% 80% at 50% 20%,rgba(255,77,77,.06) 0%,transparent 70%);pointer-events:none}
+.burn-banner{background:linear-gradient(135deg,rgba(255,77,77,.12),rgba(255,140,0,.08));border:1px solid rgba(255,77,77,.3);border-radius:16px;padding:40px;margin:32px 0;position:relative;overflow:hidden}
+.burn-banner::before{content:'';position:absolute;top:-50%;right:-30%;width:300px;height:300px;background:radial-gradient(circle,rgba(255,77,77,.1),transparent 70%);animation:burnPulse 3s ease-in-out infinite}
+@keyframes burnPulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.1)}}
+.burn-banner h3{color:var(--warn);font-size:24px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.burn-banner p{color:rgba(255,255,255,.75);font-size:15px;line-height:1.7}
+.burn-icon{font-size:28px}
+
+/* --- STEP FLOW --- */
+.steps{display:flex;flex-direction:column;gap:20px;margin:24px 0}
+.step{display:flex;gap:20px;align-items:flex-start}
+.step-num{width:36px;height:36px;border-radius:50%;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;font-family:'GeistMono',monospace;font-size:14px;font-weight:700;color:var(--accent);flex-shrink:0}
+.step-content h4{font-size:16px;font-weight:600;margin-bottom:4px;color:var(--text-primary)}
+.step-content p{font-size:14px;color:var(--text-secondary);margin:0}
+
+/* --- FORMULA --- */
+.formula{background:rgba(124,92,252,.06);border:1px solid rgba(124,92,252,.15);border-radius:10px;padding:20px 24px;margin:20px 0;font-family:'GeistMono',monospace;font-size:14px;color:var(--accent-bright);text-align:center;letter-spacing:.02em}
+
+/* --- STAT GRID --- */
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:24px 0}
+.stat-box{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px;text-align:center}
+.stat-box .val{font-size:28px;font-weight:700;color:var(--accent-bright);font-family:'GeistMono',monospace}
+.stat-box .label{font-size:12px;color:var(--text-tertiary);margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
+
+/* --- RESPONSIVE --- */
+@media(max-width:900px){
+  .sidebar{display:none}
+  .main{margin-left:0}
+  .section{padding:60px 24px}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .hero-title{font-size:48px}
+}
+@media(max-width:500px){
+  .stat-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="om-ring">OM</div>
+    <span>Whitepaper</span>
+  </div>
+  <div class="sidebar-nav">
+    <a href="#intro"><span class="num">01</span> Introduction</a>
+    <a href="#register"><span class="num">02</span> Getting Started</a>
+    <a href="#mining"><span class="num">03</span> Daily Mining</a>
+    <a href="#halving"><span class="num">04</span> Halving Mechanism</a>
+    <a href="#burn" class="warn-link"><span class="num">05</span> The Burn Rule</a>
+    <a href="#unlock"><span class="num">06</span> Unlocking Tokens</a>
+    <a href="#release"><span class="num">07</span> Release Schedule</a>
+    <a href="#referral"><span class="num">08</span> Referral System</a>
+    <a href="#staking"><span class="num">09</span> Staking</a>
+    <a href="#tokenomics"><span class="num">10</span> Tokenomics</a>
+    <a href="#risks"><span class="num">11</span> Risk Warnings</a>
+  </div>
+  <div class="sidebar-footer">OM Token &copy; 2025<br>All rights reserved.</div>
+</nav>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- HERO -->
+<section class="hero" id="top">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="hero-badge">Official Whitepaper</div>
+    <h1 class="hero-title">OM</h1>
+    <p class="hero-sub">A deflationary, check-in-to-mine token with halving cycles, linear unlock, and staking rewards. Your complete guide to the OM ecosystem.</p>
+    <div class="hero-version">v1.0 &middot; 2025</div>
+  </div>
+  <div class="hero-scroll"></div>
+</section>
+
+<!-- 01 INTRODUCTION -->
+<section class="section" id="intro">
+  <div class="section-num">01 &mdash; Introduction</div>
+  <h2>What is OM?</h2>
+  <p>OM is an ERC-20 token with a maximum supply of <strong>1,000,000,000 (1 billion)</strong> tokens. There is no pre-mine, no team allocation, and no venture capital reserve — every single OM token enters circulation through user participation.</p>
+  <p>The OM ecosystem is built around a simple daily check-in mechanic. Users register, check in once every 23 hours, and receive OM tokens as mining rewards. However, OM introduces several game-theory layers that make strategic timing critical:</p>
+  <ul>
+    <li><strong>Halving Cycles</strong> — Mining rewards halve every 60 days, creating urgency for early participation.</li>
+    <li><strong>Token Locking</strong> — Mined tokens are initially locked and cannot be transferred until the user pays to unlock.</li>
+    <li><strong>The Burn Rule</strong> — If you don't unlock before a new epoch begins, your locked tokens are permanently destroyed.</li>
+    <li><strong>Staking</strong> — Unlocked users can stake OM to earn additional yield.</li>
+    <li><strong>Referral Rewards</strong> — Invite others and earn 10% bonus on their mining rewards.</li>
+  </ul>
+  <p>This whitepaper is your complete guide to playing the OM game — from registration to advanced staking strategies.</p>
+</section>
+
+<!-- 02 GETTING STARTED -->
+<section class="section" id="register">
+  <div class="section-num">02 &mdash; Getting Started</div>
+  <h2>Registration & Referral Link</h2>
+  <p>Before you can mine OM, you must register on-chain with a valid referrer address. This creates a referral chain that powers the ecosystem's growth incentives.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>Get a Referral Link</h4>
+        <p>Obtain a referrer's wallet address. Your referrer must already be registered in the system. The contract address itself serves as the root referrer.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>Call <code>register()</code></h4>
+        <p>Submit the <code>register(referrerAddress)</code> transaction from your wallet. You cannot refer yourself, and you can only register once.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>Start Mining</h4>
+        <p>Once registered, you can immediately begin daily check-ins to mine OM tokens.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-label">Important</div>
+    <p>Registration is <strong>permanent and one-time only</strong>. Choose your referrer carefully — it cannot be changed later. Your referrer will earn 10% bonus rewards from your mining activity once you unlock your tokens.</p>
+  </div>
+</section>
+
+<!-- 03 DAILY MINING -->
+<section class="section" id="mining">
+  <div class="section-num">03 &mdash; Daily Mining</div>
+  <h2>Check-in to Mine</h2>
+  <p>Mining in OM works through a simple daily check-in mechanism. There are no hardware requirements, no energy costs — just sign a transaction once every 23 hours.</p>
+
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="val">50</div>
+      <div class="label">Initial OM / Check-in</div>
+    </div>
+    <div class="stat-box">
+      <div class="val">23h</div>
+      <div class="label">Cooldown Period</div>
+    </div>
+    <div class="stat-box">
+      <div class="val">60d</div>
+      <div class="label">Halving Cycle</div>
+    </div>
+  </div>
+
+  <h3>How It Works</h3>
+  <ol>
+    <li>Call the <code>checkIn()</code> function from your registered wallet.</li>
+    <li>You receive the current epoch's reward (starts at 50 OM).</li>
+    <li>A 23-hour cooldown begins — you cannot check in again until the cooldown expires.</li>
+    <li>If your account is <strong>locked</strong> (not yet unlocked), the mined tokens are added to your locked balance.</li>
+    <li>If your account is <strong>unlocked</strong>, your referrer receives a 10% bonus reward.</li>
+  </ol>
+
+  <div class="info-card success">
+    <div class="info-card-label">Tip</div>
+    <p>The 23-hour cooldown (not 24 hours) means your check-in window drifts earlier each day. Set a recurring reminder to maximize your mining output.</p>
+  </div>
+</section>
+
+<!-- 04 HALVING -->
+<section class="section" id="halving">
+  <div class="section-num">04 &mdash; Halving Mechanism</div>
+  <h2>60-Day Reward Halving</h2>
+  <p>Like Bitcoin, OM employs a halving mechanism to create deflationary pressure. Every <strong>60 days</strong>, the mining reward is cut in half. This creates distinct "epochs" — and early participants earn significantly more than latecomers.</p>
+
+  <table>
+    <thead>
+      <tr><th>Epoch</th><th>Time Frame</th><th>Reward / Check-in</th><th>Max per Day*</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>0</td><td>Day 1–60</td><td>50 OM</td><td>~50 OM</td></tr>
+      <tr><td>1</td><td>Day 61–120</td><td>25 OM</td><td>~25 OM</td></tr>
+      <tr><td>2</td><td>Day 121–180</td><td>12.5 OM</td><td>~12.5 OM</td></tr>
+      <tr><td>3</td><td>Day 181–240</td><td>6.25 OM</td><td>~6.25 OM</td></tr>
+      <tr><td>4</td><td>Day 241–300</td><td>3.125 OM</td><td>~3.125 OM</td></tr>
+      <tr><td>5</td><td>Day 301–360</td><td>1.5625 OM</td><td>~1.5625 OM</td></tr>
+      <tr><td>6</td><td>Day 361–420</td><td>0.78125 OM</td><td>~0.78125 OM</td></tr>
+      <tr><td>7</td><td>Day 421–480</td><td>0.3906 OM</td><td>~0.3906 OM</td></tr>
+      <tr><td>8</td><td>Day 481–540</td><td>0.1953 OM</td><td>~0.1953 OM</td></tr>
+      <tr><td>9</td><td>Day 541–600</td><td>0.0977 OM</td><td>~0.0977 OM</td></tr>
+      <tr><td>10</td><td>Day 601–660</td><td>0.0488 OM</td><td>~0.0488 OM</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:13px;color:var(--text-tertiary);">* Assumes one check-in per day with 23h cooldown.</p>
+
+  <div class="formula">reward = 50 OM &gt;&gt; epoch<br><span style="font-size:12px;opacity:.6">(integer right-shift = halving)</span></div>
+
+  <p>Mining continues for up to <strong>256 epochs</strong> (~42 years), after which rewards reach zero and mining permanently ends.</p>
+</section>
+
+<!-- 05 BURN RULE -->
+<section class="section burn-section" id="burn">
+  <div class="section-num" style="color:var(--warn)">05 &mdash; Critical Rule</div>
+  <h2 style="color:var(--warn)">The Burn Rule</h2>
+  <p>This is the most important mechanism in the OM ecosystem. Failing to understand this rule can result in the <strong>total loss</strong> of your mined tokens.</p>
+
+  <div class="burn-banner">
+    <h3><span class="burn-icon">&#9888;</span> WARNING: Epoch Transition Burn</h3>
+    <p>If you are still <strong>locked</strong> (have not paid 10 USDT to unlock) when a new epoch begins (every 60 days), <strong>ALL of your locked tokens will be permanently burned</strong> the next time you check in. They are destroyed on-chain and cannot be recovered.</p>
+    <p style="margin-top:12px"><strong>This is irreversible. There is no grace period. There is no recovery mechanism.</strong></p>
+  </div>
+
+  <h3>How It Works Technically</h3>
+  <p>When you call <code>checkIn()</code>, the contract checks:</p>
+  <ol>
+    <li>Have you checked in before? (<code>hasCheckedIn = true</code>)</li>
+    <li>Is the current epoch higher than your last recorded epoch?</li>
+    <li>Is your account still <strong>locked</strong>?</li>
+  </ol>
+  <p>If all three conditions are true, the contract calls <code>burn()</code> on your entire locked balance and resets it to zero — <em>before</em> minting your new check-in reward.</p>
+
+  <div class="info-card warn">
+    <div class="info-card-label">Example Scenario</div>
+    <p>You mine 50 OM per day for 59 days during Epoch 0. You accumulate 2,950 OM in locked balance. On Day 61 (Epoch 1), you check in without unlocking first. <strong>Result: All 2,950 OM are burned.</strong> You then receive 25 OM (Epoch 1 reward) as new locked balance. Your 59 days of mining are erased.</p>
+  </div>
+
+  <h3>How to Protect Yourself</h3>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num" style="border-color:var(--warn);color:var(--warn)">!</div>
+      <div class="step-content">
+        <h4>Unlock Before the Epoch Ends</h4>
+        <p>Pay 10 USDT to call <code>payToUnlock()</code> before the 60-day epoch transition. Once unlocked, your tokens are safe from burning permanently.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num" style="border-color:var(--warn);color:var(--warn)">!</div>
+      <div class="step-content">
+        <h4>Monitor Epoch Timing</h4>
+        <p>Use <code>nextHalvingTime()</code> to check when the next epoch begins. Plan your unlock well in advance.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 06 UNLOCKING -->
+<section class="section" id="unlock">
+  <div class="section-num">06 &mdash; Unlocking</div>
+  <h2>Unlocking Your Tokens</h2>
+  <p>Newly mined OM tokens are <strong>locked by default</strong>. While locked, you cannot transfer, sell, or stake your tokens. To activate your tokens, you must pay a one-time unlock fee.</p>
+
+  <div class="stat-grid" style="grid-template-columns:1fr 1fr">
+    <div class="stat-box">
+      <div class="val">10 USDT</div>
+      <div class="label">One-time Unlock Fee</div>
+    </div>
+    <div class="stat-box">
+      <div class="val">&infin;</div>
+      <div class="label">Permanent Unlock</div>
+    </div>
+  </div>
+
+  <h3>What Unlocking Enables</h3>
+  <ul>
+    <li><strong>Token Transfers</strong> — Send OM to other wallets (subject to linear release schedule).</li>
+    <li><strong>Staking</strong> — Stake your available OM to earn daily interest.</li>
+    <li><strong>Referral Income</strong> — Your referrer begins earning 10% bonus on your future mining rewards.</li>
+    <li><strong>Burn Protection</strong> — Your tokens are permanently safe from the epoch-transition burn.</li>
+  </ul>
+
+  <div class="info-card">
+    <div class="info-card-label">How to Unlock</div>
+    <p>1. Approve the OMMining contract to spend 10 USDT from your wallet.<br>
+       2. Call <code>payToUnlock()</code>.<br>
+       3. Your account status changes to <strong>unlocked</strong> permanently.<br>
+       4. Your locked balance begins its linear release schedule immediately.</p>
+  </div>
+</section>
+
+<!-- 07 RELEASE SCHEDULE -->
+<section class="section" id="release">
+  <div class="section-num">07 &mdash; Token Release</div>
+  <h2>Linear Release Schedule</h2>
+  <p>After unlocking, your locked balance doesn't become fully available instantly. Instead, it follows a <strong>linear release</strong> over 10,000 periods, where each period is 23 hours.</p>
+
+  <div class="formula">
+    available = balance − lockedBalance × (10000 − periodsPassed) ÷ 10000
+  </div>
+
+  <h3>Key Parameters</h3>
+  <table>
+    <thead><tr><th>Parameter</th><th>Value</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>Period Length</td><td>23 hours</td><td>Same as check-in cooldown</td></tr>
+      <tr><td>Total Periods</td><td>10,000</td><td>~958 days (~2.6 years)</td></tr>
+      <tr><td>Release Rate</td><td>0.01% / period</td><td>Linear and constant</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Example</h3>
+  <p>If you have 1,000 OM locked at the time of unlock:</p>
+  <ul>
+    <li>After 1 period (23h): 0.1 OM available, 999.9 OM locked</li>
+    <li>After 100 periods (~96 days): 10 OM available, 990 OM locked</li>
+    <li>After 1,000 periods (~958 days): 100 OM available, 900 OM locked</li>
+    <li>After 5,000 periods (~4.8 years): 500 OM available</li>
+    <li>After 10,000 periods (~9.6 years): all 1,000 OM fully available</li>
+  </ul>
+
+  <div class="info-card success">
+    <div class="info-card-label">Note</div>
+    <p>Tokens mined <strong>after</strong> unlocking are <strong>NOT locked</strong>. They are immediately available. The linear release only applies to tokens that were in your locked balance at the moment you unlocked.</p>
+  </div>
+</section>
+
+<!-- 08 REFERRAL -->
+<section class="section" id="referral">
+  <div class="section-num">08 &mdash; Referral System</div>
+  <h2>Invite & Earn</h2>
+  <p>OM features a single-tier referral system. When someone you referred checks in and mines OM, you receive a <strong>10% bonus</strong> — minted as new tokens, at no cost to the referred user.</p>
+
+  <h3>Referral Rules</h3>
+  <ul>
+    <li>Referral rewards are <strong>only active</strong> when the referred user has <strong>unlocked</strong> their account.</li>
+    <li>If the referred user is still locked, no referral bonus is paid.</li>
+    <li>The bonus is 10% of the referred user's check-in reward (e.g., 5 OM if they earn 50 OM).</li>
+    <li>If the referrer is locked, the bonus is added to the referrer's locked balance.</li>
+    <li>Referral relationships are permanent and cannot be changed.</li>
+    <li>The system is single-tier only — you earn from your direct referrals, not from their referrals.</li>
+  </ul>
+
+  <div class="info-card">
+    <div class="info-card-label">Strategy</div>
+    <p>To maximize referral income, encourage your referrals to unlock their accounts as early as possible. You only earn from their mining activity once they are unlocked.</p>
+  </div>
+</section>
+
+<!-- 09 STAKING -->
+<section class="section" id="staking">
+  <div class="section-num">09 &mdash; Staking</div>
+  <h2>Stake OM, Earn Yield</h2>
+  <p>Unlocked users can stake their available OM tokens to earn daily interest. Staking rewards are minted as new OM tokens, providing a passive income stream on top of daily mining.</p>
+
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="val">1%</div>
+      <div class="label">Max Daily Interest</div>
+    </div>
+    <div class="stat-box">
+      <div class="val">OM</div>
+      <div class="label">Rewards Minted</div>
+    </div>
+    <div class="stat-box">
+      <div class="val">0</div>
+      <div class="label">Lock-up Period</div>
+    </div>
+  </div>
+
+  <h3>How Staking Works</h3>
+  <ol>
+    <li><strong>Prerequisites:</strong> You must be unlocked and have available (non-locked) OM tokens.</li>
+    <li><strong>Approve:</strong> Approve the OMMining contract to transfer your OM tokens.</li>
+    <li><strong>Stake:</strong> Call <code>stake(amount)</code> to deposit tokens into the staking pool.</li>
+    <li><strong>Earn:</strong> Interest accrues continuously, calculated per second.</li>
+    <li><strong>Claim:</strong> Call <code>claimStakingRewards()</code> to mint accrued rewards, or they auto-claim on stake/unstake.</li>
+    <li><strong>Unstake:</strong> Call <code>unstake(amount)</code> to withdraw — no lock-up, no penalties.</li>
+  </ol>
+
+  <div class="formula">
+    reward = stakedAmount × dailyRate × elapsed ÷ (10000 × 86400)
+  </div>
+
+  <div class="info-card">
+    <div class="info-card-label">Note</div>
+    <p>The daily interest rate (default 1%) can be adjusted by the contract owner but will never exceed 1%. The rate is expressed in basis points: <code>100 = 1.00%</code>.</p>
+  </div>
+</section>
+
+<!-- 10 TOKENOMICS -->
+<section class="section" id="tokenomics">
+  <div class="section-num">10 &mdash; Tokenomics</div>
+  <h2>Token Economics</h2>
+
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="val">1B</div>
+      <div class="label">Max Supply</div>
+    </div>
+    <div class="stat-box">
+      <div class="val">0</div>
+      <div class="label">Pre-mine</div>
+    </div>
+    <div class="stat-box">
+      <div class="val">0</div>
+      <div class="label">Team Allocation</div>
+    </div>
+  </div>
+
+  <h3>Supply Distribution</h3>
+  <p>100% of OM tokens are distributed through three mechanisms:</p>
+  <ul>
+    <li><strong>Daily Check-in Mining</strong> — The primary source of new tokens. Subject to halving.</li>
+    <li><strong>Referral Rewards</strong> — 10% bonus on referred users' mining (when unlocked).</li>
+    <li><strong>Staking Rewards</strong> — Minted as yield for staked tokens.</li>
+  </ul>
+
+  <h3>Deflationary Pressures</h3>
+  <ul>
+    <li><strong>Halving</strong> — Rewards decrease exponentially every 60 days.</li>
+    <li><strong>Epoch Burn</strong> — Locked tokens of non-unlocked users are destroyed at epoch transitions.</li>
+    <li><strong>Max Supply Cap</strong> — Total supply can never exceed 1,000,000,000 OM.</li>
+  </ul>
+
+  <div class="info-card">
+    <div class="info-card-label">Fair Launch</div>
+    <p>OM has no initial coin offering (ICO), no investor round, and no pre-allocated tokens. Every token must be earned through participation. The contract owner retains administrative control over the daily staking interest rate and the ability to withdraw accumulated USDT from unlock fees, but cannot mint tokens arbitrarily.</p>
+  </div>
+</section>
+
+<!-- 11 RISKS -->
+<section class="section" id="risks">
+  <div class="section-num">11 &mdash; Disclaimer</div>
+  <h2>Risk Warnings</h2>
+
+  <div class="info-card warn">
+    <div class="info-card-label">Important Legal Disclaimer</div>
+    <p>This document is for informational purposes only and does not constitute financial, investment, or legal advice. Cryptocurrency involves significant risk, including the potential loss of all invested capital.</p>
+  </div>
+
+  <h3>Key Risks</h3>
+  <ul>
+    <li><strong>Smart Contract Risk</strong> — While OM contracts are designed with standard security practices, no smart contract is guaranteed to be free of vulnerabilities.</li>
+    <li><strong>Token Burn Risk</strong> — Failure to unlock before an epoch transition will result in permanent, irreversible token loss.</li>
+    <li><strong>Market Risk</strong> — The value of OM tokens may fluctuate significantly and may drop to zero.</li>
+    <li><strong>Unlock Fee</strong> — The 10 USDT unlock fee is non-refundable regardless of token value.</li>
+    <li><strong>Owner Privileges</strong> — The contract owner can adjust staking interest rates, withdraw accumulated USDT, and toggle token approval settings.</li>
+    <li><strong>Linear Release</strong> — Unlocked tokens are released over ~2.6 years, during which market conditions may change dramatically.</li>
+    <li><strong>Regulatory Risk</strong> — Cryptocurrency regulations vary by jurisdiction and are subject to change.</li>
+    <li><strong>No Guarantee of Returns</strong> — Past participation does not guarantee future rewards or token value.</li>
+  </ul>
+
+  <p style="margin-top:32px;font-size:13px;color:var(--text-tertiary)">By participating in the OM ecosystem, you acknowledge that you have read and understood these risks and accept full responsibility for your decisions. Always do your own research (DYOR).</p>
+</section>
+
+</main>
+
+<!-- SIDEBAR ACTIVE STATE -->
+<script>
+(function(){
+  const links=document.querySelectorAll('.sidebar-nav a');
+  const sections=[];
+  links.forEach(a=>{const id=a.getAttribute('href')?.slice(1);if(id){const el=document.getElementById(id);if(el)sections.push({el,a})}});
+  function update(){
+    let current=sections[0];
+    for(const s of sections){if(s.el.getBoundingClientRect().top<=120)current=s}
+    links.forEach(a=>a.classList.remove('active'));
+    if(current)current.a.classList.add('active');
+  }
+  window.addEventListener('scroll',update,{passive:true});
+  update();
+})();
+</script>
+</body>
+</html>
