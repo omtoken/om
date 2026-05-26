@@ -1,12 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>OM DApp - Mining & Staking</title>
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/om.png">
 <style>
-/* === RESET & BASE === */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0a0e17;--bg2:#111827;--bg3:#1a2235;--bg4:#232d42;
@@ -19,49 +18,47 @@ html{font-size:16px;-webkit-font-smoothing:antialiased}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 a{color:var(--accent);text-decoration:none}
 button{cursor:pointer;border:none;font-family:inherit}
-
-/* === LAYOUT === */
 .app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
 .tab-content{flex:1;overflow-y:auto;padding:16px 16px 100px}
 
-/* === HEADER === */
-.header{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border);background:var(--bg2)}
-.header-logo{display:flex;align-items:center;gap:10px}
-.header-logo img{width:36px;height:36px;border-radius:50%}
-.header-logo span{font-size:1.25rem;font-weight:800;letter-spacing:.5px}
-.header-chain{font-size:.75rem;color:var(--accent);background:var(--accent-glow);padding:4px 10px;border-radius:20px;font-weight:700}
-.wallet-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-weight:700;padding:10px 18px;border-radius:var(--radius-sm);font-size:.875rem;transition:transform .15s}
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg2);gap:8px}
+.header-logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.header-logo img{width:34px;height:34px;border-radius:50%}
+.header-logo span{font-size:1.2rem;font-weight:800;letter-spacing:.5px}
+.header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.lang-btn{background:var(--bg3);color:var(--text2);font-weight:700;padding:6px 12px;border-radius:8px;font-size:.75rem;border:1px solid var(--border);transition:all .15s}
+.lang-btn:hover{color:var(--accent);border-color:var(--accent)}
+.wallet-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-weight:700;padding:9px 14px;border-radius:var(--radius-sm);font-size:.8rem;transition:transform .15s;white-space:nowrap}
 .wallet-btn:active{transform:scale(.96)}
 
-/* === BOTTOM TAB BAR === */
+/* TAB BAR */
 .tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;background:var(--bg2);border-top:1px solid var(--border);z-index:100;padding:6px 0 env(safe-area-inset-bottom,8px)}
-.tab-bar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;background:none;color:var(--text3);font-size:.7rem;font-weight:600;transition:color .2s}
+.tab-bar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;background:none;color:var(--text3);font-size:.72rem;font-weight:600;transition:color .2s}
 .tab-bar button.active{color:var(--accent)}
 .tab-bar button svg{width:24px;height:24px}
 
-/* === CARDS === */
+/* CARDS */
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
 .card-title{font-size:1.1rem;font-weight:800;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+.card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
 
-/* === STAT ROWS === */
+/* STATS */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
 .stat-box{background:var(--bg3);border-radius:var(--radius-sm);padding:14px}
 .stat-label{font-size:.75rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .stat-value{font-size:1.25rem;font-weight:800;color:var(--text)}
 .stat-value.accent{color:var(--accent)}
 .stat-value.green{color:var(--green)}
-.stat-full{grid-column:1/-1}
 
-/* === BUTTONS === */
+/* BUTTONS */
 .btn-primary{width:100%;padding:16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-size:1rem;font-weight:800;letter-spacing:.5px;transition:opacity .15s,transform .15s}
 .btn-primary:active{transform:scale(.98);opacity:.9}
 .btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
 .btn-secondary{width:100%;padding:14px;border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:.95rem;font-weight:700;border:1px solid var(--border);transition:all .15s}
 .btn-secondary:active{background:var(--bg4)}
-.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 
-/* === INPUT === */
+/* INPUT */
 .input-group{margin-bottom:14px}
 .input-group label{display:block;font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:6px}
 .input-group input{width:100%;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:1rem;font-weight:600;outline:none;transition:border-color .2s}
@@ -70,7 +67,7 @@ button{cursor:pointer;border:none;font-family:inherit}
 .input-max{position:relative}
 .input-max button{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--accent-glow);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:.75rem;font-weight:700}
 
-/* === INFO LIST === */
+/* INFO LIST */
 .info-list{list-style:none}
 .info-list li{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:.9rem}
 .info-list li:last-child{border-bottom:none}
@@ -78,40 +75,32 @@ button{cursor:pointer;border:none;font-family:inherit}
 .info-list .value{font-weight:700;text-align:right;word-break:break-all;max-width:55%}
 .info-list .value.mono{font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:.78rem}
 
-/* === STATUS BADGE === */
+/* BADGE */
 .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
 .badge-green{background:rgba(16,185,129,.12);color:var(--green)}
 .badge-yellow{background:var(--accent-glow);color:var(--accent)}
 .badge-red{background:rgba(239,68,68,.12);color:var(--red)}
 
-/* === PROGRESS BAR === */
+/* PROGRESS */
 .progress-bar{width:100%;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;margin:8px 0}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:4px;transition:width .5s}
-
-/* === COUNTDOWN === */
 .countdown{font-size:1.5rem;font-weight:800;color:var(--accent);text-align:center;padding:10px 0;font-variant-numeric:tabular-nums}
-
-/* === DIVIDER === */
 .divider{height:1px;background:var(--border);margin:16px 0}
+.panel{display:none}.panel.active{display:block}
 
-/* === TAB PANELS === */
-.panel{display:none}
-.panel.active{display:block}
+/* REGISTERED BANNER */
+.registered-banner{display:flex;align-items:center;gap:10px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.2);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px}
+.registered-banner svg{width:22px;height:22px;color:var(--green);flex-shrink:0}
+.registered-banner .rb-text{font-size:.85rem;font-weight:600;color:var(--green)}
 
-/* === TOAST === */
+/* TOAST */
 .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:12px 24px;border-radius:var(--radius-sm);font-weight:700;font-size:.9rem;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
 .toast.show{opacity:1}
 
-/* === DESKTOP === */
 @media(min-width:600px){
   .app{border-left:1px solid var(--border);border-right:1px solid var(--border)}
-  .tab-bar{border-radius:0}
   html{background:#05080f}
 }
-
-/* === ANIMATIONS === */
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.pulse{animation:pulse 2s infinite}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .fade-in{animation:fadeIn .35s ease}
 </style>
@@ -124,503 +113,443 @@ button{cursor:pointer;border:none;font-family:inherit}
       <img src="https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/om.png" alt="OM">
       <span>OM</span>
     </div>
-    <span class="header-chain">BSC Mainnet</span>
-    <button class="wallet-btn" id="connectBtn" onclick="connectWallet()">Connect</button>
+    <div class="header-right">
+      <button class="lang-btn" id="langBtn" onclick="toggleLang()">CN</button>
+      <button class="wallet-btn" id="connectBtn" onclick="connectWallet()" data-i18n="connect">Connect</button>
+    </div>
   </div>
 
-  <!-- TAB CONTENT -->
   <div class="tab-content">
-    <!-- ====== MINING PANEL ====== -->
+    <!-- ====== MINING ====== -->
     <div class="panel active" id="panel-mining">
-      <!-- Mining Status Card -->
       <div class="card fade-in">
-        <div class="card-title"><span class="dot"></span>Mining Overview</div>
+        <div class="card-title"><span class="dot"></span><span data-i18n="miningOverview">Mining Overview</span></div>
         <div class="stat-grid">
           <div class="stat-box">
-            <div class="stat-label">Current Reward</div>
+            <div class="stat-label" data-i18n="currentReward">Current Reward</div>
             <div class="stat-value accent" id="currentReward">50 OM</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Epoch</div>
+            <div class="stat-label" data-i18n="epoch">Epoch</div>
             <div class="stat-value" id="currentEpoch">0</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Cooldown</div>
+            <div class="stat-label" data-i18n="cooldown">Cooldown</div>
             <div class="stat-value" id="cooldownTimer">Ready</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Status</div>
-            <div class="stat-value"><span class="badge badge-yellow" id="miningStatus">Not Connected</span></div>
+            <div class="stat-label" data-i18n="status">Status</div>
+            <div class="stat-value"><span class="badge badge-yellow" id="miningStatus" data-i18n="notConnected">Not Connected</span></div>
           </div>
         </div>
-        <button class="btn-primary" id="checkInBtn" onclick="checkIn()" disabled>Sign In to Mine</button>
+        <button class="btn-primary" id="checkInBtn" onclick="checkIn()" disabled data-i18n="signInMine">Sign In to Mine</button>
       </div>
 
-      <!-- Register Card -->
-      <div class="card fade-in">
-        <div class="card-title"><span class="dot"></span>Register</div>
+      <!-- Registered Banner (shown when registered) -->
+      <div class="registered-banner" id="registeredBanner" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span class="rb-text" data-i18n="alreadyRegistered">Already Registered</span>
+      </div>
+
+      <!-- Register Card (hidden when registered) -->
+      <div class="card fade-in" id="registerCard">
+        <div class="card-title"><span class="dot"></span><span data-i18n="register">Register</span></div>
         <div class="input-group">
-          <label>Referrer Address</label>
+          <label data-i18n="referrerAddr">Referrer Address</label>
           <input type="text" id="referrerInput" placeholder="0x...">
         </div>
-        <button class="btn-secondary" onclick="register()">Register with Referrer</button>
+        <button class="btn-primary" onclick="register()" data-i18n="registerBtn">Register with Referrer</button>
       </div>
 
       <!-- Unlock Card -->
-      <div class="card fade-in">
-        <div class="card-title"><span class="dot"></span>Unlock Transfer</div>
-        <p style="font-size:.85rem;color:var(--text2);margin-bottom:14px;line-height:1.5;font-weight:500">
-          Pay <strong style="color:var(--accent)">10 USDT</strong> to unlock token transfers and enable staking. USDT approval required.
+      <div class="card fade-in" id="unlockCard">
+        <div class="card-title"><span class="dot"></span><span data-i18n="unlockTransfer">Unlock Transfer</span></div>
+        <p style="font-size:.85rem;color:var(--text2);margin-bottom:14px;line-height:1.5;font-weight:500" data-i18n="unlockDesc">
+          Pay <strong style="color:var(--accent)">10 USDT</strong> to unlock token transfers and enable staking. Approve will be handled automatically.
         </p>
-        <div class="btn-row">
-          <button class="btn-secondary" onclick="approveUSDT()">Approve USDT</button>
-          <button class="btn-primary" onclick="payToUnlock()">Unlock</button>
-        </div>
+        <button class="btn-primary" onclick="doUnlock()" data-i18n="unlockBtn">Approve & Unlock (10 USDT)</button>
       </div>
     </div>
 
-    <!-- ====== STAKING PANEL ====== -->
+    <!-- ====== STAKING ====== -->
     <div class="panel" id="panel-staking">
-      <!-- Staking Overview -->
       <div class="card fade-in">
-        <div class="card-title"><span class="dot"></span>Staking Overview</div>
+        <div class="card-title"><span class="dot"></span><span data-i18n="stakingOverview">Staking Overview</span></div>
         <div class="stat-grid">
           <div class="stat-box">
-            <div class="stat-label">Your Staked</div>
+            <div class="stat-label" data-i18n="yourStaked">Your Staked</div>
             <div class="stat-value accent" id="stakedAmount">0 OM</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Pending Rewards</div>
+            <div class="stat-label" data-i18n="pendingRewards">Pending Rewards</div>
             <div class="stat-value green" id="pendingRewards">0 OM</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Daily Rate</div>
+            <div class="stat-label" data-i18n="dailyRate">Daily Rate</div>
             <div class="stat-value" id="dailyRate">1%</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Total Staked</div>
+            <div class="stat-label" data-i18n="totalStaked">Total Staked</div>
             <div class="stat-value" id="totalStaked">0 OM</div>
           </div>
         </div>
-        <button class="btn-primary" onclick="claimRewards()" style="margin-bottom:10px">Claim Rewards</button>
+        <button class="btn-primary" onclick="claimRewards()" data-i18n="claimRewards">Claim Rewards</button>
       </div>
 
-      <!-- Stake / Unstake -->
       <div class="card fade-in">
-        <div class="card-title"><span class="dot"></span>Stake OM</div>
+        <div class="card-title"><span class="dot"></span><span data-i18n="stakeOM">Stake OM</span></div>
         <div class="input-group">
-          <label>Amount to Stake</label>
+          <label data-i18n="amountStake">Amount to Stake</label>
           <div class="input-max">
             <input type="number" id="stakeInput" placeholder="0.00">
             <button onclick="setMaxStake()">MAX</button>
           </div>
         </div>
-        <div class="btn-row" style="margin-bottom:14px">
-          <button class="btn-secondary" onclick="approveOM()">Approve OM</button>
-          <button class="btn-primary" onclick="stakeOM()">Stake</button>
-        </div>
+        <button class="btn-primary" onclick="doStake()" data-i18n="approveStake">Approve & Stake</button>
         <div class="divider"></div>
-        <div class="card-title" style="margin-top:4px"><span class="dot"></span>Unstake OM</div>
+        <div class="card-title" style="margin-top:4px"><span class="dot"></span><span data-i18n="unstakeOM">Unstake OM</span></div>
         <div class="input-group">
-          <label>Amount to Unstake</label>
+          <label data-i18n="amountUnstake">Amount to Unstake</label>
           <div class="input-max">
             <input type="number" id="unstakeInput" placeholder="0.00">
             <button onclick="setMaxUnstake()">MAX</button>
           </div>
         </div>
-        <button class="btn-primary" onclick="unstakeOM()">Unstake</button>
+        <button class="btn-primary" onclick="unstakeOM()" data-i18n="unstakeBtn">Unstake</button>
       </div>
     </div>
 
-    <!-- ====== ACCOUNT PANEL ====== -->
+    <!-- ====== ACCOUNT ====== -->
     <div class="panel" id="panel-account">
-      <!-- Wallet Info -->
       <div class="card fade-in">
-        <div class="card-title"><span class="dot"></span>Wallet</div>
+        <div class="card-title"><span class="dot"></span><span data-i18n="wallet">Wallet</span></div>
         <ul class="info-list">
-          <li><span class="label">Address</span><span class="value mono" id="walletAddr">Not Connected</span></li>
-          <li><span class="label">OM Balance</span><span class="value" id="omBalance">--</span></li>
-          <li><span class="label">Available</span><span class="value" id="availBalance">--</span></li>
-          <li><span class="label">Locked</span><span class="value" id="lockedBalance">--</span></li>
-          <li><span class="label">Unlock Status</span><span class="value" id="unlockStatus">--</span></li>
-          <li><span class="label">Referrer</span><span class="value mono" id="referrerAddr">--</span></li>
+          <li><span class="label" data-i18n="address">Address</span><span class="value mono" id="walletAddr" data-i18n="notConnected">Not Connected</span></li>
+          <li><span class="label" data-i18n="omBal">OM Balance</span><span class="value" id="omBalance">--</span></li>
+          <li><span class="label" data-i18n="available">Available</span><span class="value" id="availBalance">--</span></li>
+          <li><span class="label" data-i18n="locked">Locked</span><span class="value" id="lockedBalance">--</span></li>
+          <li><span class="label" data-i18n="unlockStat">Unlock Status</span><span class="value" id="unlockStatus">--</span></li>
+          <li><span class="label" data-i18n="referrer">Referrer</span><span class="value mono" id="referrerAddrDisplay">--</span></li>
         </ul>
       </div>
 
-      <!-- Epoch & Halving Info -->
       <div class="card fade-in">
-        <div class="card-title"><span class="dot"></span>Epoch & Rewards</div>
+        <div class="card-title"><span class="dot"></span><span data-i18n="epochRewards">Epoch & Rewards</span></div>
         <div class="stat-grid">
           <div class="stat-box">
-            <div class="stat-label">Current Epoch</div>
+            <div class="stat-label" data-i18n="currentEpoch">Current Epoch</div>
             <div class="stat-value accent" id="acctEpoch">0</div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">Current Reward</div>
+            <div class="stat-label" data-i18n="currentReward">Current Reward</div>
             <div class="stat-value" id="acctReward">50 OM</div>
           </div>
         </div>
         <div class="stat-box" style="background:var(--bg3);border-radius:var(--radius-sm);padding:14px">
-          <div class="stat-label">Next Halving Countdown</div>
+          <div class="stat-label" data-i18n="nextHalving">Next Halving Countdown</div>
           <div class="countdown" id="halvingCountdown">--:--:--</div>
           <div class="progress-bar"><div class="progress-fill" id="halvingProgress" style="width:0%"></div></div>
         </div>
       </div>
 
-      <!-- Contract Info -->
       <div class="card fade-in">
-        <div class="card-title"><span class="dot"></span>Contract Info</div>
+        <div class="card-title"><span class="dot"></span><span data-i18n="contractInfo">Contract Info</span></div>
         <ul class="info-list">
           <li><span class="label">OMToken</span><span class="value mono"><a href="https://bscscan.com/address/0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17" target="_blank">0xe960...2a17</a></span></li>
           <li><span class="label">OMMining</span><span class="value mono"><a href="https://bscscan.com/address/0xB7583313969a033Afe6cF6654cd9a861350fca83" target="_blank">0xB758...ca83</a></span></li>
-          <li><span class="label">Network</span><span class="value">BSC Mainnet</span></li>
-          <li><span class="label">Max Supply</span><span class="value">1,000,000,000 OM</span></li>
-          <li><span class="label">Halving Cycle</span><span class="value">60 Days</span></li>
-          <li><span class="label">Unlock Fee</span><span class="value">10 USDT</span></li>
+          <li><span class="label" data-i18n="network">Network</span><span class="value">BSC Mainnet</span></li>
+          <li><span class="label" data-i18n="maxSupply">Max Supply</span><span class="value">1,000,000,000 OM</span></li>
+          <li><span class="label" data-i18n="halvingCycle">Halving Cycle</span><span class="value" data-i18n="sixtyDays">60 Days</span></li>
+          <li><span class="label" data-i18n="unlockFee">Unlock Fee</span><span class="value">10 USDT</span></li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- BOTTOM TAB BAR -->
+  <!-- TAB BAR -->
   <div class="tab-bar">
-    <button class="active" onclick="switchTab('mining',this)">
+    <button class="active" onclick="switchTab('mining',this)" id="tabMining">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-      Mining
+      <span data-i18n="tabMining">Mining</span>
     </button>
-    <button onclick="switchTab('staking',this)">
+    <button onclick="switchTab('staking',this)" id="tabStaking">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 100 4h4a2 2 0 110 4H8"/><path d="M12 18V6"/></svg>
-      Staking
+      <span data-i18n="tabStaking">Staking</span>
     </button>
-    <button onclick="switchTab('account',this)">
+    <button onclick="switchTab('account',this)" id="tabAccount">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      Account
+      <span data-i18n="tabAccount">Account</span>
     </button>
   </div>
 </div>
 
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
 
 <script>
-/* ============================================
-   CONSTANTS & ABI
-   ============================================ */
-const MINING_ADDR = '0xB7583313969a033Afe6cF6654cd9a861350fca83';
-const TOKEN_ADDR  = '0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17';
-const USDT_ADDR   = '0x55d398326f99059fF775485246999027B3197955';
-const BSC_CHAIN   = '0x38';
+/* === I18N === */
+const LANG = {
+  en: {
+    connect:'Connect', miningOverview:'Mining Overview', currentReward:'Current Reward',
+    epoch:'Epoch', cooldown:'Cooldown', status:'Status', notConnected:'Not Connected',
+    connected:'Connected', signInMine:'Sign In to Mine', register:'Register',
+    referrerAddr:'Referrer Address', registerBtn:'Register with Referrer',
+    alreadyRegistered:'Already Registered', unlockTransfer:'Unlock Transfer',
+    unlockDesc:'Pay <strong style="color:var(--accent)">10 USDT</strong> to unlock token transfers and enable staking. Approve will be handled automatically.',
+    unlockBtn:'Approve & Unlock (10 USDT)', unlocked:'Unlocked',
+    stakingOverview:'Staking Overview', yourStaked:'Your Staked',
+    pendingRewards:'Pending Rewards', dailyRate:'Daily Rate', totalStaked:'Total Staked',
+    claimRewards:'Claim Rewards', stakeOM:'Stake OM', amountStake:'Amount to Stake',
+    approveStake:'Approve & Stake', unstakeOM:'Unstake OM', amountUnstake:'Amount to Unstake',
+    unstakeBtn:'Unstake', wallet:'Wallet', address:'Address', omBal:'OM Balance',
+    available:'Available', locked:'Locked', unlockStat:'Unlock Status', referrer:'Referrer',
+    epochRewards:'Epoch & Rewards', currentEpoch:'Current Epoch', nextHalving:'Next Halving Countdown',
+    contractInfo:'Contract Info', network:'Network', maxSupply:'Max Supply',
+    halvingCycle:'Halving Cycle', sixtyDays:'60 Days', unlockFee:'Unlock Fee',
+    tabMining:'Mining', tabStaking:'Staking', tabAccount:'Account',
+    ready:'Ready', notRegistered:'Not Registered',
+    toastConnect:'Wallet Connected', toastNoMM:'Please install MetaMask',
+    toastSwitchBSC:'Please switch to BSC Mainnet', toastConnFail:'Connection failed',
+    toastSending:'Sending transaction...', toastRegOk:'Registered!',
+    toastInvalidRef:'Invalid referrer address', toastCheckOk:'Check-in successful!',
+    toastApproving:'Approving...', toastApproved:'Approved!', toastUnlockOk:'Unlocked!',
+    toastStaking:'Staking...', toastStakeOk:'Staked!', toastUnstaking:'Unstaking...',
+    toastUnstakeOk:'Unstaked!', toastClaiming:'Claiming rewards...', toastClaimOk:'Rewards claimed!',
+    toastEnterAmt:'Enter an amount', toastConnFirst:'Connect wallet first', toastTxFail:'Transaction failed',
+    toastAlreadyUnlocked:'Already unlocked', halvingNow:'Halving Now!'
+  },
+  zh: {
+    connect:'连接钱包', miningOverview:'挖矿总览', currentReward:'当前奖励',
+    epoch:'纪元', cooldown:'冷却时间', status:'状态', notConnected:'未连接',
+    connected:'已连接', signInMine:'签到挖矿', register:'注册',
+    referrerAddr:'推荐人地址', registerBtn:'通过推荐人注册',
+    alreadyRegistered:'已注册（已被邀请）', unlockTransfer:'解锁转账',
+    unlockDesc:'支付 <strong style="color:var(--accent)">10 USDT</strong> 解锁代币转账并开启质押功能，授权将自动处理。',
+    unlockBtn:'授权并解锁（10 USDT）', unlocked:'已解锁',
+    stakingOverview:'质押总览', yourStaked:'我的质押',
+    pendingRewards:'待领取收益', dailyRate:'日利率', totalStaked:'总质押量',
+    claimRewards:'领取收益', stakeOM:'质押 OM', amountStake:'质押数量',
+    approveStake:'授权并质押', unstakeOM:'解除质押', amountUnstake:'解押数量',
+    unstakeBtn:'解除质押', wallet:'钱包', address:'地址', omBal:'OM 余额',
+    available:'可用余额', locked:'锁定余额', unlockStat:'解锁状态', referrer:'推荐人',
+    epochRewards:'纪元与奖励', currentEpoch:'当前纪元', nextHalving:'下次减半倒计时',
+    contractInfo:'合约信息', network:'网络', maxSupply:'最大供应量',
+    halvingCycle:'减半周期', sixtyDays:'60 天', unlockFee:'解锁费用',
+    tabMining:'挖矿', tabStaking:'质押', tabAccount:'账户',
+    ready:'就绪', notRegistered:'未注册',
+    toastConnect:'钱包已连接', toastNoMM:'请安装 MetaMask',
+    toastSwitchBSC:'请切换到 BSC 主网', toastConnFail:'连接失败',
+    toastSending:'发送交易中...', toastRegOk:'注册成功！',
+    toastInvalidRef:'推荐人地址无效', toastCheckOk:'签到成功！',
+    toastApproving:'授权中...', toastApproved:'授权成功！', toastUnlockOk:'解锁成功！',
+    toastStaking:'质押中...', toastStakeOk:'质押成功！', toastUnstaking:'解押中...',
+    toastUnstakeOk:'解押成功！', toastClaiming:'领取收益中...', toastClaimOk:'收益已领取！',
+    toastEnterAmt:'请输入数量', toastConnFirst:'请先连接钱包', toastTxFail:'交易失败',
+    toastAlreadyUnlocked:'已经解锁', halvingNow:'正在减半！'
+  }
+};
+let curLang = 'en';
 
-const ERC20_ABI = [
-  'function balanceOf(address) view returns (uint256)',
-  'function approve(address,uint256) returns (bool)',
-  'function allowance(address,address) view returns (uint256)'
-];
-const TOKEN_ABI = [
-  'function balanceOf(address) view returns (uint256)',
-  'function isUnlocked(address) view returns (bool)',
-  'function lockedBalance(address) view returns (uint256)',
-  'function currentLockedAmount(address) view returns (uint256)',
-  'function availableBalance(address) view returns (uint256)',
-  'function approve(address,uint256) returns (bool)'
-];
-const MINING_ABI = [
-  'function currentEpoch() view returns (uint256)',
-  'function currentReward() view returns (uint256)',
-  'function nextCheckInTime(address) view returns (uint256)',
-  'function nextHalvingTime() view returns (uint256)',
-  'function pendingStakingRewards(address) view returns (uint256)',
-  'function referrer(address) view returns (address)',
-  'function lastCheckIn(address) view returns (uint256)',
-  'function stakedAmount(address) view returns (uint256)',
-  'function totalStaked() view returns (uint256)',
-  'function dailyInterestRate() view returns (uint256)',
-  'function startTime() view returns (uint256)',
-  'function register(address)',
-  'function checkIn()',
-  'function payToUnlock()',
-  'function stake(uint256)',
-  'function unstake(uint256)',
-  'function claimStakingRewards()'
-];
+function t(key) { return LANG[curLang][key] || LANG.en[key] || key; }
 
-let provider, signer, userAddr;
-let miningContract, tokenContract, usdtContract;
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    if (LANG[curLang][k]) {
+      if (k === 'unlockDesc') el.innerHTML = LANG[curLang][k];
+      else el.textContent = LANG[curLang][k];
+    }
+  });
+  document.getElementById('langBtn').textContent = curLang === 'en' ? 'CN' : 'EN';
+  // Re-set dynamic values
+  if (userAddr) {
+    document.getElementById('connectBtn').textContent = userAddr.slice(0,6)+'...'+userAddr.slice(-4);
+    document.getElementById('miningStatus').textContent = t('connected');
+  }
+}
 
-/* ============================================
-   TAB SWITCHING
-   ============================================ */
-function switchTab(name, btn) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
-  document.getElementById('panel-' + name).classList.add('active');
+function toggleLang() {
+  curLang = curLang === 'en' ? 'zh' : 'en';
+  applyLang();
+}
+
+/* === CONTRACTS === */
+const MINING_ADDR='0xB7583313969a033Afe6cF6654cd9a861350fca83';
+const TOKEN_ADDR='0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17';
+const USDT_ADDR='0x55d398326f99059fF775485246999027B3197955';
+const BSC_CHAIN='0x38';
+const MAX_UINT = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
+
+const ERC20_ABI=['function balanceOf(address) view returns (uint256)','function approve(address,uint256) returns (bool)','function allowance(address,address) view returns (uint256)'];
+const TOKEN_ABI=['function balanceOf(address) view returns (uint256)','function isUnlocked(address) view returns (bool)','function lockedBalance(address) view returns (uint256)','function currentLockedAmount(address) view returns (uint256)','function availableBalance(address) view returns (uint256)','function approve(address,uint256) returns (bool)','function allowance(address,address) view returns (uint256)'];
+const MINING_ABI=['function currentEpoch() view returns (uint256)','function currentReward() view returns (uint256)','function nextCheckInTime(address) view returns (uint256)','function nextHalvingTime() view returns (uint256)','function pendingStakingRewards(address) view returns (uint256)','function referrer(address) view returns (address)','function lastCheckIn(address) view returns (uint256)','function stakedAmount(address) view returns (uint256)','function totalStaked() view returns (uint256)','function dailyInterestRate() view returns (uint256)','function startTime() view returns (uint256)','function register(address)','function checkIn()','function payToUnlock()','function stake(uint256)','function unstake(uint256)','function claimStakingRewards()'];
+
+let provider,signer,userAddr;
+let miningContract,tokenContract,usdtContract;
+
+/* === TABS === */
+function switchTab(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-bar button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
   btn.classList.add('active');
 }
 
-/* ============================================
-   TOAST
-   ============================================ */
-function showToast(msg, dur) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), dur || 3000);
-}
+/* === TOAST === */
+function showToast(msg,dur){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur||3000);}
 
-/* ============================================
-   WALLET CONNECTION
-   ============================================ */
-async function connectWallet() {
-  if (typeof window.ethereum === 'undefined') {
-    showToast('Please install MetaMask');
-    return;
-  }
-  try {
-    await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-    if (chainId !== BSC_CHAIN) {
-      try {
-        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BSC_CHAIN }] });
-      } catch (e) {
-        showToast('Please switch to BSC Mainnet');
-        return;
-      }
-    }
-    provider = new ethers.BrowserProvider(window.ethereum);
-    signer = await provider.getSigner();
-    userAddr = await signer.getAddress();
-
-    miningContract = new ethers.Contract(MINING_ADDR, MINING_ABI, signer);
-    tokenContract  = new ethers.Contract(TOKEN_ADDR, TOKEN_ABI, signer);
-    usdtContract   = new ethers.Contract(USDT_ADDR, ERC20_ABI, signer);
-
-    document.getElementById('connectBtn').textContent = userAddr.slice(0,6) + '...' + userAddr.slice(-4);
-    document.getElementById('miningStatus').textContent = 'Connected';
-    document.getElementById('miningStatus').className = 'badge badge-green';
-    document.getElementById('checkInBtn').disabled = false;
-
-    showToast('Wallet Connected');
+/* === WALLET === */
+async function connectWallet(){
+  if(!window.ethereum){showToast(t('toastNoMM'));return;}
+  try{
+    await window.ethereum.request({method:'eth_requestAccounts'});
+    const cid=await window.ethereum.request({method:'eth_chainId'});
+    if(cid!==BSC_CHAIN){try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:BSC_CHAIN}]});}catch(e){showToast(t('toastSwitchBSC'));return;}}
+    provider=new ethers.BrowserProvider(window.ethereum);
+    signer=await provider.getSigner();
+    userAddr=await signer.getAddress();
+    miningContract=new ethers.Contract(MINING_ADDR,MINING_ABI,signer);
+    tokenContract=new ethers.Contract(TOKEN_ADDR,TOKEN_ABI,signer);
+    usdtContract=new ethers.Contract(USDT_ADDR,ERC20_ABI,signer);
+    document.getElementById('connectBtn').textContent=userAddr.slice(0,6)+'...'+userAddr.slice(-4);
+    document.getElementById('miningStatus').textContent=t('connected');
+    document.getElementById('miningStatus').className='badge badge-green';
+    document.getElementById('checkInBtn').disabled=false;
+    showToast(t('toastConnect'));
     refreshData();
-  } catch (e) {
-    showToast('Connection failed');
-    console.error(e);
-  }
+  }catch(e){showToast(t('toastConnFail'));console.error(e);}
 }
 
-/* ============================================
-   DATA REFRESH
-   ============================================ */
-async function refreshData() {
-  if (!userAddr) return;
-  try {
-    const [epoch, reward, nextCI, nextHalv, pending, ref, staked, total, rate, startTime, bal, avail, locked, unlocked] = await Promise.all([
-      miningContract.currentEpoch(),
-      miningContract.currentReward(),
-      miningContract.nextCheckInTime(userAddr),
-      miningContract.nextHalvingTime(),
-      miningContract.pendingStakingRewards(userAddr),
-      miningContract.referrer(userAddr),
-      miningContract.stakedAmount(userAddr),
-      miningContract.totalStaked(),
-      miningContract.dailyInterestRate(),
-      miningContract.startTime(),
-      tokenContract.balanceOf(userAddr),
-      tokenContract.availableBalance(userAddr),
-      tokenContract.currentLockedAmount(userAddr),
-      tokenContract.isUnlocked(userAddr)
+/* === REFRESH === */
+async function refreshData(){
+  if(!userAddr)return;
+  try{
+    const[epoch,reward,nextCI,nextHalv,pending,ref,staked,total,rate,startTime,bal,avail,locked,unlocked]=await Promise.all([
+      miningContract.currentEpoch(),miningContract.currentReward(),miningContract.nextCheckInTime(userAddr),
+      miningContract.nextHalvingTime(),miningContract.pendingStakingRewards(userAddr),
+      miningContract.referrer(userAddr),miningContract.stakedAmount(userAddr),
+      miningContract.totalStaked(),miningContract.dailyInterestRate(),miningContract.startTime(),
+      tokenContract.balanceOf(userAddr),tokenContract.availableBalance(userAddr),
+      tokenContract.currentLockedAmount(userAddr),tokenContract.isUnlocked(userAddr)
     ]);
-
-    const fmt = (v) => parseFloat(ethers.formatEther(v)).toLocaleString(undefined, {maximumFractionDigits:4});
-
-    // Mining panel
-    document.getElementById('currentReward').textContent = fmt(reward) + ' OM';
-    document.getElementById('currentEpoch').textContent = epoch.toString();
-
-    // Staking panel
-    document.getElementById('stakedAmount').textContent = fmt(staked) + ' OM';
-    document.getElementById('pendingRewards').textContent = fmt(pending) + ' OM';
-    document.getElementById('dailyRate').textContent = (Number(rate) / 100).toFixed(2) + '%';
-    document.getElementById('totalStaked').textContent = fmt(total) + ' OM';
-
-    // Account panel
-    document.getElementById('walletAddr').textContent = userAddr.slice(0,8) + '...' + userAddr.slice(-6);
-    document.getElementById('omBalance').textContent = fmt(bal) + ' OM';
-    document.getElementById('availBalance').textContent = fmt(avail) + ' OM';
-    document.getElementById('lockedBalance').textContent = fmt(locked) + ' OM';
-    document.getElementById('unlockStatus').innerHTML = unlocked
-      ? '<span class="badge badge-green">Unlocked</span>'
-      : '<span class="badge badge-red">Locked</span>';
-    document.getElementById('referrerAddr').textContent = (ref === '0x0000000000000000000000000000000000000000')
-      ? 'Not Registered'
-      : ref.slice(0,8) + '...' + ref.slice(-6);
-    document.getElementById('acctEpoch').textContent = epoch.toString();
-    document.getElementById('acctReward').textContent = fmt(reward) + ' OM';
-
-    // Cooldown
+    const fmt=v=>parseFloat(ethers.formatEther(v)).toLocaleString(undefined,{maximumFractionDigits:4});
+    document.getElementById('currentReward').textContent=fmt(reward)+' OM';
+    document.getElementById('currentEpoch').textContent=epoch.toString();
+    document.getElementById('stakedAmount').textContent=fmt(staked)+' OM';
+    document.getElementById('pendingRewards').textContent=fmt(pending)+' OM';
+    document.getElementById('dailyRate').textContent=(Number(rate)/100).toFixed(2)+'%';
+    document.getElementById('totalStaked').textContent=fmt(total)+' OM';
+    document.getElementById('walletAddr').textContent=userAddr.slice(0,8)+'...'+userAddr.slice(-6);
+    document.getElementById('omBalance').textContent=fmt(bal)+' OM';
+    document.getElementById('availBalance').textContent=fmt(avail)+' OM';
+    document.getElementById('lockedBalance').textContent=fmt(locked)+' OM';
+    document.getElementById('unlockStatus').innerHTML=unlocked?'<span class="badge badge-green">'+t('unlocked')+'</span>':'<span class="badge badge-red">Locked</span>';
+    const isRegistered=ref!=='0x0000000000000000000000000000000000000000';
+    document.getElementById('referrerAddrDisplay').textContent=isRegistered?ref.slice(0,8)+'...'+ref.slice(-6):t('notRegistered');
+    // Toggle register card vs banner
+    document.getElementById('registerCard').style.display=isRegistered?'none':'block';
+    document.getElementById('registeredBanner').style.display=isRegistered?'flex':'none';
+    // Hide unlock card if already unlocked
+    document.getElementById('unlockCard').style.display=unlocked?'none':'block';
+    document.getElementById('acctEpoch').textContent=epoch.toString();
+    document.getElementById('acctReward').textContent=fmt(reward)+' OM';
     updateCooldown(Number(nextCI));
+    window._halvingTarget=Number(nextHalv);
+    window._startTime=Number(startTime);
+    window._halvingPeriod=60*86400;
+  }catch(e){console.error('Refresh error:',e);}
+}
 
-    // Halving countdown
-    window._halvingTarget = Number(nextHalv);
-    window._startTime = Number(startTime);
-    window._halvingPeriod = 60 * 86400;
-  } catch (e) {
-    console.error('Refresh error:', e);
+function updateCooldown(nextCI){
+  const el=document.getElementById('cooldownTimer');
+  if(nextCI===0){el.textContent=t('ready');el.style.color='var(--green)';return;}
+  const now=Math.floor(Date.now()/1000);
+  if(now>=nextCI){el.textContent=t('ready');el.style.color='var(--green)';return;}
+  const diff=nextCI-now,h=Math.floor(diff/3600),m=Math.floor((diff%3600)/60),s=diff%60;
+  el.textContent=`${h}h ${m}m ${s}s`;el.style.color='var(--red)';
+}
+
+setInterval(()=>{
+  if(window._halvingTarget){
+    const now=Math.floor(Date.now()/1000),diff=window._halvingTarget-now;
+    const el=document.getElementById('halvingCountdown');
+    if(diff<=0){el.textContent=t('halvingNow');return;}
+    const d=Math.floor(diff/86400),h=Math.floor((diff%86400)/3600),m=Math.floor((diff%3600)/60),s=diff%60;
+    el.textContent=`${d}d ${h}h ${m}m ${s}s`;
+    const elapsed=now-(window._halvingTarget-window._halvingPeriod);
+    document.getElementById('halvingProgress').style.width=Math.min(100,(elapsed/window._halvingPeriod)*100)+'%';
   }
+},1000);
+setInterval(()=>{if(userAddr)refreshData();},30000);
+
+/* === ACTIONS === */
+async function register(){
+  if(!signer){showToast(t('toastConnFirst'));return;}
+  const ref=document.getElementById('referrerInput').value.trim();
+  if(!ethers.isAddress(ref)){showToast(t('toastInvalidRef'));return;}
+  try{showToast(t('toastSending'));const tx=await miningContract.register(ref);await tx.wait();showToast(t('toastRegOk'));refreshData();}
+  catch(e){showToast(e.reason||t('toastTxFail'));}
+}
+async function checkIn(){
+  if(!signer){showToast(t('toastConnFirst'));return;}
+  try{showToast(t('toastSending'));const tx=await miningContract.checkIn();await tx.wait();showToast(t('toastCheckOk'));refreshData();}
+  catch(e){showToast(e.reason||t('toastTxFail'));}
 }
 
-function updateCooldown(nextCI) {
-  const el = document.getElementById('cooldownTimer');
-  if (nextCI === 0) { el.textContent = 'Ready'; return; }
-  const now = Math.floor(Date.now() / 1000);
-  if (now >= nextCI) { el.textContent = 'Ready'; el.style.color = 'var(--green)'; return; }
-  const diff = nextCI - now;
-  const h = Math.floor(diff / 3600);
-  const m = Math.floor((diff % 3600) / 60);
-  const s = diff % 60;
-  el.textContent = `${h}h ${m}m ${s}s`;
-  el.style.color = 'var(--red)';
+/* Approve + Unlock merged */
+async function doUnlock(){
+  if(!signer){showToast(t('toastConnFirst'));return;}
+  try{
+    const allowance=await usdtContract.allowance(userAddr,MINING_ADDR);
+    if(allowance<ethers.parseEther('10')){
+      showToast(t('toastApproving'));
+      const tx1=await usdtContract.approve(MINING_ADDR,ethers.parseEther('10'));
+      await tx1.wait();
+      showToast(t('toastApproved'));
+    }
+    showToast(t('toastSending'));
+    const tx2=await miningContract.payToUnlock();await tx2.wait();
+    showToast(t('toastUnlockOk'));refreshData();
+  }catch(e){showToast(e.reason||t('toastTxFail'));}
 }
 
-/* Halving & cooldown timer */
-setInterval(() => {
-  if (window._halvingTarget) {
-    const now = Math.floor(Date.now() / 1000);
-    const diff = window._halvingTarget - now;
-    const el = document.getElementById('halvingCountdown');
-    if (diff <= 0) { el.textContent = 'Halving Now!'; return; }
-    const d = Math.floor(diff / 86400);
-    const h = Math.floor((diff % 86400) / 3600);
-    const m = Math.floor((diff % 3600) / 60);
-    const s = diff % 60;
-    el.textContent = `${d}d ${h}h ${m}m ${s}s`;
-
-    const elapsed = now - (window._halvingTarget - window._halvingPeriod);
-    const pct = Math.min(100, (elapsed / window._halvingPeriod) * 100);
-    document.getElementById('halvingProgress').style.width = pct + '%';
-  }
-}, 1000);
-
-/* Auto refresh every 30s */
-setInterval(() => { if (userAddr) refreshData(); }, 30000);
-
-/* ============================================
-   CONTRACT INTERACTIONS
-   ============================================ */
-async function register() {
-  if (!signer) { showToast('Connect wallet first'); return; }
-  const ref = document.getElementById('referrerInput').value.trim();
-  if (!ethers.isAddress(ref)) { showToast('Invalid referrer address'); return; }
-  try {
-    showToast('Sending transaction...');
-    const tx = await miningContract.register(ref);
-    await tx.wait();
-    showToast('Registered successfully!');
-    refreshData();
-  } catch (e) { showToast(e.reason || 'Transaction failed'); }
+/* Approve + Stake merged */
+async function doStake(){
+  if(!signer){showToast(t('toastConnFirst'));return;}
+  const amt=document.getElementById('stakeInput').value;
+  if(!amt||Number(amt)<=0){showToast(t('toastEnterAmt'));return;}
+  try{
+    const weiAmt=ethers.parseEther(amt);
+    const allowance=await tokenContract.allowance(userAddr,MINING_ADDR);
+    if(allowance<weiAmt){
+      showToast(t('toastApproving'));
+      const tx1=await tokenContract.approve(MINING_ADDR,weiAmt);
+      await tx1.wait();
+      showToast(t('toastApproved'));
+    }
+    showToast(t('toastStaking'));
+    const tx2=await miningContract.stake(weiAmt);await tx2.wait();
+    showToast(t('toastStakeOk'));document.getElementById('stakeInput').value='';refreshData();
+  }catch(e){showToast(e.reason||t('toastTxFail'));}
 }
 
-async function checkIn() {
-  if (!signer) { showToast('Connect wallet first'); return; }
-  try {
-    showToast('Sending transaction...');
-    const tx = await miningContract.checkIn();
-    await tx.wait();
-    showToast('Check-in successful!');
-    refreshData();
-  } catch (e) { showToast(e.reason || 'Transaction failed'); }
+async function unstakeOM(){
+  if(!signer){showToast(t('toastConnFirst'));return;}
+  const amt=document.getElementById('unstakeInput').value;
+  if(!amt||Number(amt)<=0){showToast(t('toastEnterAmt'));return;}
+  try{showToast(t('toastUnstaking'));const tx=await miningContract.unstake(ethers.parseEther(amt));await tx.wait();showToast(t('toastUnstakeOk'));document.getElementById('unstakeInput').value='';refreshData();}
+  catch(e){showToast(e.reason||t('toastTxFail'));}
 }
+async function claimRewards(){
+  if(!signer){showToast(t('toastConnFirst'));return;}
+  try{showToast(t('toastClaiming'));const tx=await miningContract.claimStakingRewards();await tx.wait();showToast(t('toastClaimOk'));refreshData();}
+  catch(e){showToast(e.reason||t('toastTxFail'));}
+}
+async function setMaxStake(){if(!userAddr)return;try{const a=await tokenContract.availableBalance(userAddr);document.getElementById('stakeInput').value=ethers.formatEther(a);}catch(e){}}
+async function setMaxUnstake(){if(!userAddr)return;try{const s=await miningContract.stakedAmount(userAddr);document.getElementById('unstakeInput').value=ethers.formatEther(s);}catch(e){}}
 
-async function approveUSDT() {
-  if (!signer) { showToast('Connect wallet first'); return; }
-  try {
-    showToast('Approving USDT...');
-    const tx = await usdtContract.approve(MINING_ADDR, ethers.parseEther('10'));
-    await tx.wait();
-    showToast('USDT approved!');
-  } catch (e) { showToast(e.reason || 'Approval failed'); }
-}
-
-async function payToUnlock() {
-  if (!signer) { showToast('Connect wallet first'); return; }
-  try {
-    showToast('Sending transaction...');
-    const tx = await miningContract.payToUnlock();
-    await tx.wait();
-    showToast('Unlocked successfully!');
-    refreshData();
-  } catch (e) { showToast(e.reason || 'Transaction failed'); }
-}
-
-async function approveOM() {
-  if (!signer) { showToast('Connect wallet first'); return; }
-  const amt = document.getElementById('stakeInput').value;
-  if (!amt || Number(amt) <= 0) { showToast('Enter an amount'); return; }
-  try {
-    showToast('Approving OM...');
-    const tx = await tokenContract.approve(MINING_ADDR, ethers.parseEther(amt));
-    await tx.wait();
-    showToast('OM approved!');
-  } catch (e) { showToast(e.reason || 'Approval failed'); }
-}
-
-async function stakeOM() {
-  if (!signer) { showToast('Connect wallet first'); return; }
-  const amt = document.getElementById('stakeInput').value;
-  if (!amt || Number(amt) <= 0) { showToast('Enter an amount'); return; }
-  try {
-    showToast('Staking...');
-    const tx = await miningContract.stake(ethers.parseEther(amt));
-    await tx.wait();
-    showToast('Staked successfully!');
-    document.getElementById('stakeInput').value = '';
-    refreshData();
-  } catch (e) { showToast(e.reason || 'Staking failed'); }
-}
-
-async function unstakeOM() {
-  if (!signer) { showToast('Connect wallet first'); return; }
-  const amt = document.getElementById('unstakeInput').value;
-  if (!amt || Number(amt) <= 0) { showToast('Enter an amount'); return; }
-  try {
-    showToast('Unstaking...');
-    const tx = await miningContract.unstake(ethers.parseEther(amt));
-    await tx.wait();
-    showToast('Unstaked successfully!');
-    document.getElementById('unstakeInput').value = '';
-    refreshData();
-  } catch (e) { showToast(e.reason || 'Unstaking failed'); }
-}
-
-async function claimRewards() {
-  if (!signer) { showToast('Connect wallet first'); return; }
-  try {
-    showToast('Claiming rewards...');
-    const tx = await miningContract.claimStakingRewards();
-    await tx.wait();
-    showToast('Rewards claimed!');
-    refreshData();
-  } catch (e) { showToast(e.reason || 'Claim failed'); }
-}
-
-async function setMaxStake() {
-  if (!userAddr) return;
-  try {
-    const avail = await tokenContract.availableBalance(userAddr);
-    document.getElementById('stakeInput').value = ethers.formatEther(avail);
-  } catch(e) {}
-}
-async function setMaxUnstake() {
-  if (!userAddr) return;
-  try {
-    const s = await miningContract.stakedAmount(userAddr);
-    document.getElementById('unstakeInput').value = ethers.formatEther(s);
-  } catch(e) {}
-}
-
-/* Listen for account / chain changes */
-if (window.ethereum) {
-  window.ethereum.on('accountsChanged', () => location.reload());
-  window.ethereum.on('chainChanged', () => location.reload());
+if(window.ethereum){
+  window.ethereum.on('accountsChanged',()=>location.reload());
+  window.ethereum.on('chainChanged',()=>location.reload());
 }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
