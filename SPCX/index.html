@@ -69,6 +69,11 @@ button{cursor:pointer;border:none;font-family:inherit}
 .input-max{position:relative}
 .input-max button{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--accent-glow);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:.75rem;font-weight:700}
 
+/* PERCENT BUTTONS */
+.percent-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;margin-top:8px;margin-bottom:14px}
+.percent-btn{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:.75rem;font-weight:700;color:var(--text2);transition:all .2s}
+.percent-btn:active{background:var(--accent-glow);color:var(--accent);border-color:var(--accent)}
+
 /* SELECT */
 .period-selector{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
 .period-btn{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:center;transition:all .2s}
@@ -170,7 +175,13 @@ button{cursor:pointer;border:none;font-family:inherit}
               <label data-i18n="amountStake">Amount to Stake</label>
               <div class="input-max">
                 <input type="number" id="stakeInput" placeholder="0.00">
-                <button onclick="setMaxStake()">MAX</button>
+                <button onclick="setPercent('stake', 100)">MAX</button>
+              </div>
+              <div class="percent-grid">
+                <button class="percent-btn" onclick="setPercent('stake', 25)">25%</button>
+                <button class="percent-btn" onclick="setPercent('stake', 50)">50%</button>
+                <button class="percent-btn" onclick="setPercent('stake', 75)">75%</button>
+                <button class="percent-btn" onclick="setPercent('stake', 100)">100%</button>
               </div>
             </div>
             <label style="display:block;font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:6px" data-i18n="selectPeriod">Select Period</label>
@@ -209,7 +220,13 @@ button{cursor:pointer;border:none;font-family:inherit}
           <label data-i18n="donateAmount">Amount to Donate (SPCX)</label>
           <div class="input-max">
             <input type="number" id="donateInput" placeholder="0.00">
-            <button onclick="setMaxDonate()">MAX</button>
+            <button onclick="setPercent('donate', 100)">MAX</button>
+          </div>
+          <div class="percent-grid">
+            <button class="percent-btn" onclick="setPercent('donate', 25)">25%</button>
+            <button class="percent-btn" onclick="setPercent('donate', 50)">50%</button>
+            <button class="percent-btn" onclick="setPercent('donate', 75)">75%</button>
+            <button class="percent-btn" onclick="setPercent('donate', 100)">100%</button>
           </div>
         </div>
         <button class="btn-secondary" style="width:100%" id="donateBtn" onclick="handleDonate()" data-i18n="donateBtn">Donate SPCX</button>
@@ -566,12 +583,21 @@ async function claimAll(){
   } catch(e) { showToast(e.reason || t('toastTxFail')); }
 }
 
-function setMaxStake(){
-    if(userSummary.spcxBalance) document.getElementById('stakeInput').value = ethers.formatUnits(userSummary.spcxBalance, 18);
+function setPercent(type, pct){
+    if(!userSummary.spcxBalance) return;
+    const bal = userSummary.spcxBalance;
+    const input = document.getElementById(type + 'Input');
+    if (pct === 100) {
+        // Show full 18 decimals for MAX
+        input.value = ethers.formatUnits(bal, 18);
+    } else {
+        const amt = (bal * BigInt(pct)) / 100n;
+        input.value = ethers.formatUnits(amt, 18);
+    }
 }
-function setMaxDonate(){
-    if(userSummary.spcxBalance) document.getElementById('donateInput').value = ethers.formatUnits(userSummary.spcxBalance, 18);
-}
+
+function setMaxStake(){ setPercent('stake', 100); }
+function setMaxDonate(){ setPercent('donate', 100); }
 
 setInterval(()=>{if(userAddr)refreshData();}, 20000);
 applyLang();
