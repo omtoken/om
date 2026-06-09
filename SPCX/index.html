@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>SPCX Staking DApp</title>
-<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/SPCX.jpg">
+<link rel="icon" type="image/jpeg" href="https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/SPCX.jpg">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -25,7 +25,7 @@ button{cursor:pointer;border:none;font-family:inherit}
 /* HEADER */
 .header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg2);gap:8px}
 .header-logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.header-logo img{width:34px;height:34px;border-radius:50%}
+.header-logo img{width:34px;height:34px;border-radius:50%;object-fit:cover}
 .header-logo span{font-size:1.2rem;font-weight:800;letter-spacing:.5px}
 .header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .lang-btn{background:var(--bg3);color:var(--text2);font-weight:700;padding:6px 12px;border-radius:8px;font-size:.75rem;border:1px solid var(--border);transition:all .15s}
@@ -130,7 +130,7 @@ button{cursor:pointer;border:none;font-family:inherit}
   <div class="tab-content">
     <!-- ====== STAKING ====== -->
     <div class="panel active" id="panel-staking">
-      <!-- Activation Card (Shown if not whitelisted) -->
+      <!-- Activation Card -->
       <div class="card fade-in" id="activationCard" style="display:none; border: 2px solid var(--accent)">
         <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="activateAccount">Activate Account</span></div></div>
         <p style="font-size:.9rem;color:var(--text);margin-bottom:14px;line-height:1.6" data-i18n="activationDesc">
@@ -276,6 +276,7 @@ const LANG = {
     toastApproveOk:'Approval successful!', toastStakeOk:'Staked successful!',
     toastClaimOk:'Claimed successful!', toastDonateOk:'Donation successful!',
     toastEnterAmt:'Enter an amount', toastConnFirst:'Connect wallet first', toastTxFail:'Transaction failed',
+    toastNoOM:'Insufficient OM balance', toastNoSPCX:'Insufficient SPCX balance',
     unstake:'Unstake', locked:'Locked', ready:'Ready to Unstake'
   },
   zh: {
@@ -296,6 +297,7 @@ const LANG = {
     toastApproveOk:'授权成功！', toastStakeOk:'质押成功！',
     toastClaimOk:'提取成功！', toastDonateOk:'捐赠成功！',
     toastEnterAmt:'请输入数量', toastConnFirst:'请先连接钱包', toastTxFail:'交易失败',
+    toastNoOM:'OM 余额不足', toastNoSPCX:'SPCX 余额不足',
     unstake:'提取', locked:'锁定中', ready:'可提取'
   }
 };
@@ -342,7 +344,7 @@ const VAULT_ABI = [
 let provider, signer, userAddr;
 let stakingContract, vaultContract, spcxContract, omContract;
 let selectedPeriodType = 0;
-let userSummary = { spcxAllowanceToVault: 0n };
+let userSummary = { spcxAllowanceToVault: 0n, omBalance: 0n, spcxBalance: 0n };
 
 /* === UI LOGIC === */
 function switchTab(name,btn){
@@ -463,6 +465,8 @@ async function refreshData(){
 /* === ACTIONS === */
 async function handleActivate(){
   if(!signer) return connectWallet();
+  if(!userSummary.omBalance || userSummary.omBalance < ethers.parseUnits("0.1", 18)) return showToast(t('toastNoOM'));
+  
   try {
     if (userSummary.omAllowance < ethers.parseUnits("0.1", 18)) {
         showToast(t('toastSending') + " (Approve OM)");
@@ -476,7 +480,10 @@ async function handleActivate(){
     await tx.wait();
     showToast(t('toastActivateOk'));
     refreshData();
-  } catch(e) { showToast(t('toastTxFail')); console.error(e); }
+  } catch(e) { 
+    console.error(e);
+    showToast(e.reason || t('toastTxFail')); 
+  }
 }
 
 async function handleStake(){
@@ -484,6 +491,8 @@ async function handleStake(){
   const amtStr = document.getElementById('stakeInput').value;
   if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
   const amt = ethers.parseUnits(amtStr, 18);
+  if(!userSummary.spcxBalance || userSummary.spcxBalance < amt) return showToast(t('toastNoSPCX'));
+
   try {
     if (userSummary.spcxAllowance < amt) {
         showToast(t('toastSending') + " (Approve SPCX)");
@@ -498,7 +507,10 @@ async function handleStake(){
     showToast(t('toastStakeOk'));
     document.getElementById('stakeInput').value = '';
     refreshData();
-  } catch(e) { showToast(t('toastTxFail')); console.error(e); }
+  } catch(e) { 
+    console.error(e);
+    showToast(e.reason || t('toastTxFail')); 
+  }
 }
 
 async function handleDonate(){
@@ -506,6 +518,8 @@ async function handleDonate(){
   const amtStr = document.getElementById('donateInput').value;
   if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
   const amt = ethers.parseUnits(amtStr, 18);
+  if(!userSummary.spcxBalance || userSummary.spcxBalance < amt) return showToast(t('toastNoSPCX'));
+
   try {
     if (userSummary.spcxAllowanceToVault < amt) {
         showToast(t('toastSending') + " (Approve SPCX)");
@@ -520,7 +534,10 @@ async function handleDonate(){
     showToast(t('toastDonateOk'));
     document.getElementById('donateInput').value = '';
     refreshData();
-  } catch(e) { showToast(t('toastTxFail')); console.error(e); }
+  } catch(e) { 
+    console.error(e);
+    showToast(e.reason || t('toastTxFail')); 
+  }
 }
 
 async function unstake(id){
@@ -530,7 +547,7 @@ async function unstake(id){
     await tx.wait();
     showToast(t('toastClaimOk'));
     refreshData();
-  } catch(e) { showToast(t('toastTxFail')); }
+  } catch(e) { showToast(e.reason || t('toastTxFail')); }
 }
 
 async function claimAll(){
@@ -546,7 +563,7 @@ async function claimAll(){
     await tx.wait();
     showToast(t('toastClaimOk'));
     refreshData();
-  } catch(e) { showToast(t('toastTxFail')); }
+  } catch(e) { showToast(e.reason || t('toastTxFail')); }
 }
 
 function setMaxStake(){
