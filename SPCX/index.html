@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SPCX Staking DApp</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/SPCX.jpg">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e17;--bg2:#111827;--bg3:#1a2235;--bg4:#232d42;
+  --accent:#f59e0b;--accent2:#d97706;--accent-glow:rgba(245,158,11,.15);
+  --green:#10b981;--red:#ef4444;--blue:#3b82f6;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;
+  --border:#1e293b;--radius:16px;--radius-sm:10px;
+}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
+button{cursor:pointer;border:none;font-family:inherit}
+.app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+.tab-content{flex:1;overflow-y:auto;padding:16px 16px 100px}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg2);gap:8px}
+.header-logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.header-logo img{width:34px;height:34px;border-radius:50%}
+.header-logo span{font-size:1.2rem;font-weight:800;letter-spacing:.5px}
+.header-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.lang-btn{background:var(--bg3);color:var(--text2);font-weight:700;padding:6px 12px;border-radius:8px;font-size:.75rem;border:1px solid var(--border);transition:all .15s}
+.lang-btn:hover{color:var(--accent);border-color:var(--accent)}
+.wallet-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-weight:700;padding:9px 14px;border-radius:var(--radius-sm);font-size:.8rem;transition:transform .15s;white-space:nowrap}
+.wallet-btn:active{transform:scale(.96)}
+
+/* TAB BAR */
+.tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;background:var(--bg2);border-top:1px solid var(--border);z-index:100;padding:6px 0 env(safe-area-inset-bottom,8px)}
+.tab-bar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;background:none;color:var(--text3);font-size:.72rem;font-weight:600;transition:color .2s}
+.tab-bar button.active{color:var(--accent)}
+.tab-bar button svg{width:24px;height:24px}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.card-title{font-size:1.1rem;font-weight:800;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.card-title-text{display:flex;align-items:center;gap:8px}
+.card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+
+/* STATS */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-box{background:var(--bg3);border-radius:var(--radius-sm);padding:14px}
+.stat-label{font-size:.75rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat-value{font-size:1.1rem;font-weight:800;color:var(--text);word-break:break-all}
+.stat-value.accent{color:var(--accent)}
+.stat-value.green{color:var(--green)}
+
+/* BUTTONS */
+.btn-primary{width:100%;padding:16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-size:1rem;font-weight:800;letter-spacing:.5px;transition:opacity .15s,transform .15s}
+.btn-primary:active{transform:scale(.98);opacity:.9}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-secondary{width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:.9rem;font-weight:700;border:1px solid var(--border);transition:all .15s}
+.btn-secondary:active{background:var(--bg4)}
+
+/* INPUT */
+.input-group{margin-bottom:14px}
+.input-group label{display:block;font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:6px}
+.input-group input{width:100%;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:1rem;font-weight:600;outline:none;transition:border-color .2s}
+.input-group input:focus{border-color:var(--accent)}
+.input-group input::placeholder{color:var(--text3)}
+.input-max{position:relative}
+.input-max button{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--accent-glow);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:.75rem;font-weight:700}
+
+/* SELECT */
+.period-selector{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+.period-btn{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:center;transition:all .2s}
+.period-btn.active{border-color:var(--accent);background:var(--accent-glow);color:var(--accent)}
+.period-days{font-size:1rem;font-weight:800}
+.period-rate{font-size:.7rem;color:var(--text3);margin-top:2px}
+
+/* STAKE LIST */
+.stake-list{margin-top:10px}
+.stake-item{background:var(--bg3);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;border:1px solid var(--border)}
+.stake-item-header{display:flex;justify-content:space-between;margin-bottom:8px}
+.stake-item-body{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem}
+.stake-item-label{color:var(--text3)}
+.stake-item-value{font-weight:700;text-align:right}
+
+/* INFO LIST */
+.info-list{list-style:none}
+.info-list li{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:.9rem}
+.info-list li:last-child{border-bottom:none}
+.info-list .label{color:var(--text2);font-weight:600}
+.info-list .value{font-weight:700;text-align:right;word-break:break-all;max-width:55%}
+.info-list .value.mono{font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:.78rem}
+
+/* BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
+.badge-green{background:rgba(16,185,129,.12);color:var(--green)}
+.badge-yellow{background:var(--accent-glow);color:var(--accent)}
+.badge-red{background:rgba(239,68,68,.12);color:var(--red)}
+
+.divider{height:1px;background:var(--border);margin:16px 0}
+.panel{display:none}.panel.active{display:block}
+
+/* TOAST */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:12px 24px;border-radius:var(--radius-sm);font-weight:700;font-size:.9rem;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
+.toast.show{opacity:1}
+
+@media(min-width:600px){
+  .app{border-left:1px solid var(--border);border-right:1px solid var(--border)}
+  html{background:#05080f}
+}
+.fade-in{animation:fadeIn .35s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-logo">
+      <img src="https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/SPCX.jpg" alt="SPCX">
+      <span>SPCX Staking</span>
+    </div>
+    <div class="header-right">
+      <button class="lang-btn" id="langBtn" onclick="toggleLang()">CN</button>
+      <button class="wallet-btn" id="connectBtn" onclick="connectWallet()" data-i18n="connect">Connect</button>
+    </div>
+  </div>
+
+  <div class="tab-content">
+    <!-- ====== STAKING ====== -->
+    <div class="panel active" id="panel-staking">
+      <!-- Whitelist Card -->
+      <div class="card fade-in" id="whitelistCard" style="display:none">
+        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="joinWhitelist">Join Whitelist</span></div></div>
+        <p style="font-size:.85rem;color:var(--text2);margin-bottom:14px;line-height:1.5" data-i18n="whitelistDesc">
+          You need to join the whitelist to participate in staking. Fee: <strong style="color:var(--accent)">0.1 OM</strong>.
+        </p>
+        <button class="btn-primary" onclick="joinWhitelist()" data-i18n="joinBtn">Join Whitelist</button>
+      </div>
+
+      <div class="card fade-in">
+        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="stakingOverview">Staking Overview</span></div></div>
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-label" data-i18n="activeStaked">Active Staked</div>
+            <div class="stat-value accent" id="activeStaked">0 SPCX</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label" data-i18n="pendingRewards">Pending Rewards</div>
+            <div class="stat-value green" id="pendingRewards">0 SPCX</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label" data-i18n="claimable">Claimable</div>
+            <div class="stat-value" id="claimableTotal">0 SPCX</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label" data-i18n="totalStaked">Global Staked</div>
+            <div class="stat-value" id="globalTotalStaked">0 SPCX</div>
+          </div>
+        </div>
+        <button class="btn-primary" id="claimAllBtn" onclick="claimAll()" disabled data-i18n="claimAll">Claim All Unlocked</button>
+      </div>
+
+      <div class="card fade-in">
+        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="stakeSPCX">Stake SPCX</span></div></div>
+        <div class="input-group">
+          <label data-i18n="amountStake">Amount to Stake</label>
+          <div class="input-max">
+            <input type="number" id="stakeInput" placeholder="0.00">
+            <button onclick="setMaxStake()">MAX</button>
+          </div>
+        </div>
+        <label style="display:block;font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:6px" data-i18n="selectPeriod">Select Period</label>
+        <div class="period-selector">
+          <div class="period-btn active" onclick="selectPeriod(0)" id="period0">
+            <div class="period-days">1 Day</div>
+            <div class="period-rate">1% Daily</div>
+          </div>
+          <div class="period-btn" onclick="selectPeriod(1)" id="period1">
+            <div class="period-days">10 Days</div>
+            <div class="period-rate">3% Daily</div>
+          </div>
+          <div class="period-btn" onclick="selectPeriod(2)" id="period2">
+            <div class="period-days">30 Days</div>
+            <div class="period-rate">5% Daily</div>
+          </div>
+        </div>
+        <button class="btn-primary" id="stakeBtn" onclick="handleStake()" data-i18n="stakeBtn">Stake SPCX</button>
+      </div>
+
+      <div class="card fade-in">
+        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="myStakes">My Active Stakes</span></div></div>
+        <div id="stakesList" class="stake-list">
+          <p style="text-align:center;color:var(--text3);padding:20px" data-i18n="noStakes">No active stakes found</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== ACCOUNT ====== -->
+    <div class="panel" id="panel-account">
+      <div class="card fade-in">
+        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="wallet">Wallet</span></div></div>
+        <ul class="info-list">
+          <li><span class="label" data-i18n="address">Address</span><span class="value mono" id="walletAddr">Not Connected</span></li>
+          <li><span class="label" data-i18n="spcxBal">SPCX Balance</span><span class="value" id="spcxBalance">--</span></li>
+          <li><span class="label" data-i18n="omBal">OM Balance</span><span class="value" id="omBalance">--</span></li>
+          <li><span class="label" data-i18n="whitelistStat">Whitelist Status</span><span class="value" id="whitelistStatus">--</span></li>
+        </ul>
+      </div>
+
+      <div class="card fade-in">
+        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="contractInfo">Contract Info</span></div></div>
+        <ul class="info-list">
+          <li><span class="label">StakingPool</span><span class="value mono"><a href="https://bscscan.com/address/0xb6Bf82936E1750F3a168Ec3671Deb360349c0AaE" target="_blank" id="stakingPoolAddr">0xb6Bf...0AaE</a></span></li>
+          <li><span class="label">RewardVault</span><span class="value mono"><a href="https://bscscan.com/address/0x176D9681D8d70e5312a83BafA8991b6Cf8AdA39c" target="_blank">0x176D...A39c</a></span></li>
+          <li><span class="label">SPCX Token</span><span class="value mono"><a href="https://bscscan.com/address/0x2fa8d5c8FeA2F63cf21d30Df1EFA1eC0d3Db5555" target="_blank">0x2fa8...5555</a></span></li>
+          <li><span class="label">OM Token</span><span class="value mono"><a href="https://bscscan.com/address/0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17" target="_blank">0xe960...2a17</a></span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB BAR -->
+  <div class="tab-bar">
+    <button class="active" onclick="switchTab('staking',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      <span data-i18n="tabStaking">Staking</span>
+    </button>
+    <button onclick="switchTab('account',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span data-i18n="tabAccount">Account</span>
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* === I18N === */
+const LANG = {
+  en: {
+    connect:'Connect', stakingOverview:'Staking Overview', activeStaked:'Active Staked',
+    pendingRewards:'Pending Rewards', claimable:'Claimable', totalStaked:'Global Staked',
+    claimAll:'Claim All Unlocked', stakeSPCX:'Stake SPCX', amountStake:'Amount to Stake',
+    selectPeriod:'Select Period', stakeBtn:'Stake SPCX', myStakes:'My Active Stakes',
+    noStakes:'No active stakes found', wallet:'Wallet', address:'Address',
+    spcxBal:'SPCX Balance', omBal:'OM Balance', whitelistStat:'Whitelist Status',
+    contractInfo:'Contract Info', tabStaking:'Staking', tabAccount:'Account',
+    joinWhitelist:'Join Whitelist', whitelistDesc:'You need to join the whitelist to participate in staking. Fee: <strong style="color:var(--accent)">0.1 OM</strong>.',
+    joinBtn:'Join Whitelist', whitelisted:'Whitelisted', notWhitelisted:'Not Whitelisted',
+    toastConnect:'Wallet Connected', toastNoMM:'Please install MetaMask',
+    toastSwitchBSC:'Please switch to BSC Mainnet', toastConnFail:'Connection failed',
+    toastSending:'Sending transaction...', toastJoinOk:'Joined Whitelist!',
+    toastApproveOk:'Approval successful!', toastStakeOk:'Staked successful!',
+    toastClaimOk:'Claimed successful!', toastEnterAmt:'Enter an amount',
+    toastConnFirst:'Connect wallet first', toastTxFail:'Transaction failed',
+    unstake:'Unstake', locked:'Locked', ready:'Ready to Unstake'
+  },
+  zh: {
+    connect:'连接钱包', stakingOverview:'质押总览', activeStaked:'正在质押',
+    pendingRewards:'待领收益', claimable:'可提取', totalStaked:'全网总质押',
+    claimAll:'提取所有已到期', stakeSPCX:'质押 SPCX', amountStake:'质押数量',
+    selectPeriod:'选择周期', stakeBtn:'质押 SPCX', myStakes:'我的质押记录',
+    noStakes:'暂无质押记录', wallet:'钱包', address:'地址',
+    spcxBal:'SPCX 余额', omBal:'OM 余额', whitelistStat:'白名单状态',
+    contractInfo:'合约信息', tabStaking:'质押', tabAccount:'账户',
+    joinWhitelist:'加入白名单', whitelistDesc:'您需要加入白名单才能参与质押。费用：<strong style="color:var(--accent)">0.1 OM</strong>。',
+    joinBtn:'立即加入', whitelisted:'已加入', notWhitelisted:'未加入',
+    toastConnect:'钱包已连接', toastNoMM:'请安装 MetaMask',
+    toastSwitchBSC:'请切换到 BSC 主网', toastConnFail:'连接失败',
+    toastSending:'发送交易中...', toastJoinOk:'加入白名单成功！',
+    toastApproveOk:'授权成功！', toastStakeOk:'质押成功！',
+    toastClaimOk:'提取成功！', toastEnterAmt:'请输入数量',
+    toastConnFirst:'请先连接钱包', toastTxFail:'交易失败',
+    unstake:'提取', locked:'锁定中', ready:'可提取'
+  }
+};
+let curLang = 'en';
+function t(key) { return LANG[curLang][key] || LANG.en[key] || key; }
+function applyLang() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.getAttribute('data-i18n');
+    if (LANG[curLang][k]) {
+      if (['whitelistDesc'].includes(k)) el.innerHTML = LANG[curLang][k];
+      else el.textContent = LANG[curLang][k];
+    }
+  });
+  document.getElementById('langBtn').textContent = curLang === 'en' ? 'CN' : 'EN';
+  if (userAddr) document.getElementById('connectBtn').textContent = userAddr.slice(0,6)+'...'+userAddr.slice(-4);
+}
+function toggleLang() { curLang = curLang === 'en' ? 'zh' : 'en'; applyLang(); }
+
+/* === CONTRACTS === */
+const STAKING_ADDR = '0xb6Bf82936E1750F3a168Ec3671Deb360349c0AaE';
+const SPCX_ADDR = '0x2fa8d5c8FeA2F63cf21d30Df1EFA1eC0d3Db5555';
+const OM_ADDR = '0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17';
+const BSC_CHAIN = '0x38';
+
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function approve(address,uint256) returns (bool)",
+  "function allowance(address,address) view returns (uint256)"
+];
+const STAKING_ABI = [
+  "function getGlobalInfo() view returns (tuple(address spcxToken, address omToken, address vaultAddress, uint256 whitelistFee, uint256 totalStaked, uint256 vaultSpcxBalance, uint256 vaultTotalReserved, uint256 vaultWithdrawableSPCX, uint256 vaultOmBalance, bool stakingPaused, bool vaultLinked))",
+  "function getUserSummary(address user) view returns (tuple(bool isWhitelisted, uint256 stakeCount, uint256 activeCount, uint256 unlockedCount, uint256 totalActivePrincipal, uint256 totalPendingReward, uint256 totalClaimablePrincipal, uint256 totalClaimableReward, uint256 spcxBalance, uint256 spcxAllowance, uint256 omBalance, uint256 omAllowance))",
+  "function getActiveStakes(address user) view returns (uint256[] ids, tuple(uint256 amount, uint256 startTime, uint256 unlockTime, uint256 reward, uint8 periodType, bool withdrawn)[] items)",
+  "function joinWhitelist()",
+  "function stake(uint256 amount, uint8 periodType)",
+  "function unstake(uint256 stakeId)",
+  "function unstakeBatch(uint256[] stakeIds)"
+];
+
+let provider, signer, userAddr;
+let stakingContract, spcxContract, omContract;
+let selectedPeriodType = 0;
+let userSummary = {};
+
+/* === UI LOGIC === */
+function switchTab(name,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-bar button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+function showToast(msg,dur){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur||3000);}
+function selectPeriod(type){
+  selectedPeriodType = type;
+  document.querySelectorAll('.period-btn').forEach((b,i)=>b.classList.toggle('active',i===type));
+}
+
+/* === WALLET === */
+async function connectWallet(){
+  if(!window.ethereum){showToast(t('toastNoMM'));return;}
+  try{
+    await window.ethereum.request({method:'eth_requestAccounts'});
+    const cid=await window.ethereum.request({method:'eth_chainId'});
+    if(cid!==BSC_CHAIN){try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:BSC_CHAIN}]});}catch(e){showToast(t('toastSwitchBSC'));return;}}
+    provider=new ethers.BrowserProvider(window.ethereum);
+    signer=await provider.getSigner();
+    userAddr=await signer.getAddress();
+    stakingContract=new ethers.Contract(STAKING_ADDR,STAKING_ABI,signer);
+    spcxContract=new ethers.Contract(SPCX_ADDR,ERC20_ABI,signer);
+    omContract=new ethers.Contract(OM_ADDR,ERC20_ABI,signer);
+    applyLang();
+    showToast(t('toastConnect'));
+    refreshData();
+  }catch(e){showToast(t('toastConnFail'));console.error(e);}
+}
+
+/* === DATA === */
+async function refreshData(){
+  if(!userAddr)return;
+  try{
+    const [global, summary, activeStakes] = await Promise.all([
+      stakingContract.getGlobalInfo(),
+      stakingContract.getUserSummary(userAddr),
+      stakingContract.getActiveStakes(userAddr)
+    ]);
+    userSummary = summary;
+    const fmt = (v, d=4) => parseFloat(ethers.formatUnits(v, 18)).toLocaleString(undefined,{maximumFractionDigits:d});
+
+    // Update Overview
+    document.getElementById('activeStaked').textContent = fmt(summary.totalActivePrincipal) + ' SPCX';
+    document.getElementById('pendingRewards').textContent = fmt(summary.totalPendingReward) + ' SPCX';
+    document.getElementById('claimableTotal').textContent = fmt(summary.totalClaimablePrincipal + summary.totalClaimableReward) + ' SPCX';
+    document.getElementById('globalTotalStaked').textContent = fmt(global.totalStaked) + ' SPCX';
+    document.getElementById('claimAllBtn').disabled = summary.unlockedCount == 0;
+
+    // Update Account
+    document.getElementById('walletAddr').textContent = userAddr.slice(0,8)+'...'+userAddr.slice(-6);
+    document.getElementById('spcxBalance').textContent = fmt(summary.spcxBalance) + ' SPCX';
+    document.getElementById('omBalance').textContent = fmt(summary.omBalance) + ' OM';
+    document.getElementById('whitelistStatus').innerHTML = summary.isWhitelisted ? '<span class="badge badge-green">'+t('whitelisted')+'</span>' : '<span class="badge badge-red">'+t('notWhitelisted')+'</span>';
+    document.getElementById('whitelistCard').style.display = summary.isWhitelisted ? 'none' : 'block';
+
+    // Update Stake Button Label
+    const btn = document.getElementById('stakeBtn');
+    if (summary.spcxAllowance < ethers.parseUnits("1000000000", 18)) { // Simple threshold
+        btn.textContent = t('zh' === curLang ? '授权并质押' : 'Approve & Stake');
+    } else {
+        btn.textContent = t('stakeBtn');
+    }
+
+    // Update Stakes List
+    const list = document.getElementById('stakesList');
+    if (activeStakes.ids.length === 0) {
+        list.innerHTML = `<p style="text-align:center;color:var(--text3);padding:20px">${t('noStakes')}</p>`;
+    } else {
+        list.innerHTML = '';
+        activeStakes.ids.forEach((id, index) => {
+            const s = activeStakes.items[index];
+            const isUnlocked = Date.now() / 1000 >= Number(s.unlockTime);
+            const div = document.createElement('div');
+            div.className = 'stake-item';
+            div.innerHTML = `
+                <div class="stake-item-header">
+                    <span class="badge ${isUnlocked?'badge-green':'badge-yellow'}">${isUnlocked?t('ready'):t('locked')}</span>
+                    <span style="font-weight:800">${fmt(s.amount)} SPCX</span>
+                </div>
+                <div class="stake-item-body">
+                    <span class="stake-item-label">Reward:</span><span class="stake-item-value green">+${fmt(s.reward)} SPCX</span>
+                    <span class="stake-item-label">Unlock:</span><span class="stake-item-value">${new Date(Number(s.unlockTime)*1000).toLocaleString()}</span>
+                </div>
+                <button class="btn-secondary" style="margin-top:10px; width:100%" onclick="unstake(${id})" ${!isUnlocked?'disabled':''}>${t('unstake')}</button>
+            `;
+            list.appendChild(div);
+        });
+    }
+  }catch(e){console.error('Refresh error:',e);}
+}
+
+/* === ACTIONS === */
+async function joinWhitelist(){
+  if(!signer) return connectWallet();
+  try {
+    if (userSummary.omAllowance < ethers.parseUnits("0.1", 18)) {
+        showToast(t('toastSending') + " (Approve OM)");
+        const tx = await omContract.approve(STAKING_ADDR, ethers.MaxUint256);
+        await tx.wait();
+    }
+    showToast(t('toastSending') + " (Join Whitelist)");
+    const tx = await stakingContract.joinWhitelist();
+    await tx.wait();
+    showToast(t('toastJoinOk'));
+    refreshData();
+  } catch(e) { showToast(t('toastTxFail')); console.error(e); }
+}
+
+async function handleStake(){
+  if(!signer) return connectWallet();
+  const amtStr = document.getElementById('stakeInput').value;
+  if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
+  const amt = ethers.parseUnits(amtStr, 18);
+  try {
+    if (userSummary.spcxAllowance < amt) {
+        showToast(t('toastSending') + " (Approve SPCX)");
+        const tx = await spcxContract.approve(STAKING_ADDR, ethers.MaxUint256);
+        await tx.wait();
+        showToast(t('toastApproveOk'));
+        await refreshData();
+    }
+    showToast(t('toastSending') + " (Stake)");
+    const tx = await stakingContract.stake(amt, selectedPeriodType);
+    await tx.wait();
+    showToast(t('toastStakeOk'));
+    document.getElementById('stakeInput').value = '';
+    refreshData();
+  } catch(e) { showToast(t('toastTxFail')); console.error(e); }
+}
+
+async function unstake(id){
+  try {
+    showToast(t('toastSending'));
+    const tx = await stakingContract.unstake(id);
+    await tx.wait();
+    showToast(t('toastClaimOk'));
+    refreshData();
+  } catch(e) { showToast(t('toastTxFail')); }
+}
+
+async function claimAll(){
+  try {
+    const ids = [];
+    const activeStakes = await stakingContract.getActiveStakes(userAddr);
+    activeStakes.ids.forEach((id, i) => {
+        if (Date.now() / 1000 >= Number(activeStakes.items[i].unlockTime)) ids.push(id);
+    });
+    if (ids.length === 0) return;
+    showToast(t('toastSending'));
+    const tx = await stakingContract.unstakeBatch(ids);
+    await tx.wait();
+    showToast(t('toastClaimOk'));
+    refreshData();
+  } catch(e) { showToast(t('toastTxFail')); }
+}
+
+function setMaxStake(){
+    if(userSummary.spcxBalance) document.getElementById('stakeInput').value = ethers.formatUnits(userSummary.spcxBalance, 18);
+}
+
+setInterval(()=>{if(userAddr)refreshData();}, 20000);
+applyLang();
+</script>
+</body>
+</html>
