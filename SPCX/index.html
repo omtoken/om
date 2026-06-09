@@ -195,6 +195,22 @@ button{cursor:pointer;border:none;font-family:inherit}
           <p style="text-align:center;color:var(--text3);padding:20px" data-i18n="noStakes">No active stakes found</p>
         </div>
       </div>
+
+      <!-- Donation Card -->
+      <div class="card fade-in">
+        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="donate">Donate to Reward Pool</span></div></div>
+        <p style="font-size:.85rem;color:var(--text2);margin-bottom:14px;line-height:1.5" data-i18n="donateDesc">
+          Anyone can donate SPCX to the Reward Vault to support other stakers.
+        </p>
+        <div class="input-group">
+          <label data-i18n="donateAmount">Amount to Donate (SPCX)</label>
+          <div class="input-max">
+            <input type="number" id="donateInput" placeholder="0.00">
+            <button onclick="setMaxDonate()">MAX</button>
+          </div>
+        </div>
+        <button class="btn-secondary" style="width:100%" id="donateBtn" onclick="handleDonate()" data-i18n="donateBtn">Donate SPCX</button>
+      </div>
     </div>
 
     <!-- ====== ACCOUNT ====== -->
@@ -212,7 +228,7 @@ button{cursor:pointer;border:none;font-family:inherit}
       <div class="card fade-in">
         <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="contractInfo">Contract Info</span></div></div>
         <ul class="info-list">
-          <li><span class="label">StakingPool</span><span class="value mono"><a href="https://bscscan.com/address/0xb6Bf82936E1750F3a168Ec3671Deb360349c0AaE" target="_blank" id="stakingPoolAddr">0xb6Bf...0AaE</a></span></li>
+          <li><span class="label">StakingPool</span><span class="value mono"><a href="https://bscscan.com/address/0xb6Bf82936E1750F3a168Ec3671Deb360349c0AaE" target="_blank">0xb6Bf...0AaE</a></span></li>
           <li><span class="label">RewardVault</span><span class="value mono"><a href="https://bscscan.com/address/0x176D9681D8d70e5312a83BafA8991b6Cf8AdA39c" target="_blank">0x176D...A39c</a></span></li>
           <li><span class="label">SPCX Token</span><span class="value mono"><a href="https://bscscan.com/address/0x2fa8d5c8FeA2F63cf21d30Df1EFA1eC0d3Db5555" target="_blank">0x2fa8...5555</a></span></li>
           <li><span class="label">OM Token</span><span class="value mono"><a href="https://bscscan.com/address/0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17" target="_blank">0xe960...2a17</a></span></li>
@@ -249,12 +265,14 @@ const LANG = {
     contractInfo:'Contract Info', tabStaking:'Staking', tabAccount:'Account',
     joinWhitelist:'Join Whitelist', whitelistDesc:'You need to join the whitelist to participate in staking. Fee: <strong style="color:var(--accent)">0.1 OM</strong>.',
     joinBtn:'Join Whitelist', whitelisted:'Whitelisted', notWhitelisted:'Not Whitelisted',
+    donate:'Donate to Reward Pool', donateDesc:'Anyone can donate SPCX to the Reward Vault to support other stakers.',
+    donateAmount:'Amount to Donate (SPCX)', donateBtn:'Donate SPCX',
     toastConnect:'Wallet Connected', toastNoMM:'Please install MetaMask',
     toastSwitchBSC:'Please switch to BSC Mainnet', toastConnFail:'Connection failed',
     toastSending:'Sending transaction...', toastJoinOk:'Joined Whitelist!',
     toastApproveOk:'Approval successful!', toastStakeOk:'Staked successful!',
-    toastClaimOk:'Claimed successful!', toastEnterAmt:'Enter an amount',
-    toastConnFirst:'Connect wallet first', toastTxFail:'Transaction failed',
+    toastClaimOk:'Claimed successful!', toastDonateOk:'Donation successful!',
+    toastEnterAmt:'Enter an amount', toastConnFirst:'Connect wallet first', toastTxFail:'Transaction failed',
     unstake:'Unstake', locked:'Locked', ready:'Ready to Unstake'
   },
   zh: {
@@ -267,12 +285,14 @@ const LANG = {
     contractInfo:'合约信息', tabStaking:'质押', tabAccount:'账户',
     joinWhitelist:'加入白名单', whitelistDesc:'您需要加入白名单才能参与质押。费用：<strong style="color:var(--accent)">0.1 OM</strong>。',
     joinBtn:'立即加入', whitelisted:'已加入', notWhitelisted:'未加入',
+    donate:'捐赠给奖励池', donateDesc:'任何人都可以向奖励金库捐赠 SPCX，以支持其他质押者。',
+    donateAmount:'捐赠数量 (SPCX)', donateBtn:'立即捐赠',
     toastConnect:'钱包已连接', toastNoMM:'请安装 MetaMask',
     toastSwitchBSC:'请切换到 BSC 主网', toastConnFail:'连接失败',
     toastSending:'发送交易中...', toastJoinOk:'加入白名单成功！',
     toastApproveOk:'授权成功！', toastStakeOk:'质押成功！',
-    toastClaimOk:'提取成功！', toastEnterAmt:'请输入数量',
-    toastConnFirst:'请先连接钱包', toastTxFail:'交易失败',
+    toastClaimOk:'提取成功！', toastDonateOk:'捐赠成功！',
+    toastEnterAmt:'请输入数量', toastConnFirst:'请先连接钱包', toastTxFail:'交易失败',
     unstake:'提取', locked:'锁定中', ready:'可提取'
   }
 };
@@ -282,7 +302,7 @@ function applyLang() {
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const k = el.getAttribute('data-i18n');
     if (LANG[curLang][k]) {
-      if (['whitelistDesc'].includes(k)) el.innerHTML = LANG[curLang][k];
+      if (['whitelistDesc', 'donateDesc'].includes(k)) el.innerHTML = LANG[curLang][k];
       else el.textContent = LANG[curLang][k];
     }
   });
@@ -293,9 +313,10 @@ function toggleLang() { curLang = curLang === 'en' ? 'zh' : 'en'; applyLang(); }
 
 /* === CONTRACTS === */
 const STAKING_ADDR = '0xb6Bf82936E1750F3a168Ec3671Deb360349c0AaE';
-const SPCX_ADDR = '0x2fa8d5c8FeA2F63cf21d30Df1EFA1eC0d3Db5555';
-const OM_ADDR = '0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17';
-const BSC_CHAIN = '0x38';
+const VAULT_ADDR   = '0x176D9681D8d70e5312a83BafA8991b6Cf8AdA39c';
+const SPCX_ADDR    = '0x2fa8d5c8FeA2F63cf21d30Df1EFA1eC0d3Db5555';
+const OM_ADDR      = '0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17';
+const BSC_CHAIN    = '0x38';
 
 const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
@@ -311,11 +332,14 @@ const STAKING_ABI = [
   "function unstake(uint256 stakeId)",
   "function unstakeBatch(uint256[] stakeIds)"
 ];
+const VAULT_ABI = [
+  "function depositSPCX(uint256 amount)"
+];
 
 let provider, signer, userAddr;
-let stakingContract, spcxContract, omContract;
+let stakingContract, vaultContract, spcxContract, omContract;
 let selectedPeriodType = 0;
-let userSummary = {};
+let userSummary = { spcxAllowanceToVault: 0n };
 
 /* === UI LOGIC === */
 function switchTab(name,btn){
@@ -341,6 +365,7 @@ async function connectWallet(){
     signer=await provider.getSigner();
     userAddr=await signer.getAddress();
     stakingContract=new ethers.Contract(STAKING_ADDR,STAKING_ABI,signer);
+    vaultContract=new ethers.Contract(VAULT_ADDR,VAULT_ABI,signer);
     spcxContract=new ethers.Contract(SPCX_ADDR,ERC20_ABI,signer);
     omContract=new ethers.Contract(OM_ADDR,ERC20_ABI,signer);
     applyLang();
@@ -353,12 +378,14 @@ async function connectWallet(){
 async function refreshData(){
   if(!userAddr)return;
   try{
-    const [global, summary, activeStakes] = await Promise.all([
+    const [global, summary, activeStakes, vaultAllowance] = await Promise.all([
       stakingContract.getGlobalInfo(),
       stakingContract.getUserSummary(userAddr),
-      stakingContract.getActiveStakes(userAddr)
+      stakingContract.getActiveStakes(userAddr),
+      spcxContract.allowance(userAddr, VAULT_ADDR)
     ]);
     userSummary = summary;
+    userSummary.spcxAllowanceToVault = vaultAllowance;
     const fmt = (v, d=4) => parseFloat(ethers.formatUnits(v, 18)).toLocaleString(undefined,{maximumFractionDigits:d});
 
     // Update Overview
@@ -377,10 +404,18 @@ async function refreshData(){
 
     // Update Stake Button Label
     const btn = document.getElementById('stakeBtn');
-    if (summary.spcxAllowance < ethers.parseUnits("1000000000", 18)) { // Simple threshold
+    if (summary.spcxAllowance < ethers.parseUnits("1000000000", 18)) {
         btn.textContent = t('zh' === curLang ? '授权并质押' : 'Approve & Stake');
     } else {
         btn.textContent = t('stakeBtn');
+    }
+
+    // Update Donate Button Label
+    const dBtn = document.getElementById('donateBtn');
+    if (vaultAllowance < ethers.parseUnits("1000000000", 18)) {
+        dBtn.textContent = t('zh' === curLang ? '授权并捐赠' : 'Approve & Donate');
+    } else {
+        dBtn.textContent = t('donateBtn');
     }
 
     // Update Stakes List
@@ -450,6 +485,28 @@ async function handleStake(){
   } catch(e) { showToast(t('toastTxFail')); console.error(e); }
 }
 
+async function handleDonate(){
+  if(!signer) return connectWallet();
+  const amtStr = document.getElementById('donateInput').value;
+  if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
+  const amt = ethers.parseUnits(amtStr, 18);
+  try {
+    if (userSummary.spcxAllowanceToVault < amt) {
+        showToast(t('toastSending') + " (Approve SPCX)");
+        const tx = await spcxContract.approve(VAULT_ADDR, ethers.MaxUint256);
+        await tx.wait();
+        showToast(t('toastApproveOk'));
+        await refreshData();
+    }
+    showToast(t('toastSending') + " (Donate)");
+    const tx = await vaultContract.depositSPCX(amt);
+    await tx.wait();
+    showToast(t('toastDonateOk'));
+    document.getElementById('donateInput').value = '';
+    refreshData();
+  } catch(e) { showToast(t('toastTxFail')); console.error(e); }
+}
+
 async function unstake(id){
   try {
     showToast(t('toastSending'));
@@ -478,6 +535,9 @@ async function claimAll(){
 
 function setMaxStake(){
     if(userSummary.spcxBalance) document.getElementById('stakeInput').value = ethers.formatUnits(userSummary.spcxBalance, 18);
+}
+function setMaxDonate(){
+    if(userSummary.spcxBalance) document.getElementById('donateInput').value = ethers.formatUnits(userSummary.spcxBalance, 18);
 }
 
 setInterval(()=>{if(userAddr)refreshData();}, 20000);
