@@ -21,8 +21,6 @@ a{color:var(--accent);text-decoration:none}
 button{cursor:pointer;border:none;font-family:inherit}
 .app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
 .tab-content{flex:1;overflow-y:auto;padding:16px 16px 100px}
-
-/* HEADER */
 .header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);background:var(--bg2);gap:8px}
 .header-logo{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .header-logo img{width:34px;height:34px;border-radius:50%;object-fit:cover}
@@ -32,35 +30,25 @@ button{cursor:pointer;border:none;font-family:inherit}
 .lang-btn:hover{color:var(--accent);border-color:var(--accent)}
 .wallet-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-weight:700;padding:9px 14px;border-radius:var(--radius-sm);font-size:.8rem;transition:transform .15s;white-space:nowrap}
 .wallet-btn:active{transform:scale(.96)}
-
-/* TAB BAR */
 .tab-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;display:flex;background:var(--bg2);border-top:1px solid var(--border);z-index:100;padding:6px 0 env(safe-area-inset-bottom,8px)}
 .tab-bar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0;background:none;color:var(--text3);font-size:.72rem;font-weight:600;transition:color .2s}
 .tab-bar button.active{color:var(--accent)}
 .tab-bar button svg{width:24px;height:24px}
-
-/* CARDS */
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
 .card-title{font-size:1.1rem;font-weight:800;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
 .card-title-text{display:flex;align-items:center;gap:8px}
 .card-title .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
-
-/* STATS */
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
 .stat-box{background:var(--bg3);border-radius:var(--radius-sm);padding:14px}
 .stat-label{font-size:.75rem;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .stat-value{font-size:1.1rem;font-weight:800;color:var(--text);word-break:break-all}
 .stat-value.accent{color:var(--accent)}
 .stat-value.green{color:var(--green)}
-
-/* BUTTONS */
 .btn-primary{width:100%;padding:16px;border-radius:var(--radius-sm);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#000;font-size:1rem;font-weight:800;letter-spacing:.5px;transition:opacity .15s,transform .15s}
 .btn-primary:active{transform:scale(.98);opacity:.9}
 .btn-primary:disabled{opacity:.4;cursor:not-allowed;transform:none}
 .btn-secondary{width:100%;padding:12px;border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:.9rem;font-weight:700;border:1px solid var(--border);transition:all .15s}
 .btn-secondary:active{background:var(--bg4)}
-
-/* INPUT */
 .input-group{margin-bottom:14px}
 .input-group label{display:block;font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:6px}
 .input-group input{width:100%;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:1rem;font-weight:600;outline:none;transition:border-color .2s}
@@ -68,48 +56,34 @@ button{cursor:pointer;border:none;font-family:inherit}
 .input-group input::placeholder{color:var(--text3)}
 .input-max{position:relative}
 .input-max button{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--accent-glow);color:var(--accent);padding:4px 10px;border-radius:6px;font-size:.75rem;font-weight:700}
-
-/* PERCENT BUTTONS */
 .percent-grid{display:grid;grid-template-columns:repeat(4, 1fr);gap:8px;margin-top:8px;margin-bottom:14px}
 .percent-btn{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px;font-size:.75rem;font-weight:700;color:var(--text2);transition:all .2s}
 .percent-btn:active{background:var(--accent-glow);color:var(--accent);border-color:var(--accent)}
-
-/* SELECT */
 .period-selector{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
 .period-btn{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;text-align:center;transition:all .2s}
 .period-btn.active{border-color:var(--accent);background:var(--accent-glow);color:var(--accent)}
 .period-days{font-size:1rem;font-weight:800}
 .period-rate{font-size:.7rem;color:var(--text3);margin-top:2px}
-
-/* STAKE LIST */
 .stake-list{margin-top:10px}
 .stake-item{background:var(--bg3);border-radius:var(--radius-sm);padding:14px;margin-bottom:10px;border:1px solid var(--border)}
 .stake-item-header{display:flex;justify-content:space-between;margin-bottom:8px}
 .stake-item-body{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.85rem}
 .stake-item-label{color:var(--text3)}
 .stake-item-value{font-weight:700;text-align:right}
-
-/* INFO LIST */
 .info-list{list-style:none}
 .info-list li{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);font-size:.9rem}
 .info-list li:last-child{border-bottom:none}
 .info-list .label{color:var(--text2);font-weight:600}
 .info-list .value{font-weight:700;text-align:right;word-break:break-all;max-width:55%}
 .info-list .value.mono{font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:.78rem}
-
-/* BADGE */
 .badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:.75rem;font-weight:700}
 .badge-green{background:rgba(16,185,129,.12);color:var(--green)}
 .badge-yellow{background:var(--accent-glow);color:var(--accent)}
 .badge-red{background:rgba(239,68,68,.12);color:var(--red)}
-
 .divider{height:1px;background:var(--border);margin:16px 0}
 .panel{display:none}.panel.active{display:block}
-
-/* TOAST */
 .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border);color:var(--text);padding:12px 24px;border-radius:var(--radius-sm);font-weight:700;font-size:.9rem;z-index:1000;opacity:0;transition:opacity .3s;pointer-events:none}
 .toast.show{opacity:1}
-
 @media(min-width:600px){
   .app{border-left:1px solid var(--border);border-right:1px solid var(--border)}
   html{background:#05080f}
@@ -120,7 +94,6 @@ button{cursor:pointer;border:none;font-family:inherit}
 </head>
 <body>
 <div class="app">
-  <!-- HEADER -->
   <div class="header">
     <div class="header-logo">
       <img src="https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/SPCX.jpg" alt="SPCX">
@@ -133,474 +106,325 @@ button{cursor:pointer;border:none;font-family:inherit}
   </div>
 
   <div class="tab-content">
-    <!-- ====== STAKING ====== -->
+    <!-- STAKING PANEL -->
     <div class="panel active" id="panel-staking">
-      <!-- Activation Card -->
-      <div class="card fade-in" id="activationCard" style="display:none; border: 2px solid var(--accent)">
-        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="activateAccount">Activate Account</span></div></div>
-        <p style="font-size:.9rem;color:var(--text);margin-bottom:14px;line-height:1.6" data-i18n="activationDesc">
-          Welcome! You must <strong>Activate</strong> your account to unlock staking features. 
-          This requires a one-time fee of <strong style="color:var(--accent)">0.1 OM</strong>.
+      <div class="card fade-in" id="debtCard" style="display:none; border: 2px solid var(--red)">
+        <div class="card-title"><div class="card-title-text"><span class="dot" style="background:var(--red)"></span><span data-i18n="unpaidRewards">Unpaid Rewards</span></div></div>
+        <p style="font-size:.9rem;color:var(--text);margin-bottom:14px;line-height:1.6" data-i18n="debtDesc">
+          You have pending rewards that couldn't be paid out due to vault liquidity. You can claim them now.
         </p>
-        <button class="btn-primary" id="activateBtn" onclick="handleActivate()" data-i18n="activateBtn">Approve & Activate</button>
+        <div class="stat-box" style="margin-bottom:14px">
+            <div class="stat-label" data-i18n="totalOwed">Total Owed</div>
+            <div class="stat-value red" id="unpaidRewardVal">0 SPCX</div>
+        </div>
+        <button class="btn-primary" id="claimDebtBtn" onclick="handleClaimDebt()" data-i18n="claimDebtBtn" style="background:linear-gradient(135deg,var(--red),#b91c1c);color:#fff">Claim Rewards</button>
       </div>
 
-      <div id="stakingMainContent">
-        <div class="card fade-in">
-            <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="stakingOverview">Staking Overview</span></div></div>
-            <div class="stat-grid">
-              <div class="stat-box">
-                <div class="stat-label" data-i18n="activeStaked">Active Staked</div>
-                <div class="stat-value accent" id="activeStaked">0 SPCX</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-label" data-i18n="pendingRewards">Pending Rewards</div>
-                <div class="stat-value green" id="pendingRewards">0 SPCX</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-label" data-i18n="claimable">Claimable</div>
-                <div class="stat-value" id="claimableTotal">0 SPCX</div>
-              </div>
-              <div class="stat-box">
-                <div class="stat-label" data-i18n="totalStaked">Global Staked</div>
-                <div class="stat-value" id="globalTotalStaked">0 SPCX</div>
-              </div>
-            </div>
-            <button class="btn-primary" id="claimAllBtn" onclick="claimAll()" disabled data-i18n="claimAll">Claim All Unlocked</button>
-          </div>
-    
-          <div class="card fade-in">
-            <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="stakeSPCX">Stake SPCX</span></div></div>
-            <div class="input-group">
-              <label data-i18n="amountStake">Amount to Stake</label>
-              <div class="input-max">
-                <input type="number" id="stakeInput" placeholder="0.00">
-                <button onclick="setPercent('stake', 100)">MAX</button>
-              </div>
-              <div class="percent-grid">
-                <button class="percent-btn" onclick="setPercent('stake', 25)">25%</button>
-                <button class="percent-btn" onclick="setPercent('stake', 50)">50%</button>
-                <button class="percent-btn" onclick="setPercent('stake', 75)">75%</button>
-                <button class="percent-btn" onclick="setPercent('stake', 100)">100%</button>
-              </div>
-            </div>
-            <label style="display:block;font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:6px" data-i18n="selectPeriod">Select Period</label>
-            <div class="period-selector">
-              <div class="period-btn active" onclick="selectPeriod(0)" id="period0">
-                <div class="period-days">1 Day</div>
-                <div class="period-rate">1% Daily</div>
-              </div>
-              <div class="period-btn" onclick="selectPeriod(1)" id="period1">
-                <div class="period-days">10 Days</div>
-                <div class="period-rate">3% Daily</div>
-              </div>
-              <div class="period-btn" onclick="selectPeriod(2)" id="period2">
-                <div class="period-days">30 Days</div>
-                <div class="period-rate">5% Daily</div>
-              </div>
-            </div>
-            <button class="btn-primary" id="stakeBtn" onclick="handleStake()" data-i18n="stakeBtn">Stake SPCX</button>
-          </div>
-    
-          <div class="card fade-in">
-            <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="myStakes">My Active Stakes</span></div></div>
-            <div id="stakesList" class="stake-list">
-              <p style="text-align:center;color:var(--text3);padding:20px" data-i18n="noStakes">No active stakes found</p>
-            </div>
-          </div>
-      </div>
-
-      <!-- Donation Card -->
       <div class="card fade-in">
-        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="donate">Donate to Reward Pool</span></div></div>
-        <p style="font-size:.85rem;color:var(--text2);margin-bottom:14px;line-height:1.5" data-i18n="donateDesc">
-          Anyone can donate SPCX to the Reward Vault to support other stakers.
-        </p>
-        <div class="input-group">
-          <label data-i18n="donateAmount">Amount to Donate (SPCX)</label>
-          <div class="input-max">
-            <input type="number" id="donateInput" placeholder="0.00">
-            <button onclick="setPercent('donate', 100)">MAX</button>
+        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="stakingOverview">Staking Overview</span></div></div>
+        <div class="stat-grid">
+          <div class="stat-box">
+            <div class="stat-label" data-i18n="activeStaked">Active Staked</div>
+            <div class="stat-value accent" id="activeStaked">0 SPCX</div>
           </div>
-          <div class="percent-grid">
-            <button class="percent-btn" onclick="setPercent('donate', 25)">25%</button>
-            <button class="percent-btn" onclick="setPercent('donate', 50)">50%</button>
-            <button class="percent-btn" onclick="setPercent('donate', 75)">75%</button>
-            <button class="percent-btn" onclick="setPercent('donate', 100)">100%</button>
+          <div class="stat-box">
+            <div class="stat-label" data-i18n="pendingRewards">Pending Rewards</div>
+            <div class="stat-value green" id="pendingRewards">0 SPCX</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label" data-i18n="claimable">Claimable</div>
+            <div class="stat-value" id="claimableTotal">0 SPCX</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label" data-i18n="totalStaked">Global Staked</div>
+            <div class="stat-value" id="globalTotalStaked">0 SPCX</div>
           </div>
         </div>
-        <button class="btn-secondary" style="width:100%" id="donateBtn" onclick="handleDonate()" data-i18n="donateBtn">Donate SPCX</button>
+        <button class="btn-primary" id="claimAllBtn" onclick="claimAll()" disabled data-i18n="claimAll">Claim All Unlocked</button>
+      </div>
+
+      <div class="card fade-in">
+        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="stakeSPCX">Stake SPCX</span></div></div>
+        <div class="input-group">
+          <label data-i18n="amountStake">Amount to Stake</label>
+          <div class="input-max">
+            <input type="number" id="stakeInput" placeholder="0.00">
+            <button onclick="setPercent('stake', 100)">MAX</button>
+          </div>
+          <div class="percent-grid">
+            <button class="percent-btn" onclick="setPercent('stake', 25)">25%</button>
+            <button class="percent-btn" onclick="setPercent('stake', 50)">50%</button>
+            <button class="percent-btn" onclick="setPercent('stake', 75)">75%</button>
+            <button class="percent-btn" onclick="setPercent('stake', 100)">100%</button>
+          </div>
+        </div>
+        <label style="display:block;font-size:.8rem;font-weight:700;color:var(--text2);margin-bottom:6px" data-i18n="selectPeriod">Select Period</label>
+        <div class="period-selector">
+          <div class="period-btn active" onclick="selectPeriod(0)" id="period0">
+            <div class="period-days">1 Day</div>
+            <div class="period-rate" id="rate0">--% Daily</div>
+          </div>
+          <div class="period-btn" onclick="selectPeriod(1)" id="period1">
+            <div class="period-days">10 Days</div>
+            <div class="period-rate" id="rate1">--% Daily</div>
+          </div>
+          <div class="period-btn" onclick="selectPeriod(2)" id="period2">
+            <div class="period-days">30 Days</div>
+            <div class="period-rate" id="rate2">--% Daily</div>
+          </div>
+        </div>
+        <button class="btn-primary" id="stakeBtn" onclick="handleStake()" data-i18n="stakeBtn">Stake SPCX</button>
+      </div>
+
+      <div class="card fade-in">
+        <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="myStakes">My Active Stakes</span></div></div>
+        <div id="stakesList" class="stake-list">
+          <p style="text-align:center;color:var(--text3);padding:20px" data-i18n="noStakes">No active stakes found</p>
+        </div>
       </div>
     </div>
 
-    <!-- ====== ACCOUNT ====== -->
+    <!-- ADMIN PANEL (OWNER ONLY) -->
+    <div class="panel" id="panel-admin">
+        <div class="card fade-in" style="border: 1px solid var(--accent)">
+            <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="adminPanel">Admin Control</span></div></div>
+            
+            <div class="input-group">
+                <label data-i18n="adjustRate">Adjust Daily Rate (BPS)</label>
+                <div style="display:grid;grid-template-columns:1fr auto;gap:8px;margin-bottom:8px">
+                    <input type="number" id="newRateVal" placeholder="e.g. 100 = 1%">
+                    <select id="ratePeriodSelect" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 10px">
+                        <option value="0">1 Day</option>
+                        <option value="1">10 Days</option>
+                        <option value="2">30 Days</option>
+                    </select>
+                </div>
+                <button class="btn-secondary" onclick="adminSetRate()" data-i18n="updateRate">Update Rate</button>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-label" data-i18n="vaultBalance">Vault SPCX</div>
+                    <div class="stat-value" id="adminVaultBal">--</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label" data-i18n="withdrawable">Withdrawable</div>
+                    <div class="stat-value green" id="adminWithdrawable">--</div>
+                </div>
+            </div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+                <button class="btn-secondary" id="pauseBtn" onclick="adminTogglePause()" data-i18n="pauseStaking">Pause Staking</button>
+                <button class="btn-secondary" onclick="adminWithdrawSPCX()" data-i18n="withdrawVault">Withdraw All</button>
+            </div>
+            <button class="btn-secondary" style="width:100%" onclick="adminSweepDust()" data-i18n="sweepDust">Sweep Dust (Pool)</button>
+        </div>
+    </div>
+
+    <!-- ACCOUNT PANEL -->
     <div class="panel" id="panel-account">
       <div class="card fade-in">
         <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="wallet">Wallet</span></div></div>
         <ul class="info-list">
           <li><span class="label" data-i18n="address">Address</span><span class="value mono" id="walletAddr">Not Connected</span></li>
           <li><span class="label" data-i18n="spcxBal">SPCX Balance</span><span class="value" id="spcxBalance">--</span></li>
-          <li><span class="label" data-i18n="omBal">OM Balance</span><span class="value" id="omBalance">--</span></li>
-          <li><span class="label" data-i18n="activationStat">Account Status</span><span class="value" id="activationStatus">--</span></li>
+          <li><span class="label" data-i18n="role">Role</span><span class="value" id="userRole">User</span></li>
         </ul>
       </div>
 
       <div class="card fade-in">
         <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="contractInfo">Contract Info</span></div></div>
         <ul class="info-list">
-          <li><span class="label">StakingPool</span><span class="value mono"><a href="https://bscscan.com/address/0xb6Bf82936E1750F3a168Ec3671Deb360349c0AaE" target="_blank">0xb6Bf...0AaE</a></span></li>
-          <li><span class="label">RewardVault</span><span class="value mono"><a href="https://bscscan.com/address/0x176D9681D8d70e5312a83BafA8991b6Cf8AdA39c" target="_blank">0x176D...A39c</a></span></li>
+          <li><span class="label">StakingPool</span><span class="value mono"><a href="https://bscscan.com/address/0x76E590a2d594Be4d338F46c45B11ddA14dB481fe" target="_blank">0x76E5...81fe</a></span></li>
+          <li><span class="label">RewardVault</span><span class="value mono"><a href="https://bscscan.com/address/0x830Ed7fdC19DbF13AD83C90C528532F5bEf0E865" target="_blank">0x830E...E865</a></span></li>
           <li><span class="label">SPCX Token</span><span class="value mono"><a href="https://bscscan.com/address/0x2fa8d5c8FeA2F63cf21d30Df1EFA1eC0d3Db5555" target="_blank">0x2fa8...5555</a></span></li>
-          <li><span class="label">OM Token</span><span class="value mono"><a href="https://bscscan.com/address/0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17" target="_blank">0xe960...2a17</a></span></li>
         </ul>
       </div>
     </div>
   </div>
 
-  <!-- TAB BAR -->
   <div class="tab-bar">
-    <button class="active" onclick="switchTab('staking',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    <button class="active" onclick="showPanel('staking')" id="tab-staking">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
       <span data-i18n="tabStaking">Staking</span>
     </button>
-    <button onclick="switchTab('account',this)">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <button onclick="showPanel('admin')" id="tab-admin" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <span data-i18n="tabAdmin">Admin</span>
+    </button>
+    <button onclick="showPanel('account')" id="tab-account">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
       <span data-i18n="tabAccount">Account</span>
     </button>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div id="toast" class="toast"></div>
 
 <script>
-/* === I18N === */
-const LANG = {
+const SPCX_ADDR = "0x2fa8d5c8FeA2F63cf21d30Df1EFA1eC0d3Db5555";
+const VAULT_ADDR = "0x830Ed7fdC19DbF13AD83C90C528532F5bEf0E865";
+const STAKING_ADDR = "0x76E590a2d594Be4d338F46c45B11ddA14dB481fe";
+
+const ERC20_ABI = ["function balanceOf(address) view returns (uint256)", "function allowance(address, address) view returns (uint256)", "function approve(address, uint256) returns (bool)"];
+const VAULT_ABI = ["function owner() view returns (address)", "function depositSPCX(uint256) external", "function setStakingPaused(bool) external", "function withdrawAllWithdrawableSPCX() external", "function stakingPaused() view returns (bool)"];
+const STAKING_ABI = [
+  "function getGlobalInfo() view returns (tuple(address spcxToken, address vaultAddress, uint256 totalStaked, uint256 vaultSpcxBalance, uint256 vaultTotalReserved, uint256 vaultWithdrawableSPCX, bool stakingPaused, bool vaultLinked))",
+  "function getUserSummary(address) view returns (tuple(uint256 stakeCount, uint256 unpaidReward, uint256 spcxBalance, uint256 spcxAllowance))",
+  "function getPeriodConfigs() view returns (tuple(uint8 periodType, uint256 daysCount, uint256 dailyRateBps, uint256 totalRateBps)[3])",
+  "function getStakesPaginated(address, uint256, uint256) view returns (tuple(uint256 amount, uint256 startTime, uint256 unlockTime, uint256 reward, uint8 periodType, bool withdrawn)[] items, uint256 total)",
+  "function stake(uint256, uint8) external", "function unstake(uint256) external", "function unstakeBatch(uint256[]) external", "function claimUnpaid() external", "function canClaimUnpaid(address) view returns (bool)", "function setDailyRateBps(uint8, uint256) external", "function sweepDust(address, address) external"
+];
+
+const i18n = {
   en: {
-    connect:'Connect', stakingOverview:'Staking Overview', activeStaked:'Active Staked',
-    pendingRewards:'Pending Rewards', claimable:'Claimable', totalStaked:'Global Staked',
-    claimAll:'Claim All Unlocked', stakeSPCX:'Stake SPCX', amountStake:'Amount to Stake',
-    selectPeriod:'Select Period', stakeBtn:'Stake SPCX', myStakes:'My Active Stakes',
-    noStakes:'No active stakes found', wallet:'Wallet', address:'Address',
-    spcxBal:'SPCX Balance', omBal:'OM Balance', activationStat:'Account Status',
-    contractInfo:'Contract Info', tabStaking:'Staking', tabAccount:'Account',
-    activateAccount:'Activate Account', activationDesc:'Welcome! You must <strong>Activate</strong> your account to unlock staking features. This requires a one-time fee of <strong style="color:var(--accent)">0.1 OM</strong>.',
-    activateBtn:'Approve & Activate', activated:'Activated', notActivated:'Not Activated',
-    donate:'Donate to Reward Pool', donateDesc:'Anyone can donate SPCX to the Reward Vault to support other stakers.',
-    donateAmount:'Amount to Donate (SPCX)', donateBtn:'Donate SPCX',
-    toastConnect:'Wallet Connected', toastNoMM:'Please install MetaMask',
-    toastSwitchBSC:'Please switch to BSC Mainnet', toastConnFail:'Connection failed',
-    toastSending:'Sending transaction...', toastActivateOk:'Account Activated!',
-    toastApproveOk:'Approval successful!', toastStakeOk:'Staked successful!',
-    toastClaimOk:'Claimed successful!', toastDonateOk:'Donation successful!',
-    toastEnterAmt:'Enter an amount', toastConnFirst:'Connect wallet first', toastTxFail:'Transaction failed',
-    toastNoOM:'Insufficient OM balance', toastNoSPCX:'Insufficient SPCX balance',
-    unstake:'Unstake', locked:'Locked', ready:'Ready to Unstake'
+    connect: "Connect", stakingOverview: "Staking Overview", activeStaked: "Active Staked", pendingRewards: "Pending Rewards", claimable: "Claimable", totalStaked: "Global Staked", claimAll: "Claim All Unlocked", stakeSPCX: "Stake SPCX", amountStake: "Amount to Stake", selectPeriod: "Select Period", stakeBtn: "Stake SPCX", myStakes: "My Active Stakes", noStakes: "No active stakes found", donate: "Donate to Reward Pool", donateDesc: "Anyone can donate SPCX to the Reward Vault to support other stakers.", donateAmount: "Amount to Donate (SPCX)", donateBtn: "Donate SPCX", wallet: "Wallet", address: "Address", spcxBal: "SPCX Balance", contractInfo: "Contract Info", tabStaking: "Staking", tabAccount: "Account", toastConnWallet: "Please connect wallet", toastEnterAmt: "Enter valid amount", toastNoSPCX: "Insufficient SPCX balance", toastSending: "Transaction sending...", toastApproveOk: "Approval successful", toastStakeOk: "Staking successful", toastDonateOk: "Donation successful", toastClaimOk: "Claim successful", toastTxFail: "Transaction failed", unpaidRewards: "Unpaid Rewards", debtDesc: "You have pending rewards that couldn't be paid out due to vault liquidity.", totalOwed: "Total Owed", claimDebtBtn: "Claim Rewards", staked: "Staked", reward: "Reward", unlocks: "Unlocks", unlocked: "Unlocked", unstake: "Unstake", adminPanel: "Admin Control", adjustRate: "Adjust Daily Rate (BPS)", updateRate: "Update Rate", vaultBalance: "Vault SPCX", withdrawable: "Withdrawable", pauseStaking: "Pause Staking", resumeStaking: "Resume Staking", withdrawVault: "Withdraw All", sweepDust: "Sweep Dust (Pool)", tabAdmin: "Admin", role: "Role", adminRole: "Owner", userRole: "User"
   },
-  zh: {
-    connect:'连接钱包', stakingOverview:'质押总览', activeStaked:'正在质押',
-    pendingRewards:'待领收益', claimable:'可提取', totalStaked:'全网总质押',
-    claimAll:'提取所有已到期', stakeSPCX:'质押 SPCX', amountStake:'质押数量',
-    selectPeriod:'选择周期', stakeBtn:'质押 SPCX', myStakes:'我的质押记录',
-    noStakes:'暂无质押记录', wallet:'钱包', address:'地址',
-    spcxBal:'SPCX 余额', omBal:'OM 余额', activationStat:'账户状态',
-    contractInfo:'合约信息', tabStaking:'质押', tabAccount:'账户',
-    activateAccount:'激活账户', activationDesc:'欢迎！您必须先<strong>激活</strong>账户才能开启质押功能。激活需要支付一次性费用 <strong style="color:var(--accent)">0.1 OM</strong>。',
-    activateBtn:'授权并激活', activated:'已激活', notActivated:'未激活',
-    donate:'捐赠给奖励池', donateDesc:'任何人都可以向奖励金库捐赠 SPCX，以支持其他质押者。',
-    donateAmount:'捐赠数量 (SPCX)', donateBtn:'立即捐赠',
-    toastConnect:'钱包已连接', toastNoMM:'请安装 MetaMask',
-    toastSwitchBSC:'请切换到 BSC 主网', toastConnFail:'连接失败',
-    toastSending:'发送交易中...', toastActivateOk:'账户激活成功！',
-    toastApproveOk:'授权成功！', toastStakeOk:'质押成功！',
-    toastClaimOk:'提取成功！', toastDonateOk:'捐赠成功！',
-    toastEnterAmt:'请输入数量', toastConnFirst:'请先连接钱包', toastTxFail:'交易失败',
-    toastNoOM:'OM 余额不足', toastNoSPCX:'SPCX 余额不足',
-    unstake:'提取', locked:'锁定中', ready:'可提取'
+  cn: {
+    connect: "连接钱包", stakingOverview: "质押概览", activeStaked: "当前质押", pendingRewards: "待收收益", claimable: "可提取", totalStaked: "全网总质押量", claimAll: "一键提取已到期", stakeSPCX: "质押 SPCX", amountStake: "质押数量", selectPeriod: "选择期限", stakeBtn: "立即质押", myStakes: "我的质押单", noStakes: "暂无质押记录", donate: "捐赠奖励池", donateDesc: "任何人都可以向奖励金库捐赠 SPCX，以支持其他质押者。", donateAmount: "捐赠数量 (SPCX)", donateBtn: "立即捐赠", wallet: "钱包信息", address: "钱包地址", spcxBal: "SPCX 余额", contractInfo: "合约信息", tabStaking: "质押", tabAccount: "账户", toastConnWallet: "请先连接钱包", toastEnterAmt: "请输入有效数量", toastNoSPCX: "SPCX 余额不足", toastSending: "交易发送中...", toastApproveOk: "授权成功", toastStakeOk: "质押成功", toastDonateOk: "捐赠成功", toastClaimOk: "提取成功", toastTxFail: "交易失败", unpaidRewards: "未支付收益", debtDesc: "由于金库流动性不足，您有部分收益尚未支付。", totalOwed: "累计欠款", claimDebtBtn: "领取欠款", staked: "质押金额", reward: "预期收益", unlocks: "解锁时间", unlocked: "已解锁", unstake: "提取", adminPanel: "管理后台", adjustRate: "调整日利率 (BPS)", updateRate: "更新利率", vaultBalance: "金库余额", withdrawable: "可提取余额", pauseStaking: "暂停质押", resumeStaking: "恢复质押", withdrawVault: "提取所有可提", sweepDust: "清理池子余量", tabAdmin: "管理", role: "角色", adminRole: "管理员", userRole: "普通用户"
   }
 };
-let curLang = 'en';
-function t(key) { return LANG[curLang][key] || LANG.en[key] || key; }
-function applyLang() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const k = el.getAttribute('data-i18n');
-    if (LANG[curLang][k]) {
-      if (['activationDesc', 'donateDesc'].includes(k)) el.innerHTML = LANG[curLang][k];
-      else el.textContent = LANG[curLang][k];
-    }
-  });
-  document.getElementById('langBtn').textContent = curLang === 'en' ? 'CN' : 'EN';
-  if (userAddr) document.getElementById('connectBtn').textContent = userAddr.slice(0,6)+'...'+userAddr.slice(-4);
+
+let currentLang = 'cn';
+let provider, signer, userAddr, ownerAddr;
+let spcxContract, vaultContract, stakingContract;
+let selectedPeriodType = 0, isPaused = false;
+let userSummary = {};
+
+function t(key){ return i18n[currentLang][key] || key; }
+function toggleLang(){
+  currentLang = document.getElementById('langBtn').innerText === 'CN' ? 'cn' : 'en';
+  document.getElementById('langBtn').innerText = currentLang === 'cn' ? 'EN' : 'CN';
+  applyLang();
 }
-function toggleLang() { curLang = curLang === 'en' ? 'zh' : 'en'; applyLang(); }
-
-/* === CONTRACTS === */
-const STAKING_ADDR = '0xb6Bf82936E1750F3a168Ec3671Deb360349c0AaE';
-const VAULT_ADDR   = '0x176D9681D8d70e5312a83BafA8991b6Cf8AdA39c';
-const SPCX_ADDR    = '0x2fa8d5c8FeA2F63cf21d30Df1EFA1eC0d3Db5555';
-const OM_ADDR      = '0xe9606397a6Ce92E3E8acbEa98e701D9842c82a17';
-const BSC_CHAIN    = '0x38';
-
-const ERC20_ABI = [
-  "function balanceOf(address) view returns (uint256)",
-  "function approve(address,uint256) returns (bool)",
-  "function allowance(address,address) view returns (uint256)"
-];
-const STAKING_ABI = [
-  "function getGlobalInfo() view returns (tuple(address spcxToken, address omToken, address vaultAddress, uint256 whitelistFee, uint256 totalStaked, uint256 vaultSpcxBalance, uint256 vaultTotalReserved, uint256 vaultWithdrawableSPCX, uint256 vaultOmBalance, bool stakingPaused, bool vaultLinked))",
-  "function getUserSummary(address user) view returns (tuple(bool isWhitelisted, uint256 stakeCount, uint256 activeCount, uint256 unlockedCount, uint256 totalActivePrincipal, uint256 totalPendingReward, uint256 totalClaimablePrincipal, uint256 totalClaimableReward, uint256 spcxBalance, uint256 spcxAllowance, uint256 omBalance, uint256 omAllowance))",
-  "function getActiveStakes(address user) view returns (uint256[] ids, tuple(uint256 amount, uint256 startTime, uint256 unlockTime, uint256 reward, uint8 periodType, bool withdrawn)[] items)",
-  "function joinWhitelist()",
-  "function stake(uint256 amount, uint8 periodType)",
-  "function unstake(uint256 stakeId)",
-  "function unstakeBatch(uint256[] stakeIds)"
-];
-const VAULT_ABI = [
-  "function depositSPCX(uint256 amount)"
-];
-
-let provider, signer, userAddr;
-let stakingContract, vaultContract, spcxContract, omContract;
-let selectedPeriodType = 0;
-let userSummary = { spcxAllowanceToVault: 0n, omBalance: 0n, spcxBalance: 0n };
-
-/* === UI LOGIC === */
-function switchTab(name,btn){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.tab-bar button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
-  btn.classList.add('active');
+function applyLang(){
+  document.querySelectorAll('[data-i18n]').forEach(el => el.innerText = t(el.getAttribute('data-i18n')));
+  if(userAddr) refreshData();
 }
-function showToast(msg,dur){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),dur||3000);}
-function selectPeriod(type){
-  selectedPeriodType = type;
-  document.querySelectorAll('.period-btn').forEach((b,i)=>b.classList.toggle('active',i===type));
+function showPanel(name){
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+function showToast(msg){
+  const toast = document.getElementById('toast');
+  toast.innerText = msg; toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-/* === WALLET === */
 async function connectWallet(){
-  if(!window.ethereum){showToast(t('toastNoMM'));return;}
-  try{
-    await window.ethereum.request({method:'eth_requestAccounts'});
-    const cid=await window.ethereum.request({method:'eth_chainId'});
-    if(cid!==BSC_CHAIN){try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:BSC_CHAIN}]});}catch(e){showToast(t('toastSwitchBSC'));return;}}
-    provider=new ethers.BrowserProvider(window.ethereum);
-    signer=await provider.getSigner();
-    userAddr=await signer.getAddress();
-    stakingContract=new ethers.Contract(STAKING_ADDR,STAKING_ABI,signer);
-    vaultContract=new ethers.Contract(VAULT_ADDR,VAULT_ABI,signer);
-    spcxContract=new ethers.Contract(SPCX_ADDR,ERC20_ABI,signer);
-    omContract=new ethers.Contract(OM_ADDR,ERC20_ABI,signer);
-    applyLang();
-    showToast(t('toastConnect'));
-    refreshData();
-  }catch(e){showToast(t('toastConnFail'));console.error(e);}
-}
-
-/* === DATA === */
-async function refreshData(){
-  if(!userAddr)return;
-  try{
-    const [global, summary, activeStakes, vaultAllowance] = await Promise.all([
-      stakingContract.getGlobalInfo(),
-      stakingContract.getUserSummary(userAddr),
-      stakingContract.getActiveStakes(userAddr),
-      spcxContract.allowance(userAddr, VAULT_ADDR)
-    ]);
-    userSummary = summary;
-    userSummary.spcxAllowanceToVault = vaultAllowance;
-    const fmt = (v, d=4) => parseFloat(ethers.formatUnits(v, 18)).toLocaleString(undefined,{maximumFractionDigits:d});
-
-    // Handle Activation State
-    const isActivated = summary.isWhitelisted;
-    document.getElementById('activationCard').style.display = isActivated ? 'none' : 'block';
-    document.getElementById('stakingMainContent').style.opacity = isActivated ? '1' : '0.4';
-    document.getElementById('stakingMainContent').style.pointerEvents = isActivated ? 'auto' : 'none';
-
-    // Update Overview
-    document.getElementById('activeStaked').textContent = fmt(summary.totalActivePrincipal) + ' SPCX';
-    document.getElementById('pendingRewards').textContent = fmt(summary.totalPendingReward) + ' SPCX';
-    document.getElementById('claimableTotal').textContent = fmt(summary.totalClaimablePrincipal + summary.totalClaimableReward) + ' SPCX';
-    document.getElementById('globalTotalStaked').textContent = fmt(global.totalStaked) + ' SPCX';
-    document.getElementById('claimAllBtn').disabled = summary.unlockedCount == 0;
-
-    // Update Account
-    document.getElementById('walletAddr').textContent = userAddr.slice(0,8)+'...'+userAddr.slice(-6);
-    document.getElementById('spcxBalance').textContent = fmt(summary.spcxBalance) + ' SPCX';
-    document.getElementById('omBalance').textContent = fmt(summary.omBalance) + ' OM';
-    document.getElementById('activationStatus').innerHTML = isActivated ? '<span class="badge badge-green">'+t('activated')+'</span>' : '<span class="badge badge-red">'+t('notActivated')+'</span>';
-
-    // Update Buttons Label
-    const aBtn = document.getElementById('activateBtn');
-    if (summary.omAllowance < ethers.parseUnits("0.1", 18)) {
-        aBtn.textContent = t('zh' === curLang ? '授权并激活' : 'Approve & Activate');
-    } else {
-        aBtn.textContent = t('zh' === curLang ? '立即激活' : 'Activate Now');
-    }
-
-    const btn = document.getElementById('stakeBtn');
-    if (summary.spcxAllowance < ethers.parseUnits("1000000000", 18)) {
-        btn.textContent = t('zh' === curLang ? '授权并质押' : 'Approve & Stake');
-    } else {
-        btn.textContent = t('stakeBtn');
-    }
-
-    const dBtn = document.getElementById('donateBtn');
-    if (vaultAllowance < ethers.parseUnits("1000000000", 18)) {
-        dBtn.textContent = t('zh' === curLang ? '授权并捐赠' : 'Approve & Donate');
-    } else {
-        dBtn.textContent = t('donateBtn');
-    }
-
-    // Update Stakes List
-    const list = document.getElementById('stakesList');
-    if (activeStakes.ids.length === 0) {
-        list.innerHTML = `<p style="text-align:center;color:var(--text3);padding:20px">${t('noStakes')}</p>`;
-    } else {
-        list.innerHTML = '';
-        activeStakes.ids.forEach((id, index) => {
-            const s = activeStakes.items[index];
-            const isUnlocked = Date.now() / 1000 >= Number(s.unlockTime);
-            const div = document.createElement('div');
-            div.className = 'stake-item';
-            div.innerHTML = `
-                <div class="stake-item-header">
-                    <span class="badge ${isUnlocked?'badge-green':'badge-yellow'}">${isUnlocked?t('ready'):t('locked')}</span>
-                    <span style="font-weight:800">${fmt(s.amount)} SPCX</span>
-                </div>
-                <div class="stake-item-body">
-                    <span class="stake-item-label">Reward:</span><span class="stake-item-value green">+${fmt(s.reward)} SPCX</span>
-                    <span class="stake-item-label">Unlock:</span><span class="stake-item-value">${new Date(Number(s.unlockTime)*1000).toLocaleString()}</span>
-                </div>
-                <button class="btn-secondary" style="margin-top:10px; width:100%" onclick="unstake(${id})" ${!isUnlocked?'disabled':''}>${t('unstake')}</button>
-            `;
-            list.appendChild(div);
-        });
-    }
-  }catch(e){console.error('Refresh error:',e);}
-}
-
-/* === ACTIONS === */
-async function handleActivate(){
-  if(!signer) return connectWallet();
-  if(!userSummary.omBalance || userSummary.omBalance < ethers.parseUnits("0.1", 18)) return showToast(t('toastNoOM'));
-  
+  if(!window.ethereum) return alert("Please install MetaMask");
   try {
-    if (userSummary.omAllowance < ethers.parseUnits("0.1", 18)) {
-        showToast(t('toastSending') + " (Approve OM)");
-        const tx = await omContract.approve(STAKING_ADDR, ethers.MaxUint256);
-        await tx.wait();
-        showToast(t('toastApproveOk'));
-        await refreshData();
-    }
-    showToast(t('toastSending') + " (Activate)");
-    const tx = await stakingContract.joinWhitelist();
-    await tx.wait();
-    showToast(t('toastActivateOk'));
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send("eth_requestAccounts", []);
+    userAddr = accounts[0]; signer = await provider.getSigner();
+    spcxContract = new ethers.Contract(SPCX_ADDR, ERC20_ABI, signer);
+    vaultContract = new ethers.Contract(VAULT_ADDR, VAULT_ABI, signer);
+    stakingContract = new ethers.Contract(STAKING_ADDR, STAKING_ABI, signer);
+    ownerAddr = await vaultContract.owner();
+    const isAdmin = userAddr.toLowerCase() === ownerAddr.toLowerCase();
+    document.getElementById('tab-admin').style.display = isAdmin ? 'flex' : 'none';
+    document.getElementById('userRole').innerText = isAdmin ? t('adminRole') : t('userRole');
+    document.getElementById('connectBtn').innerText = userAddr.slice(0,6) + "..." + userAddr.slice(-4);
+    document.getElementById('walletAddr').innerText = userAddr;
     refreshData();
-  } catch(e) { 
-    console.error(e);
-    showToast(e.reason || t('toastTxFail')); 
-  }
+  } catch(e) { console.error(e); }
 }
 
+async function refreshData(){
+  if(!userAddr) return;
+  try {
+    const [global, summary, configs] = await Promise.all([stakingContract.getGlobalInfo(), stakingContract.getUserSummary(userAddr), stakingContract.getPeriodConfigs()]);
+    userSummary = summary; isPaused = global.stakingPaused;
+    configs.forEach((cfg, i) => document.getElementById(`rate${i}`).innerText = `${Number(cfg.dailyRateBps)/100}% Daily`);
+    document.getElementById('globalTotalStaked').innerText = ethers.formatUnits(global.totalStaked, 18) + " SPCX";
+    document.getElementById('spcxBalance').innerText = ethers.formatUnits(summary.spcxBalance, 18) + " SPCX";
+    const debtCard = document.getElementById('debtCard');
+    if (summary.unpaidReward > 0n) {
+        debtCard.style.display = 'block';
+        document.getElementById('unpaidRewardVal').innerText = ethers.formatUnits(summary.unpaidReward, 18) + " SPCX";
+        document.getElementById('claimDebtBtn').disabled = !(await stakingContract.canClaimUnpaid(userAddr));
+    } else debtCard.style.display = 'none';
+
+    if (userAddr.toLowerCase() === ownerAddr.toLowerCase()) {
+        document.getElementById('adminVaultBal').innerText = ethers.formatUnits(global.vaultSpcxBalance, 18) + " SPCX";
+        document.getElementById('adminWithdrawable').innerText = ethers.formatUnits(global.vaultWithdrawableSPCX, 18) + " SPCX";
+        document.getElementById('pauseBtn').innerText = isPaused ? t('resumeStaking') : t('pauseStaking');
+    }
+
+    const {items} = await stakingContract.getStakesPaginated(userAddr, 0, 50);
+    const list = document.getElementById('stakesList'); list.innerHTML = '';
+    let activeT = 0n, pendingT = 0n, claimableT = 0n, claimableIds = [];
+    items.forEach((s, i) => {
+      if(s.withdrawn) return;
+      activeT += s.amount; pendingT += s.reward;
+      const isU = Date.now() / 1000 >= Number(s.unlockTime);
+      if(isU) { claimableT += (s.amount + s.reward); claimableIds.push(i); }
+      const item = document.createElement('div'); item.className = 'stake-item fade-in';
+      item.innerHTML = `<div class="stake-item-header"><span class="badge ${isU ? 'badge-green' : 'badge-yellow'}">${isU ? t('unlocked') : t('staked')}</span><span style="font-size:.75rem;color:var(--text3)">#${i}</span></div><div class="stake-item-body"><span class="stake-item-label">${t('staked')}</span><span class="stake-item-value">${ethers.formatUnits(s.amount, 18)} SPCX</span><span class="stake-item-label">${t('reward')}</span><span class="stake-item-value green">+${ethers.formatUnits(s.reward, 18)} SPCX</span><span class="stake-item-label">${t('unlocks')}</span><span class="stake-item-value">${new Date(Number(s.unlockTime)*1000).toLocaleString()}</span></div>${isU ? `<button class="btn-secondary" style="margin-top:12px;padding:8px" onclick="unstake(${i})">${t('unstake')}</button>` : ''}`;
+      list.appendChild(item);
+    });
+    if(items.filter(s => !s.withdrawn).length === 0) list.innerHTML = `<p style="text-align:center;color:var(--text3);padding:20px">${t('noStakes')}</p>`;
+    document.getElementById('activeStaked').innerText = ethers.formatUnits(activeT, 18) + " SPCX";
+    document.getElementById('pendingRewards').innerText = ethers.formatUnits(pendingT, 18) + " SPCX";
+    document.getElementById('claimableTotal').innerText = ethers.formatUnits(claimableT, 18) + " SPCX";
+    const cBtn = document.getElementById('claimAllBtn'); cBtn.disabled = claimableIds.length === 0; cBtn.dataset.ids = JSON.stringify(claimableIds);
+  } catch(e) { console.error(e); }
+}
+
+async function handleClaimDebt(){ try { showToast(t('toastSending')); const tx = await stakingContract.claimUnpaid(); await tx.wait(); showToast(t('claimOk')); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); } }
 async function handleStake(){
   if(!signer) return connectWallet();
-  const amtStr = document.getElementById('stakeInput').value;
-  if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
-  const amt = ethers.parseUnits(amtStr, 18);
-  if(!userSummary.spcxBalance || userSummary.spcxBalance < amt) return showToast(t('toastNoSPCX'));
-
+  const amtStr = document.getElementById('stakeInput').value; if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
+  const amt = ethers.parseUnits(amtStr, 18); if(userSummary.spcxBalance < amt) return showToast(t('toastNoSPCX'));
   try {
-    if (userSummary.spcxAllowance < amt) {
-        showToast(t('toastSending') + " (Approve SPCX)");
-        const tx = await spcxContract.approve(STAKING_ADDR, ethers.MaxUint256);
-        await tx.wait();
-        showToast(t('toastApproveOk'));
-        await refreshData();
-    }
-    showToast(t('toastSending') + " (Stake)");
-    const tx = await stakingContract.stake(amt, selectedPeriodType);
-    await tx.wait();
-    showToast(t('toastStakeOk'));
-    document.getElementById('stakeInput').value = '';
-    refreshData();
-  } catch(e) { 
-    console.error(e);
-    showToast(e.reason || t('toastTxFail')); 
-  }
+    const al = await spcxContract.allowance(userAddr, STAKING_ADDR);
+    if (al < amt) { showToast(t('toastSending') + " (Approve)"); const tx = await spcxContract.approve(STAKING_ADDR, ethers.MaxUint256); await tx.wait(); }
+    showToast(t('toastSending') + " (Stake)"); const tx = await stakingContract.stake(amt, selectedPeriodType); await tx.wait(); showToast(t('toastStakeOk')); document.getElementById('stakeInput').value = ''; refreshData();
+  } catch(e) { console.error(e); showToast(e.reason || t('toastTxFail')); }
 }
-
 async function handleDonate(){
   if(!signer) return connectWallet();
-  const amtStr = document.getElementById('donateInput').value;
-  if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
-  const amt = ethers.parseUnits(amtStr, 18);
-  if(!userSummary.spcxBalance || userSummary.spcxBalance < amt) return showToast(t('toastNoSPCX'));
-
+  const amtStr = document.getElementById('donateInput').value; if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
+  const amt = ethers.parseUnits(amtStr, 18); if(userSummary.spcxBalance < amt) return showToast(t('toastNoSPCX'));
   try {
-    if (userSummary.spcxAllowanceToVault < amt) {
-        showToast(t('toastSending') + " (Approve SPCX)");
-        const tx = await spcxContract.approve(VAULT_ADDR, ethers.MaxUint256);
-        await tx.wait();
-        showToast(t('toastApproveOk'));
-        await refreshData();
-    }
-    showToast(t('toastSending') + " (Donate)");
-    const tx = await vaultContract.depositSPCX(amt);
-    await tx.wait();
-    showToast(t('toastDonateOk'));
-    document.getElementById('donateInput').value = '';
-    refreshData();
-  } catch(e) { 
-    console.error(e);
-    showToast(e.reason || t('toastTxFail')); 
-  }
+    const al = await spcxContract.allowance(userAddr, VAULT_ADDR);
+    if (al < amt) { showToast(t('toastSending') + " (Approve)"); const tx = await spcxContract.approve(VAULT_ADDR, ethers.MaxUint256); await tx.wait(); }
+    showToast(t('toastSending') + " (Donate)"); const tx = await vaultContract.depositSPCX(amt); await tx.wait(); showToast(t('toastDonateOk')); document.getElementById('donateInput').value = ''; refreshData();
+  } catch(e) { console.error(e); showToast(e.reason || t('toastTxFail')); }
 }
+async function unstake(id){ try { showToast(t('toastSending')); const tx = await stakingContract.unstake(id); await tx.wait(); showToast(t('toastClaimOk')); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); } }
+async function claimAll(){ const ids = JSON.parse(document.getElementById('claimAllBtn').dataset.ids || "[]"); try { showToast(t('toastSending')); const tx = await stakingContract.unstakeBatch(ids); await tx.wait(); showToast(t('toastClaimOk')); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); } }
 
-async function unstake(id){
-  try {
-    showToast(t('toastSending'));
-    const tx = await stakingContract.unstake(id);
-    await tx.wait();
-    showToast(t('toastClaimOk'));
-    refreshData();
-  } catch(e) { showToast(e.reason || t('toastTxFail')); }
+// ADMIN ACTIONS
+async function adminSetRate(){
+    const rate = document.getElementById('newRateVal').value;
+    const period = document.getElementById('ratePeriodSelect').value;
+    if(!rate) return showToast(t('toastEnterAmt'));
+    try { showToast(t('toastSending')); const tx = await stakingContract.setDailyRateBps(period, rate); await tx.wait(); showToast("Rate Updated"); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); }
 }
-
-async function claimAll(){
-  try {
-    const ids = [];
-    const activeStakes = await stakingContract.getActiveStakes(userAddr);
-    activeStakes.ids.forEach((id, i) => {
-        if (Date.now() / 1000 >= Number(activeStakes.items[i].unlockTime)) ids.push(id);
-    });
-    if (ids.length === 0) return;
-    showToast(t('toastSending'));
-    const tx = await stakingContract.unstakeBatch(ids);
-    await tx.wait();
-    showToast(t('toastClaimOk'));
-    refreshData();
-  } catch(e) { showToast(e.reason || t('toastTxFail')); }
+async function adminTogglePause(){
+    try { showToast(t('toastSending')); const tx = await vaultContract.setStakingPaused(!isPaused); await tx.wait(); showToast("Status Updated"); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); }
+}
+async function adminWithdrawSPCX(){
+    try { showToast(t('toastSending')); const tx = await vaultContract.withdrawAllWithdrawableSPCX(); await tx.wait(); showToast("Withdraw Success"); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); }
+}
+async function adminSweepDust(){
+    try { showToast(t('toastSending')); const tx = await stakingContract.sweepDust(SPCX_ADDR, userAddr); await tx.wait(); showToast("Sweep Success"); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); }
 }
 
 function setPercent(type, pct){
     if(!userSummary.spcxBalance) return;
-    const bal = userSummary.spcxBalance;
     const input = document.getElementById(type + 'Input');
-    if (pct === 100) {
-        // Show full 18 decimals for MAX
-        input.value = ethers.formatUnits(bal, 18);
-    } else {
-        const amt = (bal * BigInt(pct)) / 100n;
-        input.value = ethers.formatUnits(amt, 18);
-    }
+    input.value = ethers.formatUnits((userSummary.spcxBalance * BigInt(pct)) / 100n, 18);
 }
+function selectPeriod(i){ selectedPeriodType = i; document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active')); document.getElementById('period' + i).classList.add('active'); }
 
-function setMaxStake(){ setPercent('stake', 100); }
-function setMaxDonate(){ setPercent('donate', 100); }
-
-setInterval(()=>{if(userAddr)refreshData();}, 20000);
-applyLang();
+setInterval(()=>{if(userAddr)refreshData();}, 15000);
+if(window.ethereum) window.ethereum.on('accountsChanged', accounts => { if(accounts.length > 0) connectWallet(); else location.reload(); });
 </script>
 </body>
 </html>
