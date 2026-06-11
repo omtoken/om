@@ -3,59 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>链上 NFT 随机生成器</title>
-    <!-- 引入 Tailwind CSS 用于美观的界面 -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>链上 NFT 随机生成器 (500x500)</title>
     <!-- 引入 Ethers.js v6 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.2/ethers.umd.min.js"></script>
     <style>
-        .nft-bg {
-            background-color: #f3f4f6;
-            background-image: radial-gradient(#d1d5db 1px, transparent 1px);
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        /* 强制 500x500 像素的画布容器 */
+        .canvas-wrapper {
+            width: 500px;
+            height: 500px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background-color: #ffffff;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
             background-size: 20px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 20px auto;
+            position: relative;
+            overflow: hidden;
+        }
+        /* 强制图片严格为 500x500 */
+        #nftImage {
+            width: 500px;
+            height: 500px;
+            display: none;
+            image-rendering: auto;
+        }
+        .btn {
+            background-color: #f59e0b;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 5px;
+        }
+        .btn:hover { background-color: #d97706; }
+        .btn:disabled { background-color: #d1d5db; cursor: not-allowed; }
+        .btn-secondary { background-color: #374151; }
+        .btn-secondary:hover { background-color: #1f2937; }
+        
+        .traits-box {
+            margin-top: 20px;
+            text-align: left;
+            background: #f9fafb;
+            padding: 16px;
+            border-radius: 8px;
+            display: none;
+        }
+        .trait-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .trait-row:last-child { border-bottom: none; }
+        .trait-label { color: #6b7280; font-size: 14px; }
+        .trait-value { color: #111827; font-weight: 600; font-size: 14px; }
+        
+        .loading {
+            display: none;
+            color: #6b7280;
+            font-size: 14px;
+        }
+        .error {
+            color: #dc2626;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+<body>
 
-    <div class="bg-white rounded-2xl shadow-xl p-6 md:p-8 max-w-2xl w-full">
-        <div class="text-center mb-6">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">🎲 链上 NFT 随机生成器</h1>
-            <p class="text-gray-500 text-sm">数据直接从 BSC 主网合约实时读取，无需连接钱包</p>
-            <p class="text-gray-400 text-xs mt-1">合约: 0x17e1c9844052d6CC9Fb1dCd7Ed2646673Bca3080</p>
+    <div class="container">
+        <h2 style="margin: 0 0 8px 0;">🎲 链上 NFT 随机生成器</h2>
+        <p style="color: #6b7280; font-size: 13px; margin: 0;">数据直连 BSC 主网合约，无需钱包</p>
+
+        <!-- 严格 500x500 像素的显示区域 -->
+        <div class="canvas-wrapper">
+            <span id="placeholder" style="color: #9ca3af;">点击按钮生成 500x500 图片</span>
+            <div id="loading" class="loading">正在从链上读取并拼接数据...</div>
+            <img id="nftImage" alt="Generated NFT">
         </div>
 
-        <!-- 图片预览区 -->
-        <div class="nft-bg rounded-xl border-2 border-gray-200 flex items-center justify-center mb-6 overflow-hidden" style="width: 100%; max-width: 500px; height: 500px; margin: 0 auto;">
-            <img id="nftImage" src="" alt="NFT Preview" class="hidden w-full h-full object-contain">
-            <div id="placeholder" class="text-gray-400 text-lg font-medium">点击下方按钮开始生成</div>
-            
-            <!-- Loading 动画 -->
-            <div id="loading" class="hidden flex-col items-center justify-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500 mb-3"></div>
-                <p class="text-gray-600 text-sm">正在从链上读取并拼接 SVG...</p>
-            </div>
+        <div id="errorMsg" class="error"></div>
+
+        <div>
+            <button id="generateBtn" class="btn" onclick="generateNFT()">🎲 随机生成</button>
+            <button id="downloadBtn" class="btn btn-secondary" style="display: none;" onclick="downloadSVG()">⬇️ 下载 SVG</button>
         </div>
 
-        <!-- 错误提示 -->
-        <div id="error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm text-center"></div>
-
-        <!-- 操作按钮 -->
-        <div class="flex gap-3 justify-center mb-6">
-            <button id="generateBtn" onclick="generateNFT()" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-8 rounded-lg transition-colors duration-200 flex items-center gap-2">
-                <span>🎲</span> 随机生成 NFT
-            </button>
-            <button id="downloadBtn" onclick="downloadSVG()" class="hidden bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center gap-2">
-                <span>⬇️</span> 下载 SVG
-            </button>
-        </div>
-
-        <!-- Traits 详情列表 -->
-        <div id="traitsList" class="hidden bg-gray-50 rounded-xl p-4 border border-gray-100">
-            <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">当前生成属性</h3>
-            <div id="traitsContent" class="space-y-2">
-                <!-- 动态插入 -->
-            </div>
+        <div id="traitsBox" class="traits-box">
+            <h3 style="margin: 0 0 12px 0; font-size: 14px; color: #374151; text-transform: uppercase;">当前属性</h3>
+            <div id="traitsContent"></div>
         </div>
     </div>
 
@@ -77,55 +140,51 @@
         let contract;
         let currentSvgString = "";
 
-        // 初始化区块链连接
+        // 初始化
         async function init() {
             try {
                 provider = new ethers.JsonRpcProvider(RPC_URL);
                 contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
-                // 测试连接
-                await contract.layerCount(); 
+                await contract.layerCount(); // 测试连接
                 console.log("✅ 合约连接成功");
             } catch (err) {
                 console.error("初始化失败:", err);
-                showError("连接 BSC 节点失败，请检查网络或稍后刷新页面重试。");
+                showError("连接 BSC 节点失败，请检查网络或刷新页面。");
             }
         }
 
-        // 核心生成逻辑
         async function generateNFT() {
             const btn = document.getElementById('generateBtn');
             const downloadBtn = document.getElementById('downloadBtn');
             const loading = document.getElementById('loading');
-            const errorDiv = document.getElementById('error');
-            const img = document.getElementById('nftImage');
             const placeholder = document.getElementById('placeholder');
-            const traitsList = document.getElementById('traitsList');
+            const img = document.getElementById('nftImage');
+            const traitsBox = document.getElementById('traitsBox');
             const traitsContent = document.getElementById('traitsContent');
+            const errorMsg = document.getElementById('errorMsg');
 
-            // 重置 UI 状态
+            // 重置 UI
             btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
-            downloadBtn.classList.add('hidden');
-            loading.classList.remove('hidden');
-            loading.classList.add('flex');
-            errorDiv.classList.add('hidden');
-            img.classList.add('hidden');
-            placeholder.classList.add('hidden');
-            traitsList.classList.add('hidden');
+            downloadBtn.style.display = 'none';
+            loading.style.display = 'block';
+            placeholder.style.display = 'none';
+            img.style.display = 'none';
+            traitsBox.style.display = 'none';
+            errorMsg.style.display = 'none';
             traitsContent.innerHTML = '';
 
             try {
-                // 1. 获取链上图层摘要 (名称和数量)
+                // 1. 获取链上图层摘要
                 const [layerNames, traitCounts] = await contract.getLayerSummary();
                 
                 let svgParts = [];
                 let selectedTraits = [];
 
-                // 2. 按照 LAYER_ORDER 严格顺序遍历
+                // 2. 按正确顺序遍历
                 for (let i = 0; i < LAYER_ORDER.length; i++) {
                     const expectedName = LAYER_ORDER[i];
                     
-                    // 防御性校验：确保链上顺序与预期一致
+                    // 严格校验顺序
                     if (layerNames[i] !== expectedName) {
                         throw new Error(`链上图层顺序异常！预期: ${expectedName}, 实际: ${layerNames[i]}`);
                     }
@@ -133,10 +192,10 @@
                     const count = Number(traitCounts[i]);
                     if (count === 0) continue;
 
-                    // 随机选择一个 Trait 索引
+                    // 随机选择
                     const randomIndex = Math.floor(Math.random() * count);
                     
-                    // 并发读取名称和 SVG 数据，大幅提升加载速度
+                    // 并发读取名称和 SVG，加速
                     const [name, svgContent] = await Promise.all([
                         contract.traitName(i, randomIndex),
                         contract.traitSVG(i, randomIndex)
@@ -144,58 +203,51 @@
 
                     selectedTraits.push({ layer: expectedName, name: name });
                     
-                    // 如果 SVG 内容不为空，则加入拼接数组
                     if (svgContent && svgContent.trim() !== "") {
                         svgParts.push(svgContent);
                     }
                 }
 
-                // 3. 拼接最终的 SVG 字符串
-                // 注意：viewBox="0 0 1000 1000" 是此类生成艺术的标准坐标系，width/height="500" 用于控制显示尺寸
+                // 3. 拼接 SVG (viewBox 保持原始比例，width/height 强制 500)
                 currentSvgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="500" height="500">
     ${svgParts.join('\n    ')}
 </svg>`;
 
-                // 4. 转换为 Base64 并显示图片
-                // 使用 encodeURIComponent 确保处理可能的特殊字符
+                // 4. 转换为 Base64 并显示
                 const base64Svg = btoa(unescape(encodeURIComponent(currentSvgString)));
                 img.src = `data:image/svg+xml;base64,${base64Svg}`;
+                img.style.display = 'block';
+                downloadBtn.style.display = 'inline-block';
                 
-                // 5. 更新 UI
-                img.classList.remove('hidden');
-                downloadBtn.classList.remove('hidden');
-                
+                // 5. 渲染属性列表
                 selectedTraits.forEach(trait => {
                     const div = document.createElement('div');
-                    div.className = 'flex justify-between items-center py-2 border-b border-gray-200 last:border-0';
+                    div.className = 'trait-row';
                     div.innerHTML = `
-                        <span class="text-sm font-medium text-gray-500">${trait.layer}</span>
-                        <span class="text-sm font-bold text-gray-800 bg-gray-200 px-2 py-1 rounded">${trait.name}</span>
+                        <span class="trait-label">${trait.layer}</span>
+                        <span class="trait-value">${trait.name}</span>
                     `;
                     traitsContent.appendChild(div);
                 });
-                traitsList.classList.remove('hidden');
+                traitsBox.style.display = 'block';
 
             } catch (err) {
                 console.error("生成失败:", err);
-                showError("生成失败: " + (err.message || "未知错误。请检查控制台或稍后重试。"));
-                placeholder.classList.remove('hidden');
+                showError("生成失败: " + err.message);
+                placeholder.style.display = 'block';
             } finally {
                 btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                loading.classList.add('hidden');
-                loading.classList.remove('flex');
+                loading.style.display = 'none';
             }
         }
 
-        // 下载 SVG 文件功能
         function downloadSVG() {
             if (!currentSvgString) return;
             const blob = new Blob([currentSvgString], { type: 'image/svg+xml' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `OnChain_NFT_${Date.now()}.svg`;
+            a.download = `OnChain_NFT_500x500_${Date.now()}.svg`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -203,12 +255,11 @@
         }
 
         function showError(msg) {
-            const errorDiv = document.getElementById('error');
-            errorDiv.textContent = msg;
-            errorDiv.classList.remove('hidden');
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
         }
 
-        // 页面加载时初始化
         window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
