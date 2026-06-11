@@ -182,6 +182,28 @@ button{cursor:pointer;border:none;font-family:inherit}
           <p style="text-align:center;color:var(--text3);padding:20px" data-i18n="noStakes">No active stakes found</p>
         </div>
       </div>
+
+      <!-- DONATION PANEL -->
+      <div class="card fade-in" style="border: 1px solid var(--green);">
+        <div class="card-title"><div class="card-title-text"><span class="dot" style="background:var(--green)"></span><span data-i18n="donate">Donate to Reward Pool</span></div></div>
+        <p style="font-size:.9rem;color:var(--text2);margin-bottom:14px;line-height:1.6" data-i18n="donateDesc">
+          Anyone can donate SPCX to the Reward Vault to support the staking ecosystem and other stakers.
+        </p>
+        <div class="input-group">
+          <label data-i18n="donateAmount">Amount to Donate (SPCX)</label>
+          <div class="input-max">
+            <input type="number" id="donateInput" placeholder="0.00">
+            <button onclick="setPercent('donate', 100)">MAX</button>
+          </div>
+          <div class="percent-grid">
+            <button class="percent-btn" onclick="setPercent('donate', 25)">25%</button>
+            <button class="percent-btn" onclick="setPercent('donate', 50)">50%</button>
+            <button class="percent-btn" onclick="setPercent('donate', 75)">75%</button>
+            <button class="percent-btn" onclick="setPercent('donate', 100)">100%</button>
+          </div>
+        </div>
+        <button class="btn-primary" id="donateBtn" onclick="handleDonate()" data-i18n="donateBtn" style="background:linear-gradient(135deg,var(--green),#059669);color:#fff">Donate SPCX</button>
+      </div>
     </div>
 
     <!-- ADMIN PANEL (OWNER ONLY) -->
@@ -237,8 +259,8 @@ button{cursor:pointer;border:none;font-family:inherit}
       <div class="card fade-in">
         <div class="card-title"><div class="card-title-text"><span class="dot"></span><span data-i18n="contractInfo">Contract Info</span></div></div>
         <ul class="info-list">
-          <li><span class="label">StakingPool</span><span class="value mono"><a href="https://bscscan.com/address/0x76E590a2d594Be4d338F46c45B11ddA14dB481fe" target="_blank">0x76E5...81fe</a></span></li>
-          <li><span class="label">RewardVault</span><span class="value mono"><a href="https://bscscan.com/address/0x830Ed7fdC19DbF13AD83C90C528532F5bEf0E865" target="_blank">0x830E...E865</a></span></li>
+          <li><span class="label">StakingPool</span><span class="value mono"><a href="https://bscscan.com/address/0x5074627D9C85dA9617E078E1D9F84CE15cC843BF" target="_blank">0x5074...43BF</a></span></li>
+          <li><span class="label">RewardVault</span><span class="value mono"><a href="https://bscscan.com/address/0x01Fa620dfC92Ed43Af5F3faBC2a4A69C95046501" target="_blank">0x01Fa...6501</a></span></li>
           <li><span class="label">SPCX Token</span><span class="value mono"><a href="https://bscscan.com/address/0x2fa8d5c8FeA2F63cf21d30Df1EFA1eC0d3Db5555" target="_blank">0x2fa8...5555</a></span></li>
         </ul>
       </div>
@@ -265,8 +287,8 @@ button{cursor:pointer;border:none;font-family:inherit}
 
 <script>
 const SPCX_ADDR = "0x2fa8d5c8FeA2F63cf21d30Df1EFA1eC0d3Db5555";
-const VAULT_ADDR = "0x830Ed7fdC19DbF13AD83C90C528532F5bEf0E865";
-const STAKING_ADDR = "0x76E590a2d594Be4d338F46c45B11ddA14dB481fe";
+const VAULT_ADDR = "0x01Fa620dfC92Ed43Af5F3faBC2a4A69C95046501";
+const STAKING_ADDR = "0x5074627D9C85dA9617E078E1D9F84CE15cC843BF";
 
 const ERC20_ABI = ["function balanceOf(address) view returns (uint256)", "function allowance(address, address) view returns (uint256)", "function approve(address, uint256) returns (bool)"];
 const VAULT_ABI = ["function owner() view returns (address)", "function depositSPCX(uint256) external", "function setStakingPaused(bool) external", "function withdrawAllWithdrawableSPCX() external", "function stakingPaused() view returns (bool)"];
@@ -280,10 +302,10 @@ const STAKING_ABI = [
 
 const i18n = {
   en: {
-    connect: "Connect", stakingOverview: "Staking Overview", activeStaked: "Active Staked", pendingRewards: "Pending Rewards", claimable: "Claimable", totalStaked: "Global Staked", claimAll: "Claim All Unlocked", stakeSPCX: "Stake SPCX", amountStake: "Amount to Stake", selectPeriod: "Select Period", stakeBtn: "Stake SPCX", myStakes: "My Active Stakes", noStakes: "No active stakes found", donate: "Donate to Reward Pool", donateDesc: "Anyone can donate SPCX to the Reward Vault to support other stakers.", donateAmount: "Amount to Donate (SPCX)", donateBtn: "Donate SPCX", wallet: "Wallet", address: "Address", spcxBal: "SPCX Balance", contractInfo: "Contract Info", tabStaking: "Staking", tabAccount: "Account", toastConnWallet: "Please connect wallet", toastEnterAmt: "Enter valid amount", toastNoSPCX: "Insufficient SPCX balance", toastSending: "Transaction sending...", toastApproveOk: "Approval successful", toastStakeOk: "Staking successful", toastDonateOk: "Donation successful", toastClaimOk: "Claim successful", toastTxFail: "Transaction failed", unpaidRewards: "Unpaid Rewards", debtDesc: "You have pending rewards that couldn't be paid out due to vault liquidity.", totalOwed: "Total Owed", claimDebtBtn: "Claim Rewards", staked: "Staked", reward: "Reward", unlocks: "Unlocks", unlocked: "Unlocked", unstake: "Unstake", adminPanel: "Admin Control", adjustRate: "Adjust Daily Rate (BPS)", updateRate: "Update Rate", vaultBalance: "Vault SPCX", withdrawable: "Withdrawable", pauseStaking: "Pause Staking", resumeStaking: "Resume Staking", withdrawVault: "Withdraw All", sweepDust: "Sweep Dust (Pool)", tabAdmin: "Admin", role: "Role", adminRole: "Owner", userRole: "User"
+    connect: "Connect", stakingOverview: "Staking Overview", activeStaked: "Active Staked", pendingRewards: "Pending Rewards", claimable: "Claimable", totalStaked: "Global Staked", claimAll: "Claim All Unlocked", stakeSPCX: "Stake SPCX", amountStake: "Amount to Stake", selectPeriod: "Select Period", stakeBtn: "Stake SPCX", myStakes: "My Active Stakes", noStakes: "No active stakes found", donate: "Donate to Reward Pool", donateDesc: "Anyone can donate SPCX to the Reward Vault to support the staking ecosystem and other stakers.", donateAmount: "Amount to Donate (SPCX)", donateBtn: "Donate SPCX", wallet: "Wallet", address: "Address", spcxBal: "SPCX Balance", contractInfo: "Contract Info", tabStaking: "Staking", tabAccount: "Account", toastConnWallet: "Please connect wallet", toastEnterAmt: "Enter valid amount", toastNoSPCX: "Insufficient SPCX balance", toastSending: "Transaction sending...", toastApproveOk: "Approval successful", toastStakeOk: "Staking successful", toastDonateOk: "Donation successful", toastClaimOk: "Claim successful", toastTxFail: "Transaction failed", unpaidRewards: "Unpaid Rewards", debtDesc: "You have pending rewards that couldn't be paid out due to vault liquidity.", totalOwed: "Total Owed", claimDebtBtn: "Claim Rewards", staked: "Staked", reward: "Reward", unlocks: "Unlocks", unlocked: "Unlocked", unstake: "Unstake", adminPanel: "Admin Control", adjustRate: "Adjust Daily Rate (BPS)", updateRate: "Update Rate", vaultBalance: "Vault SPCX", withdrawable: "Withdrawable", pauseStaking: "Pause Staking", resumeStaking: "Resume Staking", withdrawVault: "Withdraw All", sweepDust: "Sweep Dust (Pool)", tabAdmin: "Admin", role: "Role", adminRole: "Owner", userRole: "User"
   },
   cn: {
-    connect: "连接钱包", stakingOverview: "质押概览", activeStaked: "当前质押", pendingRewards: "待收收益", claimable: "可提取", totalStaked: "全网总质押量", claimAll: "一键提取已到期", stakeSPCX: "质押 SPCX", amountStake: "质押数量", selectPeriod: "选择期限", stakeBtn: "立即质押", myStakes: "我的质押单", noStakes: "暂无质押记录", donate: "捐赠奖励池", donateDesc: "任何人都可以向奖励金库捐赠 SPCX，以支持其他质押者。", donateAmount: "捐赠数量 (SPCX)", donateBtn: "立即捐赠", wallet: "钱包信息", address: "钱包地址", spcxBal: "SPCX 余额", contractInfo: "合约信息", tabStaking: "质押", tabAccount: "账户", toastConnWallet: "请先连接钱包", toastEnterAmt: "请输入有效数量", toastNoSPCX: "SPCX 余额不足", toastSending: "交易发送中...", toastApproveOk: "授权成功", toastStakeOk: "质押成功", toastDonateOk: "捐赠成功", toastClaimOk: "提取成功", toastTxFail: "交易失败", unpaidRewards: "未支付收益", debtDesc: "由于金库流动性不足，您有部分收益尚未支付。", totalOwed: "累计欠款", claimDebtBtn: "领取欠款", staked: "质押金额", reward: "预期收益", unlocks: "解锁时间", unlocked: "已解锁", unstake: "提取", adminPanel: "管理后台", adjustRate: "调整日利率 (BPS)", updateRate: "更新利率", vaultBalance: "金库余额", withdrawable: "可提取余额", pauseStaking: "暂停质押", resumeStaking: "恢复质押", withdrawVault: "提取所有可提", sweepDust: "清理池子余量", tabAdmin: "管理", role: "角色", adminRole: "管理员", userRole: "普通用户"
+    connect: "连接钱包", stakingOverview: "质押概览", activeStaked: "当前质押", pendingRewards: "待收收益", claimable: "可提取", totalStaked: "全网总质押量", claimAll: "一键提取已到期", stakeSPCX: "质押 SPCX", amountStake: "质押数量", selectPeriod: "选择期限", stakeBtn: "立即质押", myStakes: "我的质押单", noStakes: "暂无质押记录", donate: "捐赠奖励池", donateDesc: "任何人都可以向奖励金库捐赠 SPCX，以支持质押生态和其他质押者。", donateAmount: "捐赠数量 (SPCX)", donateBtn: "立即捐赠", wallet: "钱包信息", address: "钱包地址", spcxBal: "SPCX 余额", contractInfo: "合约信息", tabStaking: "质押", tabAccount: "账户", toastConnWallet: "请先连接钱包", toastEnterAmt: "请输入有效数量", toastNoSPCX: "SPCX 余额不足", toastSending: "交易发送中...", toastApproveOk: "授权成功", toastStakeOk: "质押成功", toastDonateOk: "捐赠成功", toastClaimOk: "提取成功", toastTxFail: "交易失败", unpaidRewards: "未支付收益", debtDesc: "由于金库流动性不足，您有部分收益尚未支付。", totalOwed: "累计欠款", claimDebtBtn: "领取欠款", staked: "质押金额", reward: "预期收益", unlocks: "解锁时间", unlocked: "已解锁", unstake: "提取", adminPanel: "管理后台", adjustRate: "调整日利率 (BPS)", updateRate: "更新利率", vaultBalance: "金库余额", withdrawable: "可提取余额", pauseStaking: "暂停质押", resumeStaking: "恢复质押", withdrawVault: "提取所有可提", sweepDust: "清理池子余量", tabAdmin: "管理", role: "角色", adminRole: "管理员", userRole: "普通用户"
   }
 };
 
@@ -375,7 +397,7 @@ async function refreshData(){
   } catch(e) { console.error(e); }
 }
 
-async function handleClaimDebt(){ try { showToast(t('toastSending')); const tx = await stakingContract.claimUnpaid(); await tx.wait(); showToast(t('claimOk')); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); } }
+async function handleClaimDebt(){ try { showToast(t('toastSending')); const tx = await stakingContract.claimUnpaid(); await tx.wait(); showToast(t('toastClaimOk')); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); } }
 async function handleStake(){
   if(!signer) return connectWallet();
   const amtStr = document.getElementById('stakeInput').value; if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
