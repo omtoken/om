@@ -140,7 +140,7 @@
 
     <div class="container">
         <h2 style="margin: 0 0 8px 0;">🎲 链上 NFT 随机生成器</h2>
-        <p style="color: #6b7280; font-size: 13px; margin: 0;">数据直连 BSC 主网合约 · 支持高清 PNG 导出</p>
+        <p style="color: #6b7280; font-size: 13px; margin: 0;">输出与合约一致的 500×500 SVG</p>
 
         <!-- 严格 500x500 像素的显示区域 -->
         <div class="canvas-wrapper">
@@ -156,16 +156,10 @@
         </div>
 
         <div id="exportArea" style="display:none;">
-            <div class="size-picker" role="radiogroup" aria-label="导出尺寸">
-                <label><input type="radio" name="size" value="500"><span>500×500</span></label>
-                <label><input type="radio" name="size" value="1000" checked><span>1000×1000</span></label>
-                <label><input type="radio" name="size" value="2000"><span>2000×2000</span></label>
-            </div>
             <div>
-                <button class="btn btn-blue" onclick="downloadPNG()">⬇️ 下载 PNG</button>
-                <button class="btn btn-secondary" onclick="downloadSVG()">⬇️ 下载 SVG</button>
+                <button class="btn btn-secondary" onclick="downloadSVG()">⬇️ 下载 SVG (500×500)</button>
             </div>
-            <div class="hint">推荐 NFT 使用 PNG 1000×1000 或以上以兼容主流市场。</div>
+            <div id="viewBoxInfo" class="hint" style="margin-top:12px;font-family:monospace;font-size:12px;color:#374151;background:#f3f4f6;padding:10px;border-radius:6px;word-break:break-all;text-align:left;"></div>
         </div>
 
         <div id="traitsBox" class="traits-box">
@@ -173,8 +167,6 @@
             <div id="traitsContent"></div>
         </div>
     </div>
-
-    <canvas id="exportCanvas"></canvas>
 
     <script>
         // ================= 配置区 =================
@@ -323,24 +315,29 @@
     ${svgParts.join('\n    ')}
 </svg>`;
 
-                // ② 把它挂到隐藏 DOM 上，用 getBBox() 测出实际内容边界
+                // ② 测出真实内容边界，作为 viewBox（合约里要硬编码的就是这个值）
                 const bbox = await measureSvgBBox(rawSvg);
-                console.log('🔍 链上内容真实边界:', bbox);
-
-                // ③ 给内容加一点 padding，并按测出的边界重写 viewBox，
-                //    这样不管原始坐标范围是 0-24 还是 0-100，都会被自动放大铺满画布
                 const pad = Math.max(bbox.width, bbox.height) * 0.02;
-                const vb = `${bbox.x - pad} ${bbox.y - pad} ${bbox.width + pad * 2} ${bbox.height + pad * 2}`;
+                const vbX = +(bbox.x - pad).toFixed(2);
+                const vbY = +(bbox.y - pad).toFixed(2);
+                const vbW = +(bbox.width + pad * 2).toFixed(2);
+                const vbH = +(bbox.height + pad * 2).toFixed(2);
+                const vb = `${vbX} ${vbY} ${vbW} ${vbH}`;
+                console.log('🔍 viewBox（请抄进 Solidity 合约）:', vb);
 
-                // 母版 SVG —— 用自动测出的 viewBox，不固定 width/height
-                masterSvgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" preserveAspectRatio="xMidYMid meet" shape-rendering="geometricPrecision">
+                // ③ 输出与智能合约完全一致的 SVG：固定 500x500 + 自动测出的 viewBox
+                //    （合约里只要把下面这一行字符串硬编码即可）
+                const finalSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="${vb}" preserveAspectRatio="xMidYMid meet" shape-rendering="geometricPrecision">
     ${svgParts.join('\n    ')}
 </svg>`;
 
-                // 预览 SVG —— 浏览器内固定 500x500
-                previewSvgString = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="500" height="500" preserveAspectRatio="xMidYMid meet" shape-rendering="geometricPrecision">
-    ${svgParts.join('\n    ')}
-</svg>`;
+                masterSvgString = finalSvg;
+                previewSvgString = finalSvg;
+
+                // 显示 viewBox，方便复制到合约
+                document.getElementById('viewBoxInfo').innerHTML =
+                    '<b>合约里硬编码这一段：</b><br>' +
+                    `width="500" height="500" viewBox="${vb}"`;
 
                 const base64Svg = btoa(unescape(encodeURIComponent(previewSvgString)));
                 img.src = `data:image/svg+xml;base64,${base64Svg}`;
@@ -368,73 +365,18 @@
             }
         }
 
-        // ============ 导出 SVG（矢量原图，可无限放大） ============
+        // ============ 导出 SVG（与合约输出格式完全一致：width=500 height=500） ============
         function downloadSVG() {
             if (!masterSvgString) return;
             const blob = new Blob([masterSvgString], { type: 'image/svg+xml;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `OnChain_NFT_${Date.now()}.svg`;
+            a.download = `OnChain_NFT_500x500_${Date.now()}.svg`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
-        }
-
-        // ============ 导出 PNG（高分辨率栅格图，NFT 主流市场推荐） ============
-        async function downloadPNG() {
-            if (!masterSvgString) return;
-            const size = parseInt(document.querySelector('input[name="size"]:checked').value, 10);
-
-            // 用一个临时 SVG，明确写死 width/height，避免栅格化时尺寸推断
-            const exportSvg = masterSvgString.replace(
-                '<svg xmlns="http://www.w3.org/2000/svg"',
-                `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"`
-            );
-
-            const svgBlob = new Blob([exportSvg], { type: 'image/svg+xml;charset=utf-8' });
-            const url = URL.createObjectURL(svgBlob);
-
-            try {
-                const pngBlob = await rasterize(url, size);
-                const pngUrl = URL.createObjectURL(pngBlob);
-                const a = document.createElement('a');
-                a.href = pngUrl;
-                a.download = `OnChain_NFT_${size}x${size}_${Date.now()}.png`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(pngUrl);
-            } catch (e) {
-                showError('PNG 导出失败: ' + e.message);
-            } finally {
-                URL.revokeObjectURL(url);
-            }
-        }
-
-        function rasterize(svgUrl, size) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.crossOrigin = 'anonymous';
-                img.onload = () => {
-                    const canvas = document.getElementById('exportCanvas');
-                    canvas.width = size;
-                    canvas.height = size;
-                    const ctx = canvas.getContext('2d');
-                    // 高质量缩放
-                    ctx.imageSmoothingEnabled = true;
-                    ctx.imageSmoothingQuality = 'high';
-                    ctx.clearRect(0, 0, size, size);
-                    ctx.drawImage(img, 0, 0, size, size);
-                    canvas.toBlob((blob) => {
-                        if (blob) resolve(blob);
-                        else reject(new Error('toBlob 返回空'));
-                    }, 'image/png');
-                };
-                img.onerror = () => reject(new Error('SVG 加载失败，可能含外部资源'));
-                img.src = svgUrl;
-            });
         }
 
         function showError(msg) {
