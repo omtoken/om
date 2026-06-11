@@ -338,85 +338,171 @@ function showToast(msg){
 }
 
 async function connectWallet(){
-  if(!window.ethereum) return alert("Please install MetaMask");
+  if(!window.ethereum) return alert("Please install MetaMask or TrustWallet");
   try {
     provider = new ethers.BrowserProvider(window.ethereum);
     const accounts = await provider.send("eth_requestAccounts", []);
-    userAddr = accounts[0]; signer = await provider.getSigner();
+    if (!accounts || accounts.length === 0) return;
+    
+    userAddr = accounts[0]; 
+    signer = await provider.getSigner();
+    
     spcxContract = new ethers.Contract(SPCX_ADDR, ERC20_ABI, signer);
     vaultContract = new ethers.Contract(VAULT_ADDR, VAULT_ABI, signer);
     stakingContract = new ethers.Contract(STAKING_ADDR, STAKING_ABI, signer);
+    
     ownerAddr = await vaultContract.owner();
     const isAdmin = userAddr.toLowerCase() === ownerAddr.toLowerCase();
     document.getElementById('tab-admin').style.display = isAdmin ? 'flex' : 'none';
     document.getElementById('userRole').innerText = isAdmin ? t('adminRole') : t('userRole');
     document.getElementById('connectBtn').innerText = userAddr.slice(0,6) + "..." + userAddr.slice(-4);
     document.getElementById('walletAddr').innerText = userAddr;
+    
     refreshData();
-  } catch(e) { console.error(e); }
+  } catch(e) { 
+    console.error("Wallet connection error:", e); 
+    showToast("Connection failed. Please try again.");
+  }
 }
 
 async function refreshData(){
-  if(!userAddr) return;
+  if(!userAddr || !stakingContract) return;
   try {
-    const [global, summary, configs] = await Promise.all([stakingContract.getGlobalInfo(), stakingContract.getUserSummary(userAddr), stakingContract.getPeriodConfigs()]);
-    userSummary = summary; isPaused = global.stakingPaused;
-    configs.forEach((cfg, i) => document.getElementById(`rate${i}`).innerText = `${Number(cfg.dailyRateBps)/100}% Daily`);
-    document.getElementById('globalTotalStaked').innerText = ethers.formatUnits(global.totalStaked, 18) + " SPCX";
-    document.getElementById('spcxBalance').innerText = ethers.formatUnits(summary.spcxBalance, 18) + " SPCX";
+    const [global, summary, configs] = await Promise.all([
+      stakingContract.getGlobalInfo(), 
+      stakingContract.getUserSummary(userAddr), 
+      stakingContract.getPeriodConfigs()
+    ]);
+    
+    if (!summary || !global) return; // 防御性检查
+    
+    userSummary = summary; 
+    isPaused = global.stakingPaused;
+    
+    configs.forEach((cfg, i) => {
+      const el = document.getElementById(`rate${i}`);
+      if(el) el.innerText = `${Number(cfg.dailyRateBps)/100}% Daily`;
+    });
+    
+    const globalEl = document.getElementById('globalTotalStaked');
+    if(globalEl) globalEl.innerText = ethers.formatUnits(global.totalStaked, 18) + " SPCX";
+    
+    const balEl = document.getElementById('spcxBalance');
+    if(balEl) balEl.innerText = ethers.formatUnits(summary.spcxBalance, 18) + " SPCX";
+    
     const debtCard = document.getElementById('debtCard');
-    if (summary.unpaidReward > 0n) {
-        debtCard.style.display = 'block';
-        document.getElementById('unpaidRewardVal').innerText = ethers.formatUnits(summary.unpaidReward, 18) + " SPCX";
-        document.getElementById('claimDebtBtn').disabled = !(await stakingContract.canClaimUnpaid(userAddr));
-    } else debtCard.style.display = 'none';
+    if (debtCard) {
+      if (summary.unpaidReward > 0n) {
+          debtCard.style.display = 'block';
+          document.getElementById('unpaidRewardVal').innerText = ethers.formatUnits(summary.unpaidReward, 18) + " SPCX";
+          document.getElementById('claimDebtBtn').disabled = !(await stakingContract.canClaimUnpaid(userAddr));
+      } else {
+          debtCard.style.display = 'none';
+      }
+    }
 
-    if (userAddr.toLowerCase() === ownerAddr.toLowerCase()) {
-        document.getElementById('adminVaultBal').innerText = ethers.formatUnits(global.vaultSpcxBalance, 18) + " SPCX";
-        document.getElementById('adminWithdrawable').innerText = ethers.formatUnits(global.vaultWithdrawableSPCX, 18) + " SPCX";
-        document.getElementById('pauseBtn').innerText = isPaused ? t('resumeStaking') : t('pauseStaking');
+    if (ownerAddr && userAddr.toLowerCase() === ownerAddr.toLowerCase()) {
+        const vBalEl = document.getElementById('adminVaultBal');
+        if(vBalEl) vBalEl.innerText = ethers.formatUnits(global.vaultSpcxBalance, 18) + " SPCX";
+        const wEl = document.getElementById('adminWithdrawable');
+        if(wEl) wEl.innerText = ethers.formatUnits(global.vaultWithdrawableSPCX, 18) + " SPCX";
+        const pBtn = document.getElementById('pauseBtn');
+        if(pBtn) pBtn.innerText = isPaused ? t('resumeStaking') : t('pauseStaking');
     }
 
     const {items} = await stakingContract.getStakesPaginated(userAddr, 0, 50);
-    const list = document.getElementById('stakesList'); list.innerHTML = '';
+    const list = document.getElementById('stakesList'); 
+    if(list) list.innerHTML = '';
+    
     let activeT = 0n, pendingT = 0n, claimableT = 0n, claimableIds = [];
-    items.forEach((s, i) => {
-      if(s.withdrawn) return;
-      activeT += s.amount; pendingT += s.reward;
-      const isU = Date.now() / 1000 >= Number(s.unlockTime);
-      if(isU) { claimableT += (s.amount + s.reward); claimableIds.push(i); }
-      const item = document.createElement('div'); item.className = 'stake-item fade-in';
-      item.innerHTML = `<div class="stake-item-header"><span class="badge ${isU ? 'badge-green' : 'badge-yellow'}">${isU ? t('unlocked') : t('staked')}</span><span style="font-size:.75rem;color:var(--text3)">#${i}</span></div><div class="stake-item-body"><span class="stake-item-label">${t('staked')}</span><span class="stake-item-value">${ethers.formatUnits(s.amount, 18)} SPCX</span><span class="stake-item-label">${t('reward')}</span><span class="stake-item-value green">+${ethers.formatUnits(s.reward, 18)} SPCX</span><span class="stake-item-label">${t('unlocks')}</span><span class="stake-item-value">${new Date(Number(s.unlockTime)*1000).toLocaleString()}</span></div>${isU ? `<button class="btn-secondary" style="margin-top:12px;padding:8px" onclick="unstake(${i})">${t('unstake')}</button>` : ''}`;
-      list.appendChild(item);
-    });
-    if(items.filter(s => !s.withdrawn).length === 0) list.innerHTML = `<p style="text-align:center;color:var(--text3);padding:20px">${t('noStakes')}</p>`;
-    document.getElementById('activeStaked').innerText = ethers.formatUnits(activeT, 18) + " SPCX";
-    document.getElementById('pendingRewards').innerText = ethers.formatUnits(pendingT, 18) + " SPCX";
-    document.getElementById('claimableTotal').innerText = ethers.formatUnits(claimableT, 18) + " SPCX";
-    const cBtn = document.getElementById('claimAllBtn'); cBtn.disabled = claimableIds.length === 0; cBtn.dataset.ids = JSON.stringify(claimableIds);
-  } catch(e) { console.error(e); }
+    
+    if (items && items.length > 0) {
+      items.forEach((s, i) => {
+        if(s.withdrawn) return;
+        activeT += s.amount; pendingT += s.reward;
+        const isU = Date.now() / 1000 >= Number(s.unlockTime);
+        if(isU) { claimableT += (s.amount + s.reward); claimableIds.push(i); }
+        const item = document.createElement('div'); item.className = 'stake-item fade-in';
+        item.innerHTML = `<div class="stake-item-header"><span class="badge ${isU ? 'badge-green' : 'badge-yellow'}">${isU ? t('unlocked') : t('staked')}</span><span style="font-size:.75rem;color:var(--text3)">#${i}</span></div><div class="stake-item-body"><span class="stake-item-label">${t('staked')}</span><span class="stake-item-value">${ethers.formatUnits(s.amount, 18)} SPCX</span><span class="stake-item-label">${t('reward')}</span><span class="stake-item-value green">+${ethers.formatUnits(s.reward, 18)} SPCX</span><span class="stake-item-label">${t('unlocks')}</span><span class="stake-item-value">${new Date(Number(s.unlockTime)*1000).toLocaleString()}</span></div>${isU ? `<button class="btn-secondary" style="margin-top:12px;padding:8px" onclick="unstake(${i})">${t('unstake')}</button>` : ''}`;
+        if(list) list.appendChild(item);
+      });
+    }
+    
+    if(list && (!items || items.filter(s => !s.withdrawn).length === 0)) {
+      list.innerHTML = `<p style="text-align:center;color:var(--text3);padding:20px">${t('noStakes')}</p>`;
+    }
+    
+    const aEl = document.getElementById('activeStaked');
+    if(aEl) aEl.innerText = ethers.formatUnits(activeT, 18) + " SPCX";
+    const pEl = document.getElementById('pendingRewards');
+    if(pEl) pEl.innerText = ethers.formatUnits(pendingT, 18) + " SPCX";
+    const cEl = document.getElementById('claimableTotal');
+    if(cEl) cEl.innerText = ethers.formatUnits(claimableT, 18) + " SPCX";
+    
+    const cBtn = document.getElementById('claimAllBtn'); 
+    if(cBtn) {
+      cBtn.disabled = claimableIds.length === 0; 
+      cBtn.dataset.ids = JSON.stringify(claimableIds);
+    }
+  } catch(e) { 
+    console.error("Refresh data error:", e); 
+  }
 }
 
 async function handleClaimDebt(){ try { showToast(t('toastSending')); const tx = await stakingContract.claimUnpaid(); await tx.wait(); showToast(t('toastClaimOk')); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); } }
 async function handleStake(){
-  if(!signer) return connectWallet();
+  if(!signer || !userAddr) return connectWallet();
   const amtStr = document.getElementById('stakeInput').value; if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
-  const amt = ethers.parseUnits(amtStr, 18); if(userSummary.spcxBalance < amt) return showToast(t('toastNoSPCX'));
+  const amt = ethers.parseUnits(amtStr, 18); if(!userSummary.spcxBalance || userSummary.spcxBalance < amt) return showToast(t('toastNoSPCX'));
   try {
     const al = await spcxContract.allowance(userAddr, STAKING_ADDR);
-    if (al < amt) { showToast(t('toastSending') + " (Approve)"); const tx = await spcxContract.approve(STAKING_ADDR, ethers.MaxUint256); await tx.wait(); }
-    showToast(t('toastSending') + " (Stake)"); const tx = await stakingContract.stake(amt, selectedPeriodType); await tx.wait(); showToast(t('toastStakeOk')); document.getElementById('stakeInput').value = ''; refreshData();
-  } catch(e) { console.error(e); showToast(e.reason || t('toastTxFail')); }
+    if (al < amt) { 
+      showToast(t('toastSending') + " (Approve)"); 
+      const tx = await spcxContract.approve(STAKING_ADDR, ethers.MaxUint256); 
+      await tx.wait(); 
+    }
+    showToast(t('toastSending') + " (Stake)"); 
+    const tx = await stakingContract.stake(amt, selectedPeriodType); 
+    await tx.wait(); 
+    
+    // 交易完成后重新获取 signer，防止 MetaMask 状态过期导致断开
+    signer = await provider.getSigner();
+    userAddr = await signer.getAddress();
+    
+    showToast(t('toastStakeOk')); 
+    document.getElementById('stakeInput').value = ''; 
+    refreshData();
+  } catch(e) { 
+    console.error("Stake error:", e); 
+    showToast(e.reason || e.shortMessage || t('toastTxFail')); 
+  }
 }
 async function handleDonate(){
-  if(!signer) return connectWallet();
+  if(!signer || !userAddr) return connectWallet();
   const amtStr = document.getElementById('donateInput').value; if(!amtStr || parseFloat(amtStr) <= 0) return showToast(t('toastEnterAmt'));
-  const amt = ethers.parseUnits(amtStr, 18); if(userSummary.spcxBalance < amt) return showToast(t('toastNoSPCX'));
+  const amt = ethers.parseUnits(amtStr, 18); if(!userSummary.spcxBalance || userSummary.spcxBalance < amt) return showToast(t('toastNoSPCX'));
   try {
     const al = await spcxContract.allowance(userAddr, VAULT_ADDR);
-    if (al < amt) { showToast(t('toastSending') + " (Approve)"); const tx = await spcxContract.approve(VAULT_ADDR, ethers.MaxUint256); await tx.wait(); }
-    showToast(t('toastSending') + " (Donate)"); const tx = await vaultContract.depositSPCX(amt); await tx.wait(); showToast(t('toastDonateOk')); document.getElementById('donateInput').value = ''; refreshData();
-  } catch(e) { console.error(e); showToast(e.reason || t('toastTxFail')); }
+    if (al < amt) { 
+      showToast(t('toastSending') + " (Approve)"); 
+      const tx = await spcxContract.approve(VAULT_ADDR, ethers.MaxUint256); 
+      await tx.wait(); 
+    }
+    showToast(t('toastSending') + " (Donate)"); 
+    const tx = await vaultContract.depositSPCX(amt); 
+    await tx.wait(); 
+    
+    // 交易完成后重新获取 signer
+    signer = await provider.getSigner();
+    userAddr = await signer.getAddress();
+    
+    showToast(t('toastDonateOk')); 
+    document.getElementById('donateInput').value = ''; 
+    refreshData();
+  } catch(e) { 
+    console.error("Donate error:", e); 
+    showToast(e.reason || e.shortMessage || t('toastTxFail')); 
+  }
 }
 async function unstake(id){ try { showToast(t('toastSending')); const tx = await stakingContract.unstake(id); await tx.wait(); showToast(t('toastClaimOk')); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); } }
 async function claimAll(){ const ids = JSON.parse(document.getElementById('claimAllBtn').dataset.ids || "[]"); try { showToast(t('toastSending')); const tx = await stakingContract.unstakeBatch(ids); await tx.wait(); showToast(t('toastClaimOk')); refreshData(); } catch(e) { showToast(e.reason || t('toastTxFail')); } }
@@ -445,8 +531,44 @@ function setPercent(type, pct){
 }
 function selectPeriod(i){ selectedPeriodType = i; document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active')); document.getElementById('period' + i).classList.add('active'); }
 
-setInterval(()=>{if(userAddr)refreshData();}, 15000);
-if(window.ethereum) window.ethereum.on('accountsChanged', accounts => { if(accounts.length > 0) connectWallet(); else location.reload(); });
+// 自动刷新数据
+setInterval(() => { if(userAddr) refreshData(); }, 15000);
+
+// 稳健的钱包事件监听
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', (accounts) => {
+    if (accounts.length > 0) {
+      connectWallet(); // 账户切换时重新连接
+    } else {
+      // 用户手动断开连接，优雅地清理状态而不强制刷新页面
+      userAddr = null; 
+      signer = null;
+      document.getElementById('connectBtn').innerText = t('connect');
+      document.getElementById('walletAddr').innerText = 'Not Connected';
+      document.getElementById('userRole').innerText = t('userRole');
+      document.getElementById('tab-admin').style.display = 'none';
+      document.getElementById('spcxBalance').innerText = '--';
+      showToast("Wallet disconnected");
+    }
+  });
+
+  window.ethereum.on('chainChanged', () => {
+    // 链切换时，标准做法是刷新页面以确保状态一致
+    window.location.reload();
+  });
+
+  // 页面加载时尝试自动恢复连接
+  window.addEventListener('load', async () => {
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accounts.length > 0) {
+        connectWallet();
+      }
+    } catch (e) {
+      console.error("Auto-connect check failed:", e);
+    }
+  });
+}
 </script>
 </body>
 </html>
