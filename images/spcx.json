@@ -1,0 +1,13 @@
+{
+  "name": "SPCX Premium",
+  "symbol": "SPCX",
+  "description": "SPCX Premium Membership NFT. Strictly limited to 88 pieces worldwide. Holding this NFT grants full access to SPCX premium membership benefits.",
+  "image": "https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/spcxnft.jpg",
+  "external_url": "https://raw.githubusercontent.com/omtoken/om/refs/heads/main/images/spcxnft.jpg",
+  "attributes": [
+    { "trait_type": "Tier", "value": "Premium" },
+    { "trait_type": "Collection", "value": "SPCX Premium" },
+    { "trait_type": "Max Supply", "value": 88 },
+    { "trait_type": "Membership", "value": "Lifetime" }
+  ]
+}
