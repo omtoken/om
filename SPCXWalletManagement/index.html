@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SPCX 钱包管理面板</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+:root{--bg:#0a0e17;--card:#131a2a;--border:#1e2a42;--accent:#f0b90b;--accent2:#d4a20a;--text:#e8eaed;--muted:#6b7a99;--green:#00c853;--red:#ff5252;--blue:#448aff;--radius:12px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+#app{max-width:960px;margin:0 auto;padding:20px}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:24px}
+.logo{font-size:22px;font-weight:700;color:var(--accent)}
+.logo span{color:var(--text);font-weight:400;font-size:14px;margin-left:8px}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.btn-primary{background:var(--accent);color:#000}
+.btn-primary:hover{background:var(--accent2)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{opacity:.85}
+.btn-green{background:var(--green);color:#000}
+.btn-green:hover{opacity:.85}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px}
+.card-title{font-size:16px;font-weight:600;margin-bottom:16px;color:var(--accent)}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.info-item{background:rgba(255,255,255,.03);border-radius:8px;padding:14px}
+.info-label{font-size:12px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+.info-value{font-size:14px;font-weight:500;word-break:break-all}
+.info-value.mono{font-family:'SF Mono',Monaco,monospace;font-size:13px}
+.connect-box{text-align:center;padding:80px 20px}
+.connect-box h2{font-size:28px;margin-bottom:12px}
+.connect-box p{color:var(--muted);margin-bottom:24px}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.tab{padding:12px 20px;border:none;background:transparent;color:var(--muted);font-size:14px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover{color:var(--text)}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+.form-group input,.form-group textarea{width:100%;padding:10px 14px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit}
+.form-group input:focus,.form-group textarea:focus{outline:none;border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px;font-family:'SF Mono',Monaco,monospace;font-size:13px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-hint{font-size:11px;color:var(--muted);margin-top:4px}
+.result-box{margin-top:16px;padding:14px;background:rgba(0,200,83,.08);border:1px solid rgba(0,200,83,.2);border-radius:8px;font-size:13px;word-break:break-all;font-family:'SF Mono',Monaco,monospace;display:none}
+.result-box.error{background:rgba(255,82,82,.08);border-color:rgba(255,82,82,.2)}
+.result-box.show{display:block}
+.badge{display:inline-block;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600}
+.badge-owner{background:rgba(240,185,11,.15);color:var(--accent)}
+.badge-connected{background:rgba(0,200,83,.15);color:var(--green)}
+.addr{font-family:'SF Mono',Monaco,monospace;font-size:13px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border);font-size:12px;text-transform:uppercase}
+td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.wallet-info{display:flex;align-items:center;gap:12px}
+.wallet-dot{width:8px;height:8px;border-radius:50%;background:var(--green)}
+.wallet-addr{font-family:'SF Mono',Monaco,monospace;font-size:13px}
+.wallet-bal{font-size:12px;color:var(--muted)}
+#logOverlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:1000;display:flex;align-items:center;justify-content:center}
+#logModal{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);width:90%;max-width:600px;max-height:80vh;display:flex;flex-direction:column}
+#logHeader{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)}
+#logHeader h3{font-size:16px}
+#logBody{padding:16px 20px;overflow-y:auto;font-size:13px;line-height:1.6;color:var(--muted);white-space:pre-wrap;word-break:break-all}
+.close-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer}
+.close-btn:hover{color:var(--text)}
+.section-desc{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+@media(max-width:600px){.form-row{grid-template-columns:1fr}.info-grid{grid-template-columns:1fr}header{flex-direction:column;gap:12px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HEADER -->
+  <header id="header">
+    <div class="logo">SPCX <span>钱包管理面板</span></div>
+    <div class="wallet-info" id="walletInfo" style="display:none">
+      <div class="wallet-dot"></div>
+      <div>
+        <div class="wallet-addr" id="walletAddr">-</div>
+        <div class="wallet-bal" id="walletBal">-</div>
+      </div>
+      <button class="btn btn-outline" onclick="disconnectWallet()" style="padding:6px 12px;font-size:12px">断开</button>
+    </div>
+  </header>
+  <!-- CONNECT_PROMPT -->
+  <div id="connectPrompt" class="card connect-box">
+    <h2>连接钱包</h2>
+    <p>请连接您的 MetaMask 钱包以管理 SPCXWalletManagement 合约</p>
+    <button class="btn btn-primary" onclick="connectWallet()" style="font-size:16px;padding:14px 32px">连接 MetaMask</button>
+  </div>
+  <!-- MAIN PANEL -->
+  <main id="mainPanel" style="display:none;">
+    <!-- CONTRACT_INFO -->
+    <section id="contractInfo" class="card">
+      <div class="card-title">合约信息</div>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-label">合约地址</div>
+          <div class="info-value mono">0xEFe3313555ff48cD401c48966e457Ee4F8037c24</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">网络</div>
+          <div class="info-value">BSC 主网 (56)</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">合约 BNB 余额</div>
+          <div class="info-value" id="contractBalance">加载中...</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">当前 Owner</div>
+          <div class="info-value mono" id="currentOwner">加载中...</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Pending Owner</div>
+          <div class="info-value mono" id="pendingOwner">加载中...</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">是否为 Owner</div>
+          <div class="info-value" id="isOwnerStatus">-</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">SPCX NFT 地址</div>
+          <div class="info-value mono">0xa48952423bF3EB94999f2182129F87CEC7Ba7BDA</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">NFT 总供应量</div>
+          <div class="info-value" id="totalSupply">88</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">起始 Token ID</div>
+          <div class="info-value" id="startTokenId">加载中...</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">分配 Gas 限制</div>
+          <div class="info-value" id="payoutGasLimit">加载中...</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">隔离地址数量</div>
+          <div class="info-value" id="isolatedCount">加载中...</div>
+        </div>
+      </div>
+    </section>
+    <!-- TABS -->
+    <nav id="tabNav" class="tabs">
+      <button class="tab active" onclick="switchTab('ownership')">所有权管理</button>
+      <button class="tab" onclick="switchTab('withdraw')">资金提取</button>
+      <button class="tab" onclick="switchTab('distribute')">BNB 分配</button>
+      <button class="tab" onclick="switchTab('isolated')">隔离地址</button>
+      <button class="tab" onclick="switchTab('settings')">参数设置</button>
+      <button class="tab" onclick="switchTab('query')">数据查询</button>
+    </nav>
+    <!-- TAB CONTENT -->
+    <div id="tabContent">
+
+      <!-- 所有权管理 -->
+      <div class="tab-panel active" id="panel-ownership">
+        <div class="card">
+          <div class="card-title">转让所有权 (两步验证)</div>
+          <p class="section-desc">两步转让：先发起转让请求，新 Owner 需要调用"接受所有权"来确认。只有当前 Owner 可以操作。</p>
+          <div class="form-group">
+            <label>新 Owner 地址</label>
+            <input type="text" id="newOwnerAddr" placeholder="0x...">
+          </div>
+          <button class="btn btn-primary" onclick="transferOwnership()">发起转让</button>
+          <div class="result-box" id="result-transferOwnership"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">接受所有权</div>
+          <p class="section-desc">如果您是 pendingOwner，可以调用此函数接受所有权。只有被指定的 pendingOwner 可以操作。</p>
+          <button class="btn btn-green" onclick="acceptOwnership()">接受所有权</button>
+          <div class="result-box" id="result-acceptOwnership"></div>
+        </div>
+      </div>
+
+      <!-- 资金提取 -->
+      <div class="tab-panel" id="panel-withdraw">
+        <div class="card">
+          <div class="card-title">提取 BNB</div>
+          <p class="section-desc">提取指定数量的 BNB 到目标地址。仅 Owner 可操作。</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label>接收地址</label>
+              <input type="text" id="withdrawBnbAddr" placeholder="0x...">
+            </div>
+            <div class="form-group">
+              <label>金额 (BNB)</label>
+              <input type="text" id="withdrawBnbAmount" placeholder="例如: 0.1">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="withdrawBNB()">提取 BNB</button>
+          <div class="result-box" id="result-withdrawBNB"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">提取全部 BNB</div>
+          <p class="section-desc">将合约中所有 BNB 提取到目标地址。仅 Owner 可操作。</p>
+          <div class="form-group">
+            <label>接收地址</label>
+            <input type="text" id="withdrawAllBnbAddr" placeholder="0x...">
+          </div>
+          <button class="btn btn-danger" onclick="withdrawAllBNB()">提取全部 BNB</button>
+          <div class="result-box" id="result-withdrawAllBNB"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">提取 ERC20 代币</div>
+          <p class="section-desc">提取指定数量的 ERC20 代币到目标地址。仅 Owner 可操作。</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label>代币合约地址</label>
+              <input type="text" id="withdrawTokenAddr" placeholder="0x...">
+            </div>
+            <div class="form-group">
+              <label>接收地址</label>
+              <input type="text" id="withdrawTokenTo" placeholder="0x...">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>数量 (最小单位, 如 wei)</label>
+            <input type="text" id="withdrawTokenAmount" placeholder="例如: 1000000000000000000">
+            <div class="form-hint">输入代币的最小单位数量。例如 USDT (18位精度) 1个 = 1000000000000000000</div>
+          </div>
+          <button class="btn btn-primary" onclick="withdrawToken()">提取代币</button>
+          <div class="result-box" id="result-withdrawToken"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">提取全部 ERC20 代币</div>
+          <p class="section-desc">将合约中指定代币的全部余额提取到目标地址。仅 Owner 可操作。</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label>代币合约地址</label>
+              <input type="text" id="withdrawAllTokenAddr" placeholder="0x...">
+            </div>
+            <div class="form-group">
+              <label>接收地址</label>
+              <input type="text" id="withdrawAllTokenTo" placeholder="0x...">
+            </div>
+          </div>
+          <button class="btn btn-danger" onclick="withdrawAllToken()">提取全部代币</button>
+          <div class="result-box" id="result-withdrawAllToken"></div>
+        </div>
+      </div>
+
+      <!-- BNB 分配 -->
+      <div class="tab-panel" id="panel-distribute">
+        <div class="card">
+          <div class="card-title">预览分配</div>
+          <p class="section-desc">查看当前合约 BNB 按 NFT 持有情况的分配预览，不会实际执行分配。</p>
+          <button class="btn btn-outline" onclick="previewDistribution()">预览分配情况</button>
+          <div class="result-box" id="result-previewDistribution"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">执行 BNB 分配</div>
+          <p class="section-desc">将合约中的 BNB 按 NFT 持有数量比例分配给所有符合条件的持有者。任何人都可以调用此函数。分配时会自动跳过隔离地址。</p>
+          <button class="btn btn-green" onclick="distribute()">执行分配</button>
+          <div class="result-box" id="result-distribute"></div>
+        </div>
+      </div>
+
+      <!-- 隔离地址 -->
+      <div class="tab-panel" id="panel-isolated">
+        <div class="card">
+          <div class="card-title">添加单个隔离地址</div>
+          <p class="section-desc">将地址加入隔离列表，该地址将不参与 BNB 分配。仅 Owner 可操作。</p>
+          <div class="form-group">
+            <label>隔离地址</label>
+            <input type="text" id="addIsolatedAddr" placeholder="0x...">
+          </div>
+          <button class="btn btn-primary" onclick="addIsolatedAddress()">添加</button>
+          <div class="result-box" id="result-addIsolatedAddress"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">批量添加隔离地址</div>
+          <p class="section-desc">一次添加多个隔离地址，每行一个地址。仅 Owner 可操作。</p>
+          <div class="form-group">
+            <label>地址列表 (每行一个)</label>
+            <textarea id="batchIsolatedAddrs" placeholder="0x地址1&#10;0x地址2&#10;0x地址3"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="addIsolatedAddresses()">批量添加</button>
+          <div class="result-box" id="result-addIsolatedAddresses"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">移除隔离地址</div>
+          <p class="section-desc">将地址从隔离列表中移除，恢复其参与 BNB 分配的资格。仅 Owner 可操作。</p>
+          <div class="form-group">
+            <label>隔离地址</label>
+            <input type="text" id="removeIsolatedAddr" placeholder="0x...">
+          </div>
+          <button class="btn btn-danger" onclick="removeIsolatedAddress()">移除</button>
+          <div class="result-box" id="result-removeIsolatedAddress"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">查询隔离地址</div>
+          <p class="section-desc">查看当前所有隔离地址列表，或检查某个地址是否已被隔离。</p>
+          <button class="btn btn-outline" onclick="getIsolatedAddresses()" style="margin-bottom:12px">查看全部隔离地址</button>
+          <div class="result-box" id="result-getIsolatedAddresses"></div>
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+            <div class="form-group">
+              <label>检查地址是否已隔离</label>
+              <input type="text" id="checkIsolatedAddr" placeholder="0x...">
+            </div>
+            <button class="btn btn-outline" onclick="checkIsolated()">检查</button>
+            <div class="result-box" id="result-checkIsolated"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 参数设置 -->
+      <div class="tab-panel" id="panel-settings">
+        <div class="card">
+          <div class="card-title">设置起始 Token ID</div>
+          <p class="section-desc">修改 NFT 扫描的起始 Token ID。默认为 1。仅 Owner 可操作。</p>
+          <div class="form-group">
+            <label>新的起始 Token ID</label>
+            <input type="text" id="newStartTokenId" placeholder="例如: 1">
+          </div>
+          <button class="btn btn-primary" onclick="setStartTokenId()">设置</button>
+          <div class="result-box" id="result-setStartTokenId"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">设置分配 Gas 限制</div>
+          <p class="section-desc">修改分配 BNB 时每个地址的 Gas 限制。范围: 2300 ~ 500,000。默认 60,000。仅 Owner 可操作。</p>
+          <div class="form-group">
+            <label>新的 Gas 限制</label>
+            <input type="text" id="newPayoutGasLimit" placeholder="例如: 60000">
+            <div class="form-hint">最小值 2300，最大值 500000</div>
+          </div>
+          <button class="btn btn-primary" onclick="setPayoutGasLimit()">设置</button>
+          <div class="result-box" id="result-setPayoutGasLimit"></div>
+        </div>
+      </div>
+
+      <!-- 数据查询 -->
+      <div class="tab-panel" id="panel-query">
+        <div class="card">
+          <div class="card-title">查询所有 NFT 持有者</div>
+          <p class="section-desc">获取所有 88 个 SPCX NFT 的当前持有者地址列表。</p>
+          <button class="btn btn-outline" onclick="getAllOwners()">查询</button>
+          <div class="result-box" id="result-getAllOwners"></div>
+          <div id="ownersTableWrap" style="margin-top:16px;display:none">
+            <div class="table-wrap">
+              <table id="ownersTable">
+                <thead><tr><th>Token ID</th><th>持有者地址</th><th>BscScan</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">查询合约 BNB 余额</div>
+          <button class="btn btn-outline" onclick="refreshContractBalance()">刷新余额</button>
+          <div class="result-box" id="result-contractBalance"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<!-- LOG MODAL -->
+  <div id="logOverlay" style="display:none" onclick="if(event.target===this)closeLog()">
+    <div id="logModal">
+      <div id="logHeader">
+        <h3 id="logTitle">交易详情</h3>
+        <button class="close-btn" onclick="closeLog()">&times;</button>
+      </div>
+      <pre id="logBody"></pre>
+    </div>
+  </div>
+<script>
+const CONTRACT_ADDR = '0xEFe3313555ff48cD401c48966e457Ee4F8037c24';
+const BSC_CHAIN_ID = '0x38';
+const BSC_CHAIN_ID_DEC = 56;
+
+const ABI = [
+  "function owner() view returns (address)",
+  "function pendingOwner() view returns (address)",
+  "function transferOwnership(address newOwner)",
+  "function acceptOwnership()",
+  "function renounceOwnership() view",
+  "function SPCX_NFT() view returns (address)",
+  "function TOTAL_SUPPLY() view returns (uint256)",
+  "function startTokenId() view returns (uint256)",
+  "function payoutGasLimit() view returns (uint256)",
+  "function withdrawBNB(address payable to, uint256 amount)",
+  "function withdrawAllBNB(address payable to)",
+  "function withdrawToken(address token, address to, uint256 amount)",
+  "function withdrawAllToken(address token, address to)",
+  "function addIsolatedAddress(address addr)",
+  "function addIsolatedAddresses(address[] calldata addrs)",
+  "function removeIsolatedAddress(address addr)",
+  "function isIsolated(address addr) view returns (bool)",
+  "function getIsolatedAddresses() view returns (address[] memory)",
+  "function getIsolatedCount() view returns (uint256)",
+  "function setStartTokenId(uint256 newStart)",
+  "function setPayoutGasLimit(uint256 newLimit)",
+  "function distribute()",
+  "function previewDistribution() view returns (uint256 totalBalance, uint256 eligibleNFTCount, uint256 uniqueHolderCount, uint256 perNFTAmount)",
+  "function getAllOwners() view returns (uint256[] memory tokenIds, address[] memory owners)",
+  "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)"
+];
+
+let provider, signer, contract, userAddress, isOwner = false;
+
+function showResult(id, msg, isError) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = 'result-box show' + (isError ? ' error' : '');
+}
+
+function shortAddr(addr) {
+  if (!addr || addr === '0x0000000000000000000000000000000000000000') return '0x0000...0000';
+  return addr.slice(0, 6) + '...' + addr.slice(-4);
+}
+
+function bscScanLink(addr) {
+  return '<a href="https://bscscan.com/address/' + addr + '" target="_blank" style="color:var(--accent);font-size:12px">查看</a>';
+}
+
+function showLog(title, content) {
+  document.getElementById('logTitle').textContent = title;
+  document.getElementById('logBody').textContent = content;
+  document.getElementById('logOverlay').style.display = 'flex';
+}
+
+function closeLog() {
+  document.getElementById('logOverlay').style.display = 'none';
+}
+
+async function connectWallet() {
+  if (typeof window.ethereum === 'undefined') {
+    alert('未检测到 MetaMask，请先安装 MetaMask 钱包扩展');
+    return;
+  }
+  try {
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send('eth_requestAccounts', []);
+    const network = await provider.getNetwork();
+    if (network.chainId !== BSC_CHAIN_ID_DEC) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: BSC_CHAIN_ID }]
+        });
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+      } catch (e) {
+        if (e.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: BSC_CHAIN_ID,
+              chainName: 'BNB Smart Chain',
+              nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+              rpcUrls: ['https://bsc-dataseed1.binance.org'],
+              blockExplorerUrls: ['https://bscscan.com']
+            }]
+          });
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+        } else {
+          throw e;
+        }
+      }
+    }
+    signer = provider.getSigner();
+    userAddress = await signer.getAddress();
+    contract = new ethers.Contract(CONTRACT_ADDR, ABI, signer);
+
+    document.getElementById('walletAddr').textContent = shortAddr(userAddress);
+    const bal = await provider.getBalance(userAddress);
+    document.getElementById('walletBal').textContent = ethers.utils.formatEther(bal) + ' BNB';
+    document.getElementById('walletInfo').style.display = 'flex';
+    document.getElementById('connectPrompt').style.display = 'none';
+    document.getElementById('mainPanel').style.display = 'block';
+
+    await loadContractInfo();
+
+    window.ethereum.on('accountsChanged', function(accounts) {
+      if (accounts.length === 0) {
+        location.reload();
+      } else {
+        location.reload();
+      }
+    });
+    window.ethereum.on('chainChanged', function() { location.reload(); });
+
+  } catch (err) {
+    console.error(err);
+    alert('连接失败: ' + (err.message || err));
+  }
+}
+
+function disconnectWallet() {
+  location.reload();
+}
+
+async function loadContractInfo() {
+  try {
+    const readOnly = new ethers.Contract(CONTRACT_ADDR, ABI, provider);
+    const [owner, pending, startId, gasLimit, isoCount, bal] = await Promise.all([
+      readOnly.owner(),
+      readOnly.pendingOwner(),
+      readOnly.startTokenId(),
+      readOnly.payoutGasLimit(),
+      readOnly.getIsolatedCount(),
+      provider.getBalance(CONTRACT_ADDR)
+    ]);
+    document.getElementById('currentOwner').textContent = owner;
+    document.getElementById('pendingOwner').textContent = pending === '0x0000000000000000000000000000000000000000' ? '无' : pending;
+    document.getElementById('startTokenId').textContent = startId.toString();
+    document.getElementById('payoutGasLimit').textContent = gasLimit.toString();
+    document.getElementById('isolatedCount').textContent = isoCount.toString();
+    document.getElementById('contractBalance').textContent = ethers.utils.formatEther(bal) + ' BNB';
+
+    isOwner = (owner.toLowerCase() === userAddress.toLowerCase());
+    const ownerEl = document.getElementById('isOwnerStatus');
+    if (isOwner) {
+      ownerEl.innerHTML = '<span class="badge badge-owner">是 Owner</span>';
+    } else {
+      ownerEl.innerHTML = '<span style="color:var(--muted)">否</span>';
+    }
+  } catch (err) {
+    console.error('加载合约信息失败:', err);
+  }
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+  event.target.classList.add('active');
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+function requireOwner() {
+  if (!isOwner) {
+    alert('当前连接的钱包不是合约 Owner，无法执行此操作');
+    return false;
+  }
+  return true;
+}
+
+async function txWrapper(promiseFn, resultId) {
+  try {
+    showResult(resultId, '交易提交中...', false);
+    const tx = await promiseFn();
+    showResult(resultId, '交易已提交，等待确认...\nTx Hash: ' + tx.hash, false);
+    const receipt = await tx.wait();
+    showResult(resultId, '交易成功!\nTx Hash: ' + receipt.transactionHash + '\nGas 消耗: ' + receipt.gasUsed.toString(), false);
+    await loadContractInfo();
+  } catch (err) {
+    const msg = err.reason || err.message || String(err);
+    showResult(resultId, '交易失败: ' + msg, true);
+  }
+}
+
+// === 所有权管理 ===
+async function transferOwnership() {
+  if (!requireOwner()) return;
+  const addr = document.getElementById('newOwnerAddr').value.trim();
+  if (!ethers.utils.isAddress(addr)) { alert('请输入有效的地址'); return; }
+  await txWrapper(function() { return contract.transferOwnership(addr); }, 'result-transferOwnership');
+}
+
+async function acceptOwnership() {
+  await txWrapper(function() { return contract.acceptOwnership(); }, 'result-acceptOwnership');
+}
+
+// === 资金提取 ===
+async function withdrawBNB() {
+  if (!requireOwner()) return;
+  const addr = document.getElementById('withdrawBnbAddr').value.trim();
+  const amount = document.getElementById('withdrawBnbAmount').value.trim();
+  if (!ethers.utils.isAddress(addr)) { alert('请输入有效的接收地址'); return; }
+  if (!amount || isNaN(amount)) { alert('请输入有效的金额'); return; }
+  const wei = ethers.utils.parseEther(amount);
+  await txWrapper(function() { return contract.withdrawBNB(addr, wei); }, 'result-withdrawBNB');
+}
+
+async function withdrawAllBNB() {
+  if (!requireOwner()) return;
+  const addr = document.getElementById('withdrawAllBnbAddr').value.trim();
+  if (!ethers.utils.isAddress(addr)) { alert('请输入有效的接收地址'); return; }
+  if (!confirm('确定要提取合约中所有 BNB 吗？')) return;
+  await txWrapper(function() { return contract.withdrawAllBNB(addr); }, 'result-withdrawAllBNB');
+}
+
+async function withdrawToken() {
+  if (!requireOwner()) return;
+  const token = document.getElementById('withdrawTokenAddr').value.trim();
+  const to = document.getElementById('withdrawTokenTo').value.trim();
+  const amount = document.getElementById('withdrawTokenAmount').value.trim();
+  if (!ethers.utils.isAddress(token)) { alert('请输入有效的代币合约地址'); return; }
+  if (!ethers.utils.isAddress(to)) { alert('请输入有效的接收地址'); return; }
+  if (!amount || isNaN(amount)) { alert('请输入有效的数量'); return; }
+  await txWrapper(function() { return contract.withdrawToken(token, to, ethers.BigNumber.from(amount)); }, 'result-withdrawToken');
+}
+
+async function withdrawAllToken() {
+  if (!requireOwner()) return;
+  const token = document.getElementById('withdrawAllTokenAddr').value.trim();
+  const to = document.getElementById('withdrawAllTokenTo').value.trim();
+  if (!ethers.utils.isAddress(token)) { alert('请输入有效的代币合约地址'); return; }
+  if (!ethers.utils.isAddress(to)) { alert('请输入有效的接收地址'); return; }
+  if (!confirm('确定要提取该代币的全部余额吗？')) return;
+  await txWrapper(function() { return contract.withdrawAllToken(token, to); }, 'result-withdrawAllToken');
+}
+
+// === BNB 分配 ===
+async function previewDistribution() {
+  try {
+    showResult('result-previewDistribution', '查询中...', false);
+    const readOnly = new ethers.Contract(CONTRACT_ADDR, ABI, provider);
+    const result = await readOnly.previewDistribution();
+    const msg = '合约 BNB 余额: ' + ethers.utils.formatEther(result.totalBalance) + ' BNB\n' +
+      '符合条件的 NFT 数量: ' + result.eligibleNFTCount.toString() + '\n' +
+      '唯一持有者数量: ' + result.uniqueHolderCount.toString() + '\n' +
+      '每个 NFT 可分配: ' + ethers.utils.formatEther(result.perNFTAmount) + ' BNB';
+    showResult('result-previewDistribution', msg, false);
+  } catch (err) {
+    showResult('result-previewDistribution', '查询失败: ' + (err.reason || err.message), true);
+  }
+}
+
+async function distribute() {
+  if (!confirm('确定要执行 BNB 分配吗？此操作将把合约中所有 BNB 按 NFT 持有比例分配给持有者。')) return;
+  await txWrapper(function() { return contract.distribute(); }, 'result-distribute');
+}
+
+// === 隔离地址 ===
+async function addIsolatedAddress() {
+  if (!requireOwner()) return;
+  const addr = document.getElementById('addIsolatedAddr').value.trim();
+  if (!ethers.utils.isAddress(addr)) { alert('请输入有效的地址'); return; }
+  await txWrapper(function() { return contract.addIsolatedAddress(addr); }, 'result-addIsolatedAddress');
+}
+
+async function addIsolatedAddresses() {
+  if (!requireOwner()) return;
+  const text = document.getElementById('batchIsolatedAddrs').value.trim();
+  if (!text) { alert('请输入至少一个地址'); return; }
+  const addrs = text.split('\n').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+  for (var i = 0; i < addrs.length; i++) {
+    if (!ethers.utils.isAddress(addrs[i])) { alert('第 ' + (i + 1) + ' 行地址无效: ' + addrs[i]); return; }
+  }
+  await txWrapper(function() { return contract.addIsolatedAddresses(addrs); }, 'result-addIsolatedAddresses');
+}
+
+async function removeIsolatedAddress() {
+  if (!requireOwner()) return;
+  const addr = document.getElementById('removeIsolatedAddr').value.trim();
+  if (!ethers.utils.isAddress(addr)) { alert('请输入有效的地址'); return; }
+  await txWrapper(function() { return contract.removeIsolatedAddress(addr); }, 'result-removeIsolatedAddress');
+}
+
+async function getIsolatedAddresses() {
+  try {
+    showResult('result-getIsolatedAddresses', '查询中...', false);
+    const readOnly = new ethers.Contract(CONTRACT_ADDR, ABI, provider);
+    const addrs = await readOnly.getIsolatedAddresses();
+    if (addrs.length === 0) {
+      showResult('result-getIsolatedAddresses', '当前没有隔离地址', false);
+    } else {
+      var msg = '共 ' + addrs.length + ' 个隔离地址:\n\n';
+      addrs.forEach(function(a, i) { msg += (i + 1) + '. ' + a + '\n'; });
+      showResult('result-getIsolatedAddresses', msg, false);
+    }
+  } catch (err) {
+    showResult('result-getIsolatedAddresses', '查询失败: ' + (err.reason || err.message), true);
+  }
+}
+
+async function checkIsolated() {
+  try {
+    const addr = document.getElementById('checkIsolatedAddr').value.trim();
+    if (!ethers.utils.isAddress(addr)) { alert('请输入有效的地址'); return; }
+    const readOnly = new ethers.Contract(CONTRACT_ADDR, ABI, provider);
+    const result = await readOnly.isIsolated(addr);
+    showResult('result-checkIsolated', result ? '该地址已被隔离' : '该地址未被隔离', false);
+  } catch (err) {
+    showResult('result-checkIsolated', '查询失败: ' + (err.reason || err.message), true);
+  }
+}
+
+// === 参数设置 ===
+async function setStartTokenId() {
+  if (!requireOwner()) return;
+  const val = document.getElementById('newStartTokenId').value.trim();
+  if (!val || isNaN(val)) { alert('请输入有效的数字'); return; }
+  await txWrapper(function() { return contract.setStartTokenId(parseInt(val)); }, 'result-setStartTokenId');
+}
+
+async function setPayoutGasLimit() {
+  if (!requireOwner()) return;
+  const val = document.getElementById('newPayoutGasLimit').value.trim();
+  if (!val || isNaN(val)) { alert('请输入有效的数字'); return; }
+  const num = parseInt(val);
+  if (num < 2300 || num > 500000) { alert('Gas 限制必须在 2300 ~ 500000 之间'); return; }
+  await txWrapper(function() { return contract.setPayoutGasLimit(num); }, 'result-setPayoutGasLimit');
+}
+
+// === 数据查询 ===
+async function getAllOwners() {
+  try {
+    showResult('result-getAllOwners', '查询中，可能需要几秒...', false);
+    const readOnly = new ethers.Contract(CONTRACT_ADDR, ABI, provider);
+    const result = await readOnly.getAllOwners();
+    const tokenIds = result.tokenIds;
+    const owners = result.owners;
+    var tbody = document.querySelector('#ownersTable tbody');
+    tbody.innerHTML = '';
+    for (var i = 0; i < tokenIds.length; i++) {
+      var tr = document.createElement('tr');
+      var tdId = document.createElement('td');
+      tdId.textContent = '#' + tokenIds[i].toString();
+      var tdAddr = document.createElement('td');
+      tdAddr.className = 'addr';
+      tdAddr.textContent = shortAddr(owners[i]);
+      var tdLink = document.createElement('td');
+      tdLink.innerHTML = bscScanLink(owners[i]);
+      tr.appendChild(tdId);
+      tr.appendChild(tdAddr);
+      tr.appendChild(tdLink);
+      tbody.appendChild(tr);
+    }
+    document.getElementById('ownersTableWrap').style.display = 'block';
+    showResult('result-getAllOwners', '查询完成，共 ' + tokenIds.length + ' 个 NFT', false);
+  } catch (err) {
+    showResult('result-getAllOwners', '查询失败: ' + (err.reason || err.message), true);
+  }
+}
+
+async function refreshContractBalance() {
+  try {
+    const bal = await provider.getBalance(CONTRACT_ADDR);
+    showResult('result-contractBalance', '合约 BNB 余额: ' + ethers.utils.formatEther(bal) + ' BNB', false);
+  } catch (err) {
+    showResult('result-contractBalance', '查询失败: ' + err.message, true);
+  }
+}
+</script>
+</body>
+</html>
