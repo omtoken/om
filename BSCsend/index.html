@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jace Batch Transfer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" href="https://woofswap.finance/image/tokens/star.png" type="image/x-icon" />
+    <style>
+        :root {
+            --primary-color: #ff9100;
+            --secondary-color: #ff6f61;
+            --gradient-bg: linear-gradient(180deg, #1e1e2f 0%, #2a2a3d 100%);
+            --card-bg: #2c2f48;
+            --input-bg: #373b5c;
+            --text-color: #ffffff;
+            --border-radius: 15px;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--gradient-bg);
+            color: var(--text-color);
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border-radius: var(--border-radius);
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(90deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+            padding: 12px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            font-size: 1.3em;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .connect-section button {
+            padding: 12px;
+            background: var(--primary-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.2s;
+            margin-bottom: 10px;
+        }
+        .connect-section button:hover { background: #e68a00; }
+        .input-box {
+            background: var(--input-bg);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+        }
+        .input-box label {
+            display: block;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            background: var(--input-bg);
+            border: none;
+            border-radius: 10px;
+            color: var(--text-color);
+            font-size: 1em;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            max-height: 300px;
+        }
+        .balance-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            color: #ff9100;
+        }
+        .action-button {
+            padding: 15px;
+            background: var(--primary-color);
+            color: var(--text-color);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: background 0.2s;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .action-button:disabled {
+            background: #4a4f7a;
+            cursor: not-allowed;
+        }
+        .action-button:hover:not(:disabled) { background: #e68a00; }
+        .status {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--primary-color);
+            text-align: center;
+        }
+        .dog-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .dog-section img {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 10px;
+        }
+        .dog-message {
+            font-size: 0.9em;
+            color: var(--secondary-color);
+            font-style: italic;
+        }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 5px;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        @media (max-width: 480px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            .header { font-size: 1.1em; }
+            .dog-section img { width: 50px; height: 50px; }
+            .dog-message { font-size: 0.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">Jace Batch Transfer</div>
+        <div class="connect-section">
+            <button id="connectWalletButton">Connect Wallet</button>
+            <div id="networkStatus" class="status">Click to connect...</div>
+        </div>
+        <div class="input-box">
+            <label>Batch Transfer Tokens</label>
+            <input type="text" id="batchTokenAddress" placeholder="Token Address (e.g., 0x...)">
+            <div class="balance-row"><span>Token Balance</span><span id="batchTokenBalance">Balance: 0</span></div>
+            <textarea id="batchTransferList" placeholder="Enter one address and amount per line (e.g., 0xAddress,Amount)"></textarea>
+            <button class="action-button" id="authorizeBatchButton" disabled>Authorize Token</button>
+            <button class="action-button" id="batchTransferButton" disabled>Batch Transfer</button>
+        </div>
+        <div class="dog-section">
+            <img src="https://woofswap.finance/image/tokens/star.png" alt="WSTAR">
+            <div class="dog-message" id="dogMessage">"Woof! Connect your wallet to start batch transfers, pup!"</div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.7.0/dist/web3.min.js"></script>
+    <script>
+        const JaceBatchTransferAddress = '0x0139498eAEa8aB4934701aEE164091F416c8de98';
+
+        const JaceBatchTransferAbi = [
+            {
+                "inputs": [
+                    { "internalType": "address", "name": "tokenAddress", "type": "address" },
+                    { "internalType": "address[]", "name": "recipients", "type": "address[]" },
+                    { "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }
+                ],
+                "name": "batchTransfer",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    { "indexed": true, "internalType": "address", "name": "sender", "type": "address" },
+                    { "indexed": true, "internalType": "address", "name": "token", "type": "address" },
+                    { "internalType": "address[]", "name": "recipients", "type": "address[]" },
+                    { "internalType": "uint256[]", "name": "amounts", "type": "uint256[]" }
+                ],
+                "name": "BatchTransfer",
+                "type": "event"
+            }
+        ];
+
+        const erc20Abi = [
+            {
+                "constant": true,
+                "inputs": [{ "name": "_owner", "type": "address" }],
+                "name": "balanceOf",
+                "outputs": [{ "name": "balance", "type": "uint256" }],
+                "type": "function"
+            },
+            {
+                "constant": false,
+                "inputs": [
+                    { "name": "_spender", "type": "address" },
+                    { "name": "_value", "type": "uint256" }
+                ],
+                "name": "approve",
+                "outputs": [{ "name": "success", "type": "bool" }],
+                "type": "function"
+            },
+            {
+                "constant": true,
+                "inputs": [
+                    { "name": "_owner", "type": "address" },
+                    { "name": "_spender", "type": "address" }
+                ],
+                "name": "allowance",
+                "outputs": [{ "name": "remaining", "type": "uint256" }],
+                "type": "function"
+            }
+        ];
+
+        const chains = {
+            XLayer: {
+                chainId: 56,
+                chainName: 'BSC',
+                rpcUrl: 'https://bsc-dataseed.binance.org',
+                blockExplorer: 'https://bscscan.com/',
+                nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 }
+            }
+        };
+
+        let web3, account, batchTransferContract, tokenContract;
+
+        const dogMessages = {
+            connectSuccess: ["Woof! Wallet connected, ready to transfer, pup!", "Arf! You're in, let's roll!", "Bark! Wallet's ready, time to play!"],
+            connectFail: ["Woof! Couldn't connect wallet, try again, pup!", "Arf! Wallet connection failed, give it another go!", "Bark! Something went wrong, check your wallet!"],
+            authorizeStart: ["Woof! Authorizing token, hold tight, pup!", "Arf! Approving tokens now!", "Bark! Authorization in progress!"],
+            authorizeSuccess: ["Woof! Token authorized, ready to transfer, pup!", "Arf! Approval successful!", "Bark! Success! Ready to batch transfer!"],
+            authorizeFail: ["Woof! Authorization failed, try again, pup!", "Arf! Couldn't approve token, check your wallet!", "Bark! Approval issue, retry!"],
+            batchStart: ["Woof! Starting batch transfer, hold tight, pup!", "Arf! Transferring tokens now!", "Bark! Batch transfer in progress!"],
+            batchSuccess: ["Woof! Batch transfer completed, pup!", "Arf! Tokens sent successfully!", "Bark! Success! All transfers done!"],
+            batchFail: ["Woof! Batch transfer failed, check inputs or token, pup!", "Arf! Something went wrong, try again!", "Bark! Transfer hit a snag, retry!"],
+            invalidInput: ["Woof! Invalid address or amount, check your input, pup!", "Arf! Something's not right, check your list!", "Bark! Need valid addresses and amounts!"],
+            userDenied: ["Woof! You canceled the transaction, pup!", "Arf! Transaction denied, try again when ready!", "Bark! You said no, let's try that again!"],
+            invalidToken: ["Woof! Token address issue, check and try again, pup!", "Arf! Token problem, verify the address!", "Bark! Token error, please check it!"],
+            insufficientBalance: ["Woof! Not enough tokens, check your balance, pup!", "Arf! Token balance too low, top up!", "Bark! Need more tokens to transfer!"],
+            insufficientGas: ["Woof! Not enough OKB for gas, pup!", "Arf! Gas funds too low, try again!", "Bark! Need more OKB for gas!"],
+            insufficientAllowance: ["Woof! Token not authorized, approve first, pup!", "Arf! Need to authorize token!", "Bark! Approve token before transferring!"]
+        };
+
+        function getRandomMessage(type) {
+            const messages = dogMessages[type];
+            return messages[Math.floor(Math.random() * messages.length)];
+        }
+
+        async function waitForTransaction(txHash) {
+            let receipt = null;
+            const maxAttempts = 30;
+            let attempts = 0;
+            while (attempts < maxAttempts) {
+                receipt = await web3.eth.getTransactionReceipt(txHash);
+                if (receipt) {
+                    if (receipt.status) return receipt;
+                    throw new Error(`Transaction ${txHash} failed`);
+                }
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                attempts++;
+            }
+            throw new Error(`Transaction ${txHash} not confirmed after ${maxAttempts} attempts`);
+        }
+
+        async function initializeWeb3() {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    account = (await web3.eth.getAccounts())[0];
+                    document.getElementById('connectWalletButton').innerText = `Connected: ${account.slice(0, 6)}...${account.slice(-4)}`;
+                    await switchNetwork('XLayer');
+                    await initializeContracts();
+                    await checkTokenStatus();
+                    document.getElementById('networkStatus').innerText = `Connected to X Layer`;
+                    document.getElementById('dogMessage').innerText = getRandomMessage('connectSuccess');
+                } catch (error) {
+                    console.error("Connection error:", error);
+                    document.getElementById('networkStatus').innerText = 'Failed to connect wallet';
+                    document.getElementById('dogMessage').innerText = getRandomMessage('connectFail');
+                }
+            } else {
+                document.getElementById('networkStatus').innerText = 'Please install MetaMask';
+                document.getElementById('dogMessage').innerText = 'Woof! MetaMask not found, pup!';
+            }
+        }
+
+        async function switchNetwork(chain) {
+            const chainConfig = chains[chain];
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: `0x${chainConfig.chainId.toString(16)}` }]
+                });
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: `0x${chainConfig.chainId.toString(16)}`,
+                            chainName: chainConfig.chainName,
+                            rpcUrls: [chainConfig.rpcUrl],
+                            nativeCurrency: chainConfig.nativeCurrency,
+                            blockExplorerUrls: [chainConfig.blockExplorer]
+                        }]
+                    });
+                } else {
+                    throw switchError;
+                }
+            }
+        }
+
+        async function initializeContracts() {
+            try {
+                batchTransferContract = new web3.eth.Contract(JaceBatchTransferAbi, web3.utils.toChecksumAddress(JaceBatchTransferAddress));
+            } catch (error) {
+                console.error("Contract initialization error:", error);
+                document.getElementById('networkStatus').innerText = 'Failed to initialize contracts';
+                document.getElementById('dogMessage').innerText = 'Woof! Contract setup failed, pup!';
+            }
+        }
+
+        async function checkTokenStatus() {
+            if (!web3 || !account) {
+                document.getElementById('authorizeBatchButton').disabled = true;
+                document.getElementById('batchTransferButton').disabled = true;
+                document.getElementById('batchTokenBalance').innerText = 'Balance: 0';
+                return;
+            }
+            const tokenAddress = document.getElementById('batchTokenAddress').value.trim();
+            if (!web3.utils.isAddress(tokenAddress)) {
+                document.getElementById('batchTokenBalance').innerText = 'Balance: Enter valid token address';
+                document.getElementById('authorizeBatchButton').disabled = true;
+                document.getElementById('batchTransferButton').disabled = true;
+                return;
+            }
+            try {
+                tokenContract = new web3.eth.Contract(erc20Abi, web3.utils.toChecksumAddress(tokenAddress));
+                const balance = await tokenContract.methods.balanceOf(account).call();
+                document.getElementById('batchTokenBalance').innerText = `Balance: ${Number(web3.utils.fromWei(balance, 'ether')).toLocaleString()}`;
+                await checkAuthorizationStatus();
+            } catch (error) {
+                console.error("Token status error:", error);
+                document.getElementById('batchTokenBalance').innerText = 'Balance: Check token address';
+                document.getElementById('authorizeBatchButton').disabled = true;
+                document.getElementById('batchTransferButton').disabled = true;
+                document.getElementById('dogMessage').innerText = getRandomMessage('invalidToken');
+            }
+        }
+
+        async function checkAuthorizationStatus() {
+            if (!web3 || !account || !tokenContract) {
+                document.getElementById('authorizeBatchButton').disabled = true;
+                document.getElementById('batchTransferButton').disabled = true;
+                return;
+            }
+            const list = document.getElementById('batchTransferList').value.trim().split('\n').filter(line => line.trim() !== '');
+            if (list.length === 0) {
+                document.getElementById('authorizeBatchButton').disabled = true;
+                document.getElementById('batchTransferButton').disabled = true;
+                return;
+            }
+            try {
+                const allowance = await tokenContract.methods.allowance(account, JaceBatchTransferAddress).call();
+                const sufficientAllowance = web3.utils.toBN(allowance).gte(web3.utils.toBN('1000000000000000000')); // 1 ETH equivalent as threshold
+                document.getElementById('authorizeBatchButton').disabled = sufficientAllowance;
+                document.getElementById('batchTransferButton').disabled = !sufficientAllowance;
+                document.getElementById('networkStatus').innerText = sufficientAllowance ? "Token authorized, ready to transfer." : "Please authorize token first.";
+            } catch (error) {
+                console.error("Authorization check error:", error);
+                document.getElementById('networkStatus').innerText = "Error checking authorization status.";
+                document.getElementById('dogMessage').innerText = getRandomMessage('authorizeFail');
+            }
+        }
+
+        async function authorizeToken() {
+            const status = document.getElementById('networkStatus');
+            const authorizeButton = document.getElementById('authorizeBatchButton');
+            const dogMessage = document.getElementById('dogMessage');
+            const tokenAddress = document.getElementById('batchTokenAddress').value.trim();
+
+            if (!web3 || !account || !tokenContract) {
+                status.innerText = "Please connect wallet or enter valid token address.";
+                dogMessage.innerText = getRandomMessage('connectFail');
+                return;
+            }
+
+            try {
+                authorizeButton.disabled = true;
+                authorizeButton.innerHTML = 'Authorizing... <span class="spinner"></span>';
+                status.innerText = "Authorizing token...";
+                dogMessage.innerText = getRandomMessage('authorizeStart');
+
+                const maxAllowance = '115792089237316195423570985008687907853269984665640564039457584007913129639935';
+                const gasPrice = await web3.eth.getGasPrice();
+                const estimatedGas = await tokenContract.methods.approve(
+                    JaceBatchTransferAddress,
+                    maxAllowance
+                ).estimateGas({ from: account });
+                const nativeBalance = await web3.eth.getBalance(account);
+                const gasCost = web3.utils.toBN(gasPrice).mul(web3.utils.toBN(estimatedGas));
+                if (web3.utils.toBN(nativeBalance).lt(gasCost)) {
+                    status.innerText = "Insufficient OKB for gas.";
+                    dogMessage.innerText = getRandomMessage('insufficientGas');
+                    return;
+                }
+
+                const tx = await tokenContract.methods.approve(
+                    JaceBatchTransferAddress,
+                    maxAllowance
+                ).send({
+                    from: account,
+                    gas: web3.utils.toHex(Math.min(estimatedGas * 2, 1000000))
+                });
+                await waitForTransaction(tx.transactionHash);
+
+                status.innerText = "Token authorized successfully!";
+                dogMessage.innerText = getRandomMessage('authorizeSuccess');
+                await checkAuthorizationStatus();
+            } catch (error) {
+                console.error("Authorize error:", error);
+                if (error.code === 4001) {
+                    status.innerText = "Authorization canceled by user.";
+                    dogMessage.innerText = getRandomMessage('userDenied');
+                } else if (error.message.includes('insufficient funds for gas')) {
+                    status.innerText = "Insufficient OKB for gas.";
+                    dogMessage.innerText = getRandomMessage('insufficientGas');
+                } else {
+                    status.innerText = "Authorization failed, check token address.";
+                    dogMessage.innerText = getRandomMessage('authorizeFail');
+                }
+            } finally {
+                authorizeButton.disabled = false;
+                authorizeButton.innerHTML = 'Authorize Token';
+            }
+        }
+
+        async function batchTransfer() {
+            const status = document.getElementById('networkStatus');
+            const transferButton = document.getElementById('batchTransferButton');
+            const dogMessage = document.getElementById('dogMessage');
+            const tokenAddress = document.getElementById('batchTokenAddress').value.trim();
+            const list = document.getElementById('batchTransferList').value.trim().split('\n').filter(line => line.trim() !== '');
+
+            if (!web3 || !account || !tokenContract) {
+                status.innerText = "Please connect wallet or enter valid token address.";
+                dogMessage.innerText = getRandomMessage('connectFail');
+                return;
+            }
+            if (list.length === 0 || list.length > 200) {
+                status.innerText = "Invalid input or exceeds 200 addresses.";
+                dogMessage.innerText = getRandomMessage('invalidInput');
+                return;
+            }
+
+            try {
+                const recipients = [];
+                const amounts = [];
+                let totalAmount = web3.utils.toBN(0);
+                for (const line of list) {
+                    const [address, amount] = line.split(',').map(s => s.trim());
+                    if (!web3.utils.isAddress(address)) {
+                        status.innerText = `Invalid address: ${address}`;
+                        dogMessage.innerText = getRandomMessage('invalidInput');
+                        return;
+                    }
+                    const amountValue = parseFloat(amount);
+                    if (isNaN(amountValue) || amountValue <= 0) {
+                        status.innerText = `Invalid amount: ${amount}`;
+                        dogMessage.innerText = getRandomMessage('invalidInput');
+                        return;
+                    }
+                    recipients.push(web3.utils.toChecksumAddress(address));
+                    const amountWei = web3.utils.toWei(amountValue.toString(), 'ether');
+                    amounts.push(amountWei);
+                    totalAmount = totalAmount.add(web3.utils.toBN(amountWei));
+                }
+
+                transferButton.disabled = true;
+                transferButton.innerHTML = 'Transferring... <span class="spinner"></span>';
+                status.innerText = "Checking balance and gas...";
+                dogMessage.innerText = getRandomMessage('batchStart');
+
+                const balance = await tokenContract.methods.balanceOf(account).call();
+                if (web3.utils.toBN(balance).lt(totalAmount)) {
+                    status.innerText = "Insufficient token balance.";
+                    dogMessage.innerText = getRandomMessage('insufficientBalance');
+                    return;
+                }
+
+                const allowance = await tokenContract.methods.allowance(account, JaceBatchTransferAddress).call();
+                if (web3.utils.toBN(allowance).lt(totalAmount)) {
+                    status.innerText = "Please authorize token first.";
+                    dogMessage.innerText = getRandomMessage('insufficientAllowance');
+                    return;
+                }
+
+                const gasPrice = await web3.eth.getGasPrice();
+                const estimatedGas = await batchTransferContract.methods.batchTransfer(
+                    tokenAddress,
+                    recipients,
+                    amounts
+                ).estimateGas({ from: account });
+                const nativeBalance = await web3.eth.getBalance(account);
+                const gasCost = web3.utils.toBN(gasPrice).mul(web3.utils.toBN(estimatedGas));
+                if (web3.utils.toBN(nativeBalance).lt(gasCost)) {
+                    status.innerText = "Insufficient OKB for gas.";
+                    dogMessage.innerText = getRandomMessage('insufficientGas');
+                    return;
+                }
+
+                const tx = await batchTransferContract.methods.batchTransfer(
+                    tokenAddress,
+                    recipients,
+                    amounts
+                ).send({
+                    from: account,
+                    gas: web3.utils.toHex(Math.min(estimatedGas * 2, 10000000))
+                });
+                await waitForTransaction(tx.transactionHash);
+
+                status.innerText = "Batch transfer successful!";
+                dogMessage.innerText = getRandomMessage('batchSuccess');
+                await checkTokenStatus();
+            } catch (error) {
+                console.error("Batch transfer error:", error);
+                if (error.code === 4001) {
+                    status.innerText = "Transaction canceled by user.";
+                    dogMessage.innerText = getRandomMessage('userDenied');
+                } else if (error.message.includes('insufficient funds for gas')) {
+                    status.innerText = "Insufficient OKB for gas.";
+                    dogMessage.innerText = getRandomMessage('insufficientGas');
+                } else if (error.message.includes('Invalid token address') || error.message.includes('Token address is not a contract')) {
+                    status.innerText = "Check token address and try again.";
+                    dogMessage.innerText = getRandomMessage('invalidToken');
+                } else if (error.message.includes('Arrays length mismatch') || error.message.includes('Exceeds max batch size')) {
+                    status.innerText = "Invalid input or exceeds 200 addresses.";
+                    dogMessage.innerText = getRandomMessage('invalidInput');
+                } else if (error.message.includes('Transfer failed')) {
+                    status.innerText = "Transfer failed, check token contract.";
+                    dogMessage.innerText = getRandomMessage('batchFail');
+                } else {
+                    status.innerText = "Batch transfer failed: " + (error.message || "Unknown error");
+                    dogMessage.innerText = getRandomMessage('batchFail');
+                }
+            } finally {
+                transferButton.disabled = false;
+                transferButton.innerHTML = 'Batch Transfer';
+            }
+        }
+
+        document.getElementById('connectWalletButton').addEventListener('click', initializeWeb3);
+        document.getElementById('authorizeBatchButton').addEventListener('click', authorizeToken);
+        document.getElementById('batchTransferButton').addEventListener('click', batchTransfer);
+        document.getElementById('batchTokenAddress').addEventListener('input', checkTokenStatus);
+        document.getElementById('batchTransferList').addEventListener('input', checkAuthorizationStatus);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthorizationStatus();
+        });
+    </script>
+</body>
+</html>
