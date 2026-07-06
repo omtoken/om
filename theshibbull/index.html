@@ -549,16 +549,25 @@
             <div>
               <label for="maxGasGwei">Gas 阈值：高于不执行</label>
               <input id="maxGasGwei" type="number" min="0" step="0.01" value="5" placeholder="例如 8" />
-              <div class="hint">默认 5 Gwei。按“当前基础费 + 优先费”判断，高于这个值不会提交新交易。</div>
+              <div class="hint">只有选择“阈值保护模式”时才生效。强制提交模式会忽略这个限制。</div>
             </div>
 
             <div>
-              <label for="overMode">高于阈值时</label>
+              <label for="submitPolicy">执行策略</label>
+              <select id="submitPolicy">
+                <option value="force" selected>强制提交：按我填的 gas 先发，失败就停</option>
+                <option value="threshold">阈值保护：高于阈值不发</option>
+              </select>
+              <div class="hint">你要的“0.05 也先执行”就用强制提交模式。</div>
+            </div>
+
+            <div>
+              <label for="overMode">阈值保护时</label>
               <select id="overMode">
                 <option value="stop">停止执行</option>
                 <option value="wait" selected>等待后重查</option>
               </select>
-              <div class="hint">选择等待时，会按下方间隔自动检查 gas。</div>
+              <div class="hint">只在“阈值保护模式”下使用。</div>
             </div>
 
             <div>
@@ -570,25 +579,25 @@
               <label for="gasMode">Gas 模式</label>
               <select id="gasMode">
                 <option value="auto">自动低价：按最新区块基础费计算</option>
-                <option value="custom1559">自定义 EIP-1559</option>
+                <option value="custom1559" selected>自定义 EIP-1559：按你填的 gas 发</option>
                 <option value="legacy">自定义 Legacy gasPrice</option>
               </select>
             </div>
 
             <div>
               <label for="priorityFee">优先费 maxPriorityFee（Gwei）</label>
-              <input id="priorityFee" type="number" min="0" step="0.001" value="0.05" />
-              <div class="hint">自动低价模式也会使用这个值；太低可能长时间不被打包。</div>
+              <input id="priorityFee" type="number" min="0" step="0.001" value="0.001" />
+              <div class="hint">强压极低 gas 时建议小于 maxFee，比如 0.001。</div>
             </div>
 
             <div>
               <label for="maxFee">最大费 maxFee（Gwei）</label>
-              <input id="maxFee" type="number" min="0" step="0.001" placeholder="自定义 EIP-1559 时填写" />
+              <input id="maxFee" type="number" min="0" step="0.001" value="0.05" placeholder="自定义 EIP-1559 时填写" />
             </div>
 
             <div>
               <label for="legacyGasPrice">Legacy gasPrice（Gwei）</label>
-              <input id="legacyGasPrice" type="number" min="0" step="0.001" placeholder="Legacy 模式时填写" />
+              <input id="legacyGasPrice" type="number" min="0" step="0.001" value="0.05" placeholder="Legacy 模式时填写" />
             </div>
 
             <div>
@@ -604,8 +613,8 @@
             </div>
 
             <label class="switch span-2">
-              <input id="dryRun" type="checkbox" checked />
-              <span>先模拟/估算，不立即发交易。取消勾选后才会真正执行。</span>
+              <input id="dryRun" type="checkbox" />
+              <span>只模拟/估算，不发真实交易。需要测试时再勾选。</span>
             </label>
 
             <label class="switch">
@@ -843,6 +852,11 @@
       const target = $("thresholdStatus");
       const thresholdRaw = $("maxGasGwei").value.trim();
       target.className = "";
+      if ($("submitPolicy").value === "force") {
+        target.textContent = "强制提交";
+        target.classList.add("amber");
+        return;
+      }
       if (!thresholdRaw) {
         target.textContent = "未限制";
         target.classList.add("amber");
@@ -920,6 +934,13 @@
       return overrides;
     }
 
+    function describeOverrides(overrides) {
+      if (overrides.gasPrice) {
+        return `legacy gasPrice=${fmtGwei(toGwei(overrides.gasPrice))} Gwei`;
+      }
+      return `maxFee=${fmtGwei(toGwei(overrides.maxFeePerGas))} Gwei，priority=${fmtGwei(toGwei(overrides.maxPriorityFeePerGas))} Gwei`;
+    }
+
     async function ensureUnderThreshold() {
       const thresholdRaw = $("maxGasGwei").value.trim();
       const gas = await refreshGas();
@@ -954,8 +975,8 @@
       else price = overrides.maxFeePerGas;
       const worst = overrides.gasLimit * price;
       $("costEstimate").textContent = `${Number(ethers.formatEther(worst)).toLocaleString("zh-CN", { maximumFractionDigits: 6 })} ETH`;
-      $("estimateDetail").textContent = `gasLimit ${overrides.gasLimit.toString()} × ${fmtGwei(toGwei(price))} Gwei，显示为最坏上限`;
-      log("信息", `估算完成：gasLimit=${overrides.gasLimit.toString()}，单笔最坏成本上限 ${ethers.formatEther(worst)} ETH`);
+      $("estimateDetail").textContent = `${describeOverrides(overrides)}，gasLimit ${overrides.gasLimit.toString()}，显示为最坏上限`;
+      log("信息", `估算完成：${describeOverrides(overrides)}，gasLimit=${overrides.gasLimit.toString()}，单笔最坏成本上限 ${ethers.formatEther(worst)} ETH`);
       return overrides;
     }
 
@@ -996,16 +1017,22 @@
             break;
           }
 
-          setPhase(`第 ${i} 笔：检查 Gas`);
-          const under = await waitUntilUnderThreshold();
-          if (!under) {
-            log("警告", `第 ${i} 笔因 gas 高于阈值而未执行，队列停止。`);
-            break;
+          if ($("submitPolicy").value === "threshold") {
+            setPhase(`第 ${i} 笔：检查 Gas 阈值`);
+            const under = await waitUntilUnderThreshold();
+            if (!under) {
+              log("警告", `第 ${i} 笔因 gas 高于阈值而未执行，队列停止。`);
+              break;
+            }
+          } else {
+            setPhase(`第 ${i} 笔：强制提交`);
+            await refreshGas();
+            log("警告", `强制提交模式：不检查阈值，按你填写的 gas 参数直接尝试。失败会停止队列。`);
           }
 
           setPhase(`第 ${i} 笔：准备交易`);
           const overrides = await estimateCost();
-          log("交易", `第 ${i}/${total} 笔提交中，gasLimit=${overrides.gasLimit.toString()}`);
+          log("交易", `第 ${i}/${total} 笔提交中，${describeOverrides(overrides)}，gasLimit=${overrides.gasLimit.toString()}`);
           const tx = await state.contract.airdrop(overrides);
           $("lastTx").textContent = shortAddr(tx.hash);
           log("交易", `已提交：${tx.hash}`);
@@ -1113,6 +1140,10 @@
       if (state.lastGas) updateThresholdDisplay(toGwei(state.lastGas.current));
     });
 
+    $("submitPolicy").addEventListener("change", () => {
+      if (state.lastGas) updateThresholdDisplay(toGwei(state.lastGas.current));
+    });
+
     $("priorityFee").addEventListener("input", async () => {
       try { await refreshGas(); scheduleNextGasRefresh(); }
       catch (_) {}
@@ -1135,10 +1166,10 @@
     scheduleNextGasRefresh();
     setInterval(autoGasTick, 1000);
     refreshGas()
-      .then(() => log("信息", "已自动读取以太坊实时 Gas。默认参数：自动低价、优先费 0.05 Gwei、阈值 5 Gwei、超过阈值等待重查。"))
+      .then(() => log("信息", "已自动读取以太坊实时 Gas。当前默认：强制提交、自定义 EIP-1559、maxFee 0.05 Gwei、priority 0.001 Gwei；失败会停止队列。"))
       .catch((err) => log("警告", `自动读取 Gas 失败：${normalizeError(err)}。可以换成自己的 RPC 后再点“刷新 Gas”。`));
 
-    log("信息", "页面已就绪。私钥只在点击“读取钱包与合约 / 开始执行 / 估算”时需要填写。");
+    log("信息", "页面已就绪。现在不会因为阈值拦截；开始执行会按你填写的 gas 参数直接尝试提交。");
   </script>
 </body>
 </html>
