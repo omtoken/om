@@ -1,0 +1,1144 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TheShibBull 批量空投执行台</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #070807;
+      --panel: rgba(18, 22, 18, .78);
+      --panel-2: rgba(27, 34, 26, .70);
+      --line: rgba(209, 255, 170, .18);
+      --text: #f1ffe8;
+      --muted: #aebfa5;
+      --dim: #6f8069;
+      --green: #baff35;
+      --green-2: #72f85b;
+      --amber: #ffd15a;
+      --red: #ff6262;
+      --cyan: #8efcff;
+      --shadow: 0 28px 90px rgba(0, 0, 0, .55);
+      --radius-xl: 34px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: "Trebuchet MS", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 20px;
+      background:
+        radial-gradient(circle at 10% -10%, rgba(186, 255, 53, .24), transparent 34rem),
+        radial-gradient(circle at 105% 4%, rgba(142, 252, 255, .15), transparent 33rem),
+        radial-gradient(circle at 70% 115%, rgba(255, 209, 90, .12), transparent 34rem),
+        linear-gradient(135deg, #050604 0%, #0d120c 48%, #060806 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .22;
+      background-image:
+        linear-gradient(rgba(186,255,53,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(186,255,53,.06) 1px, transparent 1px);
+      background-size: 42px 42px;
+      mask-image: radial-gradient(circle at 50% 20%, black, transparent 75%);
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .10;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+    }
+
+    .wrap {
+      width: min(1480px, calc(100vw - 42px));
+      margin: 0 auto;
+      padding: 42px 0 54px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      padding: 38px;
+      background:
+        linear-gradient(135deg, rgba(186,255,53,.12), transparent 32%),
+        linear-gradient(160deg, rgba(255,255,255,.08), rgba(255,255,255,.025)),
+        var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      width: 560px;
+      height: 560px;
+      right: -190px;
+      top: -245px;
+      background: conic-gradient(from 120deg, transparent, rgba(186,255,53,.35), transparent, rgba(142,252,255,.20), transparent);
+      border-radius: 50%;
+      filter: blur(8px);
+      animation: turn 18s linear infinite;
+    }
+
+    @keyframes turn { to { transform: rotate(360deg); } }
+
+    .hero-inner { position: relative; z-index: 1; }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--green);
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-size: 15px;
+      font-weight: 900;
+      border: 1px solid rgba(186,255,53,.30);
+      padding: 9px 13px;
+      border-radius: 999px;
+      background: rgba(186,255,53,.08);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 22px var(--green);
+    }
+
+    h1 {
+      margin: 22px 0 12px;
+      font-size: clamp(42px, 6vw, 88px);
+      line-height: .94;
+      letter-spacing: -0.065em;
+      max-width: 930px;
+    }
+
+    .subtitle {
+      margin: 0;
+      max-width: 980px;
+      color: var(--muted);
+      font-size: clamp(20px, 2vw, 28px);
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .contract-pill {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin-top: 26px;
+    }
+
+    .pill {
+      min-height: 46px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.28);
+      border: 1px solid rgba(255,255,255,.10);
+      color: #dfffd0;
+      font-family: var(--mono);
+      font-size: 15px;
+      overflow-wrap: anywhere;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.08fr .92fr;
+      gap: 24px;
+      margin-top: 24px;
+      align-items: start;
+    }
+
+    @media (max-width: 1080px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.025)), var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-head {
+      padding: 26px 28px 18px;
+      border-bottom: 1px solid rgba(209,255,170,.13);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: -0.035em;
+    }
+
+    .card-note {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+
+    .card-body { padding: 26px 28px 30px; }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .span-2 { grid-column: 1 / -1; }
+
+    @media (max-width: 760px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .span-2 { grid-column: auto; }
+      .wrap { width: min(100vw - 24px, 1480px); padding-top: 20px; }
+      .hero, .card-body, .card-head { padding-left: 20px; padding-right: 20px; }
+    }
+
+    label {
+      display: block;
+      color: #e9ffdc;
+      font-size: 17px;
+      font-weight: 900;
+      margin: 0 0 9px;
+    }
+
+    .hint {
+      color: var(--dim);
+      font-size: 14px;
+      margin-top: 8px;
+      line-height: 1.45;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      min-height: 58px;
+      border: 1px solid rgba(209,255,170,.22);
+      background: rgba(0, 0, 0, .36);
+      color: var(--text);
+      border-radius: 18px;
+      padding: 15px 16px;
+      outline: none;
+      font: 700 18px/1.35 var(--sans);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+      transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 650;
+    }
+
+    input::placeholder, textarea::placeholder { color: rgba(174,191,165,.54); }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: rgba(186,255,53,.78);
+      box-shadow: 0 0 0 4px rgba(186,255,53,.12), inset 0 1px 0 rgba(255,255,255,.07);
+      background: rgba(0,0,0,.50);
+    }
+
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+    .btn {
+      min-height: 58px;
+      border: 0;
+      border-radius: 18px;
+      padding: 15px 20px;
+      color: #071007;
+      background: linear-gradient(135deg, var(--green), #eaff9a 58%, var(--green-2));
+      font: 1000 18px/1 var(--sans);
+      letter-spacing: -.02em;
+      cursor: pointer;
+      box-shadow: 0 18px 40px rgba(186,255,53,.20), inset 0 1px 0 rgba(255,255,255,.65);
+      transition: transform .18s ease, filter .18s ease, opacity .18s ease;
+    }
+
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
+    .btn:active { transform: translateY(0); }
+    .btn:disabled { opacity: .48; cursor: not-allowed; transform: none; filter: grayscale(.45); }
+
+    .btn.secondary {
+      color: var(--text);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(209,255,170,.20);
+      box-shadow: none;
+    }
+
+    .btn.danger {
+      color: #240404;
+      background: linear-gradient(135deg, #ff7777, #ffd0d0);
+      box-shadow: 0 18px 40px rgba(255,98,98,.16), inset 0 1px 0 rgba(255,255,255,.55);
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 14px;
+    }
+
+    @media (max-width: 620px) { .metric-grid { grid-template-columns: 1fr; } }
+
+    .metric {
+      padding: 18px;
+      min-height: 116px;
+      border-radius: 22px;
+      background:
+        linear-gradient(135deg, rgba(186,255,53,.08), transparent),
+        rgba(0,0,0,.28);
+      border: 1px solid rgba(209,255,170,.15);
+    }
+
+    .metric small {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 10px;
+      font-family: var(--mono);
+      font-size: clamp(22px, 2.4vw, 34px);
+      line-height: 1.05;
+      color: #f7ffe9;
+      overflow-wrap: anywhere;
+    }
+
+    .metric .sub {
+      color: var(--dim);
+      font-size: 14px;
+      margin-top: 8px;
+      overflow-wrap: anywhere;
+    }
+
+    .status-strip {
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 760px) { .status-strip { grid-template-columns: 1fr; } }
+
+    .status-item {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(0,0,0,.25);
+      border: 1px solid rgba(255,255,255,.10);
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.4;
+    }
+
+    .status-item b { display:block; color: var(--text); font-size: 22px; margin-top: 4px; }
+
+    .warn {
+      margin: 0 0 18px;
+      padding: 16px 18px;
+      border: 1px solid rgba(255,209,90,.32);
+      border-radius: 20px;
+      background: rgba(255,209,90,.10);
+      color: #ffe6a1;
+      font-size: 16px;
+      line-height: 1.55;
+    }
+
+    .ok { color: var(--green); }
+    .bad { color: var(--red); }
+    .amber { color: var(--amber); }
+    .cyan { color: var(--cyan); }
+
+    .live-dot {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      margin-right: 8px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 18px rgba(186,255,53,.85);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: .45; transform: scale(.9); }
+      50% { opacity: 1; transform: scale(1.12); }
+    }
+
+    .console {
+      height: 520px;
+      overflow: auto;
+      padding: 18px;
+      border-radius: 24px;
+      background: #030503;
+      border: 1px solid rgba(209,255,170,.15);
+      font-family: var(--mono);
+      font-size: 14px;
+      line-height: 1.55;
+      box-shadow: inset 0 0 38px rgba(186,255,53,.04);
+    }
+
+    .log-line {
+      padding: 8px 0;
+      border-bottom: 1px dashed rgba(255,255,255,.06);
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .log-line:last-child { border-bottom: 0; }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      margin-right: 8px;
+      font-size: 12px;
+      font-weight: 1000;
+      letter-spacing: .06em;
+      color: #061006;
+      background: var(--green);
+    }
+
+    .tag.info { background: var(--cyan); }
+    .tag.warn { background: var(--amber); color: #1d1300; border: 0; margin: 0 8px 0 0; }
+    .tag.err { background: var(--red); color: #230303; }
+
+    .progress-shell {
+      height: 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(209,255,170,.14);
+      overflow: hidden;
+      margin-top: 16px;
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), var(--cyan));
+      box-shadow: 0 0 28px rgba(186,255,53,.35);
+      transition: width .25s ease;
+    }
+
+    .footer-note {
+      margin-top: 20px;
+      color: var(--dim);
+      font-size: 14px;
+      line-height: 1.6;
+      text-align: center;
+    }
+
+    .switch {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(209,255,170,.14);
+      background: rgba(0,0,0,.22);
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 850;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .switch input { width: 22px; min-height: 22px; accent-color: #baff35; }
+
+    .split-actions { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top: 18px; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="kicker"><span class="dot"></span> TheShibBull Gas Console</div>
+        <h1>SHIB 空投顺序执行台</h1>
+        <p class="subtitle">输入 RPC 和私钥后，页面会读取当前 gas，低于你设置的阈值才发交易；多笔任务会严格等待上一笔确认成功，再继续下一笔。</p>
+        <div class="contract-pill">
+          <div class="pill">合约：<span id="contractShort">0x23a...0E45</span></div>
+          <div class="pill">函数：airdrop()</div>
+          <div class="pill">每笔内部地址数：200</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">执行参数</h2>
+            <p class="card-note">不连接钱包，直接用私钥签名。建议只放够 gas 的临时钱包。</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <p class="warn"><b>安全提示：</b>私钥只在当前浏览器页面内存中使用，不会写入本地存储；但不要在不可信电脑或来路不明的页面输入主钱包私钥。建议使用只存少量 ETH gas 的热钱包。</p>
+
+          <div class="form-grid">
+            <div class="span-2">
+              <label for="rpcUrl">RPC 地址</label>
+              <input id="rpcUrl" value="https://ethereum-rpc.publicnode.com" placeholder="粘贴你的以太坊 RPC HTTPS 地址" autocomplete="off" />
+              <div class="hint">已默认填入以太坊公共 RPC；如果执行大量交易，建议换成你自己的 Alchemy / Infura / QuickNode 等 RPC。</div>
+            </div>
+
+            <div class="span-2">
+              <label for="privateKey">私钥</label>
+              <input id="privateKey" type="password" placeholder="0x 开头或不带 0x 都可以" autocomplete="off" />
+              <div class="row" style="margin-top:10px;">
+                <button class="btn secondary" id="toggleKey" type="button">显示/隐藏私钥</button>
+                <button class="btn secondary" id="forgetKey" type="button">清空私钥</button>
+              </div>
+            </div>
+
+            <div class="span-2">
+              <label for="contractAddress">合约地址</label>
+              <input id="contractAddress" value="0x23a0C2baB99fD2F864f5cd8b2659ec3b05D10E45" />
+            </div>
+
+            <div>
+              <label for="txCount">执行笔数</label>
+              <input id="txCount" type="number" min="1" step="1" value="1" />
+              <div class="hint">每一笔都是一次 airdrop()，合约内部会转 200 个随机地址。</div>
+            </div>
+
+            <div>
+              <label for="confirmations">确认数</label>
+              <input id="confirmations" type="number" min="1" step="1" value="1" />
+              <div class="hint">上一笔达到确认数后，才会发下一笔。</div>
+            </div>
+
+            <div>
+              <label for="maxGasGwei">Gas 阈值：高于不执行</label>
+              <input id="maxGasGwei" type="number" min="0" step="0.01" value="5" placeholder="例如 8" />
+              <div class="hint">默认 5 Gwei。按“当前基础费 + 优先费”判断，高于这个值不会提交新交易。</div>
+            </div>
+
+            <div>
+              <label for="overMode">高于阈值时</label>
+              <select id="overMode">
+                <option value="stop">停止执行</option>
+                <option value="wait" selected>等待后重查</option>
+              </select>
+              <div class="hint">选择等待时，会按下方间隔自动检查 gas。</div>
+            </div>
+
+            <div>
+              <label for="retrySeconds">等待重查间隔（秒）</label>
+              <input id="retrySeconds" type="number" min="10" step="1" value="30" />
+            </div>
+
+            <div>
+              <label for="gasMode">Gas 模式</label>
+              <select id="gasMode">
+                <option value="auto">自动低价：按最新区块基础费计算</option>
+                <option value="custom1559">自定义 EIP-1559</option>
+                <option value="legacy">自定义 Legacy gasPrice</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="priorityFee">优先费 maxPriorityFee（Gwei）</label>
+              <input id="priorityFee" type="number" min="0" step="0.001" value="0.05" />
+              <div class="hint">自动低价模式也会使用这个值；太低可能长时间不被打包。</div>
+            </div>
+
+            <div>
+              <label for="maxFee">最大费 maxFee（Gwei）</label>
+              <input id="maxFee" type="number" min="0" step="0.001" placeholder="自定义 EIP-1559 时填写" />
+            </div>
+
+            <div>
+              <label for="legacyGasPrice">Legacy gasPrice（Gwei）</label>
+              <input id="legacyGasPrice" type="number" min="0" step="0.001" placeholder="Legacy 模式时填写" />
+            </div>
+
+            <div>
+              <label for="gasLimit">Gas Limit</label>
+              <input id="gasLimit" type="number" min="21000" step="1" placeholder="留空自动估算 + 15%" />
+              <div class="hint">这个合约单笔会循环 200 次转账，gas limit 不要压得太低。</div>
+            </div>
+
+            <div>
+              <label for="gasBuffer">自动 Gas Limit 余量</label>
+              <input id="gasBuffer" type="number" min="0" step="1" value="15" />
+              <div class="hint">自动估算后增加百分比，防止估算偏低。</div>
+            </div>
+
+            <label class="switch span-2">
+              <input id="dryRun" type="checkbox" checked />
+              <span>先模拟/估算，不立即发交易。取消勾选后才会真正执行。</span>
+            </label>
+
+            <label class="switch">
+              <input id="autoGasRefresh" type="checkbox" checked />
+              <span><span class="live-dot"></span>实时刷新 Gas</span>
+            </label>
+
+            <div>
+              <label for="gasRefreshSeconds">Gas 刷新间隔（秒）</label>
+              <input id="gasRefreshSeconds" type="number" min="5" step="1" value="15" />
+              <div class="hint">默认每 15 秒刷新一次当前 gas 和最新区块。</div>
+            </div>
+          </div>
+
+          <div class="split-actions">
+            <div class="row">
+              <button class="btn secondary" id="connectBtn" type="button">读取钱包与合约</button>
+              <button class="btn secondary" id="gasBtn" type="button">刷新 Gas</button>
+              <button class="btn secondary" id="estimateBtn" type="button">估算本笔成本</button>
+            </div>
+            <div class="row">
+              <button class="btn danger" id="stopBtn" type="button" disabled>停止队列</button>
+              <button class="btn" id="runBtn" type="button">开始执行</button>
+            </div>
+          </div>
+
+          <div class="progress-shell"><div class="progress-bar" id="progressBar"></div></div>
+          <div class="status-strip">
+            <div class="status-item">队列进度 <b id="queueStatus">0 / 0</b></div>
+            <div class="status-item">当前阶段 <b id="phaseStatus">未开始</b></div>
+            <div class="status-item">最后交易 <b id="lastTx">无</b></div>
+            <div class="status-item">Gas 阈值 <b id="thresholdStatus">未检查</b></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">链上状态</h2>
+            <p class="card-note">读取账户 ETH、合约 SHIB、当前 gas 和估算成本。</p>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="metric-grid">
+            <div class="metric">
+              <small>当前账户</small>
+              <strong id="walletAddress">未读取</strong>
+              <div class="sub" id="ethBalance">ETH：-</div>
+            </div>
+            <div class="metric">
+              <small>合约 SHIB 余额</small>
+              <strong id="shibBalance">-</strong>
+              <div class="sub" id="airdropAmount">每地址数量：-</div>
+            </div>
+            <div class="metric">
+              <small>当前 Gas</small>
+              <strong id="gasNow">-</strong>
+              <div class="sub" id="gasDetail">base / priority / maxFee</div>
+            </div>
+            <div class="metric">
+              <small>最新区块</small>
+              <strong id="latestBlock">-</strong>
+              <div class="sub" id="nextRefresh">自动刷新：-</div>
+            </div>
+            <div class="metric">
+              <small>估算成本</small>
+              <strong id="costEstimate">-</strong>
+              <div class="sub" id="estimateDetail">等待估算</div>
+            </div>
+          </div>
+
+          <div style="margin-top:18px;">
+            <label for="logBox">执行日志</label>
+            <div class="console" id="logBox" aria-live="polite"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="footer-note">页面只调用合约的 airdrop()。如果 gas 高于阈值，页面不会提交新交易；已经提交到链上的交易无法从页面撤回。</p>
+  </main>
+
+  <script>
+    const CONTRACT_ADDRESS = "0x23a0C2baB99fD2F864f5cd8b2659ec3b05D10E45";
+    const SHIB_TOKEN = "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce";
+    const AIRDROP_ABI = [
+      "function airdrop() external",
+      "function airdropAmount() view returns (uint256)",
+      "function totalAirdroppedAddresses() view returns (uint256)",
+      "function airdropCount(address) view returns (uint256)",
+      "function owner() view returns (address)",
+      "function AIRDROP_ADDRESSES() view returns (uint256)",
+      "function SHIB_TOKEN() view returns (address)"
+    ];
+    const ERC20_ABI = [
+      "function balanceOf(address) view returns (uint256)",
+      "function decimals() view returns (uint8)",
+      "function symbol() view returns (string)"
+    ];
+
+    const $ = (id) => document.getElementById(id);
+    const state = {
+      provider: null,
+      providerRpc: "",
+      wallet: null,
+      contract: null,
+      token: null,
+      tokenDecimals: 18,
+      tokenSymbol: "SHIB",
+      running: false,
+      stopRequested: false,
+      lastGas: null,
+      gasRefreshing: false,
+      nextGasRefreshAt: 0
+    };
+
+    function stamp() {
+      const d = new Date();
+      return d.toLocaleTimeString("zh-CN", { hour12: false });
+    }
+
+    function log(type, text) {
+      const box = $("logBox");
+      const line = document.createElement("div");
+      line.className = "log-line";
+      const cls = type === "错误" ? "err" : type === "警告" ? "warn" : type === "交易" ? "info" : "";
+      line.innerHTML = `<span class="tag ${cls}">${type}</span><span class="dim">${stamp()}</span> ${escapeHtml(text)}`;
+      box.appendChild(line);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"]/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[s]));
+    }
+
+    function setPhase(text) { $("phaseStatus").textContent = text; }
+
+    function setProgress(done, total) {
+      $("queueStatus").textContent = `${done} / ${total}`;
+      const pct = total > 0 ? Math.min(100, Math.round(done * 100 / total)) : 0;
+      $("progressBar").style.width = pct + "%";
+    }
+
+    function shortAddr(addr) {
+      if (!addr || addr.length < 12) return addr || "-";
+      return `${addr.slice(0, 6)}...${addr.slice(-6)}`;
+    }
+
+    function toGwei(value) {
+      if (value == null) return "-";
+      return Number(ethers.formatUnits(value, "gwei"));
+    }
+
+    function fmtGwei(value, digits = 3) {
+      if (value == null || Number.isNaN(Number(value))) return "-";
+      return Number(value).toLocaleString("zh-CN", { maximumFractionDigits: digits });
+    }
+
+    function parseGweiInput(id, required = false) {
+      const raw = $(id).value.trim();
+      if (!raw) {
+        if (required) throw new Error(`${id} 必须填写`);
+        return null;
+      }
+      if (Number(raw) < 0) throw new Error(`${id} 不能小于 0`);
+      return ethers.parseUnits(raw, "gwei");
+    }
+
+    function parsePositiveInt(id, fallback) {
+      const n = Number($(id).value);
+      if (!Number.isFinite(n) || n < 1) return fallback;
+      return Math.floor(n);
+    }
+
+    function cleanPrivateKey(pk) {
+      const v = pk.trim();
+      if (!v) throw new Error("请填写私钥");
+      return v.startsWith("0x") ? v : "0x" + v;
+    }
+
+    async function ensureProvider() {
+      if (!window.ethers) throw new Error("ethers 库未加载，请检查网络或 CDN 是否被拦截");
+      const rpc = $("rpcUrl").value.trim();
+      if (!rpc) throw new Error("请先填写 RPC 地址");
+      if (!state.provider || state.providerRpc !== rpc) {
+        state.provider = new ethers.JsonRpcProvider(rpc);
+        state.providerRpc = rpc;
+        state.wallet = null;
+        state.contract = null;
+        state.token = new ethers.Contract(SHIB_TOKEN, ERC20_ABI, state.provider);
+        $("walletAddress").textContent = "未读取";
+        $("ethBalance").textContent = "ETH：-";
+      }
+      return state.provider;
+    }
+
+    async function setup() {
+      await ensureProvider();
+      const pk = cleanPrivateKey($("privateKey").value);
+      const contractAddr = $("contractAddress").value.trim();
+      if (!ethers.isAddress(contractAddr)) throw new Error("合约地址不正确");
+
+      const network = await state.provider.getNetwork();
+      if (Number(network.chainId) !== 1) {
+        log("警告", `当前 RPC chainId=${network.chainId}，不是以太坊主网 1。请确认你部署的链是否正确。`);
+      }
+      state.wallet = new ethers.Wallet(pk, state.provider);
+      state.contract = new ethers.Contract(contractAddr, AIRDROP_ABI, state.wallet);
+      state.token = new ethers.Contract(SHIB_TOKEN, ERC20_ABI, state.provider);
+
+      try { state.tokenDecimals = Number(await state.token.decimals()); } catch (_) { state.tokenDecimals = 18; }
+      try { state.tokenSymbol = await state.token.symbol(); } catch (_) { state.tokenSymbol = "SHIB"; }
+
+      $("walletAddress").textContent = shortAddr(state.wallet.address);
+      $("contractShort").textContent = shortAddr(contractAddr);
+      log("信息", `已连接 RPC，签名账户：${state.wallet.address}`);
+      await refreshBalances();
+      await refreshGas();
+    }
+
+    async function refreshBalances() {
+      if (!state.provider || !state.wallet || !state.contract || !state.token) await setup();
+      const [eth, shib, amount] = await Promise.all([
+        state.provider.getBalance(state.wallet.address),
+        state.token.balanceOf($("contractAddress").value.trim()),
+        state.contract.airdropAmount()
+      ]);
+      $("ethBalance").textContent = `ETH：${Number(ethers.formatEther(eth)).toLocaleString("zh-CN", { maximumFractionDigits: 6 })}`;
+      $("shibBalance").textContent = `${Number(ethers.formatUnits(shib, state.tokenDecimals)).toLocaleString("zh-CN", { maximumFractionDigits: 2 })}`;
+      $("airdropAmount").textContent = `每地址数量：${Number(ethers.formatUnits(amount, state.tokenDecimals)).toLocaleString("zh-CN", { maximumFractionDigits: 6 })} ${state.tokenSymbol}`;
+    }
+
+    function updateThresholdDisplay(currentGwei) {
+      const target = $("thresholdStatus");
+      const thresholdRaw = $("maxGasGwei").value.trim();
+      target.className = "";
+      if (!thresholdRaw) {
+        target.textContent = "未限制";
+        target.classList.add("amber");
+        return;
+      }
+      const threshold = Number(thresholdRaw);
+      if (!Number.isFinite(threshold) || threshold < 0 || currentGwei === "-") {
+        target.textContent = "阈值错误";
+        target.classList.add("bad");
+        return;
+      }
+      if (currentGwei <= threshold) {
+        target.textContent = `可执行 ≤ ${threshold} Gwei`;
+        target.classList.add("ok");
+      } else {
+        target.textContent = `等待中 > ${threshold} Gwei`;
+        target.classList.add("bad");
+      }
+    }
+
+    async function refreshGas() {
+      if (state.gasRefreshing) {
+        for (let i = 0; i < 30 && state.gasRefreshing; i++) await sleep(100);
+        if (state.lastGas) return state.lastGas;
+      }
+      state.gasRefreshing = true;
+      try {
+        await ensureProvider();
+        const [feeData, block] = await Promise.all([
+          state.provider.getFeeData(),
+          state.provider.getBlock("latest")
+        ]);
+        const priority = parseGweiInput("priorityFee") ?? ethers.parseUnits("0.05", "gwei");
+        const base = block && block.baseFeePerGas ? block.baseFeePerGas : null;
+        const autoMaxFee = base ? ((base * 113n) / 100n) + priority : (feeData.gasPrice || priority);
+        const current = base ? base + priority : (feeData.gasPrice || autoMaxFee);
+        state.lastGas = { feeData, block, base, priority, autoMaxFee, current };
+
+        $("gasNow").textContent = `${fmtGwei(toGwei(current))} Gwei`;
+        $("gasDetail").textContent = `base ${fmtGwei(toGwei(base))} / priority ${fmtGwei(toGwei(priority))} / auto maxFee ${fmtGwei(toGwei(autoMaxFee))}`;
+        $("latestBlock").textContent = block && block.number ? block.number.toLocaleString("zh-CN") : "-";
+        updateThresholdDisplay(toGwei(current));
+        return state.lastGas;
+      } finally {
+        state.gasRefreshing = false;
+      }
+    }
+
+    async function buildOverrides() {
+      const gas = await refreshGas();
+      const mode = $("gasMode").value;
+      const overrides = {};
+
+      const customGasLimit = $("gasLimit").value.trim();
+      if (customGasLimit) overrides.gasLimit = BigInt(customGasLimit);
+      else {
+        setPhase("估算 Gas Limit");
+        const estimated = await state.contract.airdrop.estimateGas();
+        const bufferPct = BigInt(Math.max(0, Math.floor(Number($("gasBuffer").value) || 0)));
+        overrides.gasLimit = estimated + (estimated * bufferPct / 100n);
+      }
+
+      if (mode === "legacy") {
+        overrides.gasPrice = parseGweiInput("legacyGasPrice", true);
+      } else if (mode === "custom1559") {
+        overrides.maxPriorityFeePerGas = parseGweiInput("priorityFee", true);
+        overrides.maxFeePerGas = parseGweiInput("maxFee", true);
+        if (overrides.maxFeePerGas < overrides.maxPriorityFeePerGas) {
+          throw new Error("maxFee 不能小于 maxPriorityFee");
+        }
+      } else {
+        overrides.maxPriorityFeePerGas = gas.priority;
+        overrides.maxFeePerGas = gas.autoMaxFee;
+      }
+      return overrides;
+    }
+
+    async function ensureUnderThreshold() {
+      const thresholdRaw = $("maxGasGwei").value.trim();
+      const gas = await refreshGas();
+      if (!thresholdRaw) return true;
+      const threshold = Number(thresholdRaw);
+      if (!Number.isFinite(threshold) || threshold < 0) throw new Error("Gas 阈值填写不正确");
+      const now = toGwei(gas.current);
+      if (now <= threshold) return true;
+      log("警告", `当前 gas ${fmtGwei(now)} Gwei，高于阈值 ${threshold} Gwei，不提交交易。`);
+      return false;
+    }
+
+    async function waitUntilUnderThreshold() {
+      while (!state.stopRequested) {
+        const ok = await ensureUnderThreshold();
+        if (ok) return true;
+        if ($("overMode").value === "stop") return false;
+        setPhase("等待 Gas 降低");
+        const seconds = Math.max(10, parsePositiveInt("retrySeconds", 30));
+        await sleep(seconds * 1000);
+      }
+      return false;
+    }
+
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+    async function estimateCost() {
+      if (!state.contract) await setup();
+      const overrides = await buildOverrides();
+      let price;
+      if (overrides.gasPrice) price = overrides.gasPrice;
+      else price = overrides.maxFeePerGas;
+      const worst = overrides.gasLimit * price;
+      $("costEstimate").textContent = `${Number(ethers.formatEther(worst)).toLocaleString("zh-CN", { maximumFractionDigits: 6 })} ETH`;
+      $("estimateDetail").textContent = `gasLimit ${overrides.gasLimit.toString()} × ${fmtGwei(toGwei(price))} Gwei，显示为最坏上限`;
+      log("信息", `估算完成：gasLimit=${overrides.gasLimit.toString()}，单笔最坏成本上限 ${ethers.formatEther(worst)} ETH`);
+      return overrides;
+    }
+
+    async function dryRunCheck() {
+      if (!state.contract) await setup();
+      const overrides = await estimateCost();
+      setPhase("模拟调用");
+      await state.contract.airdrop.staticCall(overrides);
+      log("信息", "模拟调用成功：当前合约余额和调用条件允许执行 airdrop()。注意真实交易仍可能受后续区块 gas 和状态变化影响。");
+      return overrides;
+    }
+
+    async function runQueue() {
+      if (state.running) return;
+      state.running = true;
+      state.stopRequested = false;
+      $("runBtn").disabled = true;
+      $("stopBtn").disabled = false;
+      setProgress(0, 0);
+      try {
+        await setup();
+        const total = parsePositiveInt("txCount", 1);
+        const confs = parsePositiveInt("confirmations", 1);
+        setProgress(0, total);
+
+        if ($("dryRun").checked) {
+          await dryRunCheck();
+          setPhase("模拟完成");
+          log("警告", "当前是模拟模式，未发送真实交易。要真正执行，请取消勾选“先模拟/估算”。");
+          return;
+        }
+
+        log("信息", `开始顺序执行，共 ${total} 笔。每笔成功确认后才继续下一笔。`);
+
+        for (let i = 1; i <= total; i++) {
+          if (state.stopRequested) {
+            log("警告", "已收到停止指令，队列停止。已提交到链上的交易不受影响。");
+            break;
+          }
+
+          setPhase(`第 ${i} 笔：检查 Gas`);
+          const under = await waitUntilUnderThreshold();
+          if (!under) {
+            log("警告", `第 ${i} 笔因 gas 高于阈值而未执行，队列停止。`);
+            break;
+          }
+
+          setPhase(`第 ${i} 笔：准备交易`);
+          const overrides = await estimateCost();
+          log("交易", `第 ${i}/${total} 笔提交中，gasLimit=${overrides.gasLimit.toString()}`);
+          const tx = await state.contract.airdrop(overrides);
+          $("lastTx").textContent = shortAddr(tx.hash);
+          log("交易", `已提交：${tx.hash}`);
+
+          setPhase(`第 ${i} 笔：等待确认`);
+          const receipt = await tx.wait(confs);
+          if (!receipt || receipt.status !== 1) {
+            throw new Error(`第 ${i} 笔失败或被回滚：${tx.hash}`);
+          }
+          log("交易", `第 ${i} 笔成功，区块 ${receipt.blockNumber}，实际 gasUsed=${receipt.gasUsed.toString()}`);
+          setProgress(i, total);
+          await refreshBalances();
+        }
+        setPhase("队列结束");
+      } catch (err) {
+        setPhase("执行出错");
+        log("错误", normalizeError(err));
+      } finally {
+        state.running = false;
+        $("runBtn").disabled = false;
+        $("stopBtn").disabled = true;
+      }
+    }
+
+    function normalizeError(err) {
+      if (!err) return "未知错误";
+      if (err.shortMessage) return err.shortMessage;
+      if (err.reason) return err.reason;
+      if (err.info && err.info.error && err.info.error.message) return err.info.error.message;
+      if (err.message) return err.message;
+      return String(err);
+    }
+
+    function gasRefreshIntervalMs() {
+      return Math.max(5, parsePositiveInt("gasRefreshSeconds", 15)) * 1000;
+    }
+
+    function scheduleNextGasRefresh() {
+      state.nextGasRefreshAt = Date.now() + gasRefreshIntervalMs();
+      updateNextRefreshText();
+    }
+
+    function updateNextRefreshText() {
+      if (!$("autoGasRefresh").checked) {
+        $("nextRefresh").textContent = "自动刷新：已关闭";
+        return;
+      }
+      const left = Math.max(0, Math.ceil((state.nextGasRefreshAt - Date.now()) / 1000));
+      $("nextRefresh").textContent = `自动刷新：${left} 秒后`;
+    }
+
+    async function autoGasTick() {
+      updateNextRefreshText();
+      if (!$("autoGasRefresh").checked) return;
+      if (Date.now() < state.nextGasRefreshAt || state.gasRefreshing) return;
+      try {
+        await refreshGas();
+        setPhase(state.running ? $("phaseStatus").textContent : "Gas 实时更新");
+      } catch (err) {
+        $("nextRefresh").textContent = `自动刷新失败：${normalizeError(err)}`;
+      } finally {
+        scheduleNextGasRefresh();
+      }
+    }
+
+    $("connectBtn").addEventListener("click", async () => {
+      try { setPhase("读取中"); await setup(); setPhase("已读取"); }
+      catch (err) { setPhase("读取失败"); log("错误", normalizeError(err)); }
+    });
+
+    $("gasBtn").addEventListener("click", async () => {
+      try { setPhase("刷新 Gas"); await refreshGas(); setPhase("Gas 已刷新"); log("信息", "Gas 已刷新。"); }
+      catch (err) { setPhase("刷新失败"); log("错误", normalizeError(err)); }
+    });
+
+    $("estimateBtn").addEventListener("click", async () => {
+      try { await dryRunCheck(); setPhase("估算完成"); }
+      catch (err) { setPhase("估算失败"); log("错误", normalizeError(err)); }
+    });
+
+    $("runBtn").addEventListener("click", runQueue);
+    $("stopBtn").addEventListener("click", () => {
+      state.stopRequested = true;
+      log("警告", "停止请求已记录：不会再提交下一笔新交易。正在等待的链上交易无法取消。")
+    });
+
+    $("toggleKey").addEventListener("click", () => {
+      $("privateKey").type = $("privateKey").type === "password" ? "text" : "password";
+    });
+
+    $("forgetKey").addEventListener("click", () => {
+      $("privateKey").value = "";
+      state.wallet = null;
+      log("信息", "私钥输入框已清空，页面没有保存私钥。")
+    });
+
+    $("gasMode").addEventListener("change", () => {
+      const mode = $("gasMode").value;
+      $("maxFee").disabled = mode !== "custom1559";
+      $("legacyGasPrice").disabled = mode !== "legacy";
+    });
+    $("gasMode").dispatchEvent(new Event("change"));
+
+    $("maxGasGwei").addEventListener("input", () => {
+      if (state.lastGas) updateThresholdDisplay(toGwei(state.lastGas.current));
+    });
+
+    $("priorityFee").addEventListener("input", async () => {
+      try { await refreshGas(); scheduleNextGasRefresh(); }
+      catch (_) {}
+    });
+
+    $("rpcUrl").addEventListener("change", async () => {
+      state.provider = null;
+      state.providerRpc = "";
+      try { await refreshGas(); scheduleNextGasRefresh(); }
+      catch (err) { log("错误", normalizeError(err)); }
+    });
+
+    $("autoGasRefresh").addEventListener("change", () => {
+      scheduleNextGasRefresh();
+      if ($("autoGasRefresh").checked) autoGasTick();
+    });
+
+    $("gasRefreshSeconds").addEventListener("change", scheduleNextGasRefresh);
+
+    scheduleNextGasRefresh();
+    setInterval(autoGasTick, 1000);
+    refreshGas()
+      .then(() => log("信息", "已自动读取以太坊实时 Gas。默认参数：自动低价、优先费 0.05 Gwei、阈值 5 Gwei、超过阈值等待重查。"))
+      .catch((err) => log("警告", `自动读取 Gas 失败：${normalizeError(err)}。可以换成自己的 RPC 后再点“刷新 Gas”。`));
+
+    log("信息", "页面已就绪。私钥只在点击“读取钱包与合约 / 开始执行 / 估算”时需要填写。");
+  </script>
+</body>
+</html>
