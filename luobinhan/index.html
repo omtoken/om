@@ -1,0 +1,1563 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="罗宾汉控制台：RobinhoodChain 主网批量买入、卖出、本地签名静态工具。" />
+  <meta name="robots" content="noindex,nofollow" />
+  <meta name="referrer" content="no-referrer" />
+  <title>罗宾汉控制台</title>
+  <link rel="icon" href="https://robinhood.opscx.com/logo.png" />
+  <link rel="apple-touch-icon" href="https://robinhood.opscx.com/logo.png" />
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050505;
+      --panel: rgba(18, 18, 18, 0.82);
+      --panel-2: rgba(27, 27, 27, 0.9);
+      --line: rgba(255, 255, 255, 0.1);
+      --line-strong: rgba(255, 255, 255, 0.18);
+      --text: #ffffff;
+      --muted: rgba(255, 255, 255, 0.62);
+      --faint: rgba(255, 255, 255, 0.38);
+      --orange: #ff7a18;
+      --orange-2: #ff9a3d;
+      --orange-dark: #9c3900;
+      --green: #42f28f;
+      --red: #ff5f5f;
+      --yellow: #ffd166;
+      --radius: 22px;
+      --mono: "SFMono-Regular", "Cascadia Code", "Fira Code", Consolas, monospace;
+      --sans: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Helvetica Neue", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      min-height: 100%;
+      margin: 0;
+      background:
+        radial-gradient(circle at 14% 6%, rgba(255, 122, 24, 0.22), transparent 30rem),
+        radial-gradient(circle at 92% 12%, rgba(255, 154, 61, 0.13), transparent 34rem),
+        linear-gradient(135deg, #000 0%, #090806 45%, #030303 100%);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.34;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+      background-size: 54px 54px;
+      mask-image: radial-gradient(circle at 50% 20%, #000 0%, transparent 76%);
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      color: var(--text);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      filter: grayscale(0.65);
+      opacity: 0.58;
+    }
+
+    #app {
+      width: min(1920px, 100%);
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: clamp(18px, 2vw, 34px);
+    }
+
+    .shell {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 18px;
+      min-height: calc(100vh - 68px);
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 10px);
+      padding: 24px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.018)),
+        rgba(0,0,0,0.58);
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 560px;
+      height: 560px;
+      right: -240px;
+      top: -310px;
+      background: conic-gradient(from 180deg, transparent, rgba(255,122,24,0.48), transparent 42%);
+      filter: blur(10px);
+      opacity: 0.82;
+      animation: drift 12s linear infinite;
+    }
+
+    @keyframes drift {
+      to { transform: rotate(360deg); }
+    }
+
+    .hero-top {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: min(100%, 520px);
+    }
+
+    .logo-wrap {
+      width: 70px;
+      height: 70px;
+      border-radius: 23px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, rgba(255,122,24,0.25), rgba(255,255,255,0.05));
+      border: 1px solid rgba(255,122,24,0.35);
+      box-shadow: 0 18px 45px rgba(255,122,24,0.16);
+    }
+
+    .logo-wrap img {
+      width: 50px;
+      height: 50px;
+      object-fit: contain;
+      border-radius: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 4vw, 66px);
+      letter-spacing: -0.07em;
+      line-height: 0.96;
+      font-weight: 900;
+    }
+
+    .subtitle {
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 15px;
+      letter-spacing: 0.02em;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.06);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--yellow);
+      box-shadow: 0 0 14px currentColor;
+    }
+
+    .dot.ok { background: var(--green); color: var(--green); }
+    .dot.bad { background: var(--red); color: var(--red); }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(330px, 440px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .tab-nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: rgba(0,0,0,0.38);
+      backdrop-filter: blur(18px);
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .tab-btn {
+      min-height: 46px;
+      padding: 0 22px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    .tab-btn.active {
+      color: #160800;
+      background: linear-gradient(135deg, var(--orange), var(--orange-2));
+      box-shadow: 0 12px 30px rgba(255,122,24,0.22);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .default-settings {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+
+    .default-settings .notice,
+    .default-settings .checkline,
+    .default-settings .actions {
+      grid-column: 1 / -1;
+    }
+
+    .operation-grid {
+      display: grid;
+      grid-template-columns: minmax(330px, 430px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: 0 18px 70px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06);
+      backdrop-filter: blur(22px);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px 18px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 850;
+      letter-spacing: -0.02em;
+    }
+
+    .panel-sub {
+      margin-top: 5px;
+      color: var(--faint);
+      font-size: 12px;
+    }
+
+    .panel-body {
+      padding: 18px;
+    }
+
+    .settings {
+      display: grid;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field label {
+      color: rgba(255,255,255,0.82);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .hint {
+      color: var(--faint);
+      font-weight: 500;
+      font-size: 12px;
+    }
+
+    .control, textarea, select {
+      width: 100%;
+      min-height: 45px;
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 15px;
+      background: rgba(0,0,0,0.42);
+      color: var(--text);
+      padding: 12px 13px;
+      outline: none;
+      transition: border-color 0.16s, box-shadow 0.16s, background 0.16s;
+    }
+
+    textarea {
+      min-height: 210px;
+      resize: vertical;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .control:focus, textarea:focus, select:focus {
+      border-color: rgba(255,122,24,0.74);
+      box-shadow: 0 0 0 4px rgba(255,122,24,0.11);
+      background: rgba(0,0,0,0.62);
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+    }
+
+    .checkline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .checkline input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--orange);
+    }
+
+    .btn {
+      min-height: 45px;
+      border-radius: 15px;
+      padding: 0 16px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #fff;
+      font-weight: 850;
+      letter-spacing: -0.01em;
+      transition: transform 0.16s, box-shadow 0.16s, background 0.16s, border-color 0.16s;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.22);
+      background: rgba(255,255,255,0.12);
+    }
+
+    .btn.primary {
+      color: #160800;
+      background: linear-gradient(135deg, var(--orange), var(--orange-2));
+      border-color: rgba(255,154,61,0.62);
+      box-shadow: 0 13px 34px rgba(255,122,24,0.24);
+    }
+
+    .btn.danger {
+      background: linear-gradient(135deg, #ff5b3d, #ff7a18);
+      color: #180300;
+      border-color: rgba(255,111,61,0.6);
+    }
+
+    .btn.ghost {
+      color: rgba(255,255,255,0.76);
+      background: rgba(255,255,255,0.055);
+    }
+
+    .btn.small {
+      min-height: 34px;
+      border-radius: 11px;
+      padding: 0 11px;
+      font-size: 12px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      position: relative;
+      overflow: hidden;
+      min-height: 92px;
+      padding: 15px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: linear-gradient(145deg, rgba(255,255,255,0.075), rgba(255,255,255,0.026));
+    }
+
+    .stat::after {
+      content: "";
+      position: absolute;
+      right: -42px;
+      bottom: -54px;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: rgba(255,122,24,0.12);
+    }
+
+    .stat-label {
+      color: var(--faint);
+      font-size: 12px;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      position: relative;
+      z-index: 1;
+      font-family: var(--mono);
+      font-size: clamp(18px, 1.8vw, 27px);
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .workspace {
+      display: grid;
+      gap: 18px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(0,0,0,0.18);
+    }
+
+    .progress-wrap {
+      flex: 1;
+      min-width: 240px;
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .progress {
+      width: 0%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--orange), var(--yellow));
+      transition: width 0.22s ease;
+    }
+
+    .table-wrap {
+      max-height: min(58vh, 700px);
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      min-width: 1040px;
+      font-size: 13px;
+    }
+
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      text-align: left;
+      color: rgba(255,255,255,0.72);
+      background: rgba(10,10,10,0.96);
+      border-bottom: 1px solid var(--line-strong);
+      padding: 12px 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    thead th:last-child {
+      right: 0;
+      z-index: 3;
+    }
+
+    tbody td {
+      border-bottom: 1px solid rgba(255,255,255,0.065);
+      padding: 11px 12px;
+      vertical-align: middle;
+      color: rgba(255,255,255,0.86);
+    }
+
+    tbody td:last-child {
+      position: sticky;
+      right: 0;
+      z-index: 1;
+      background: rgba(12,12,12,0.96);
+      min-width: 248px;
+    }
+
+    tbody tr:hover td {
+      background: rgba(255,122,24,0.045);
+    }
+
+    tbody tr:hover td:last-child {
+      background: rgba(31,18,8,0.96);
+    }
+
+    .addr, .mono {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .addr {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 230px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 24px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.06);
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .badge.ok { color: var(--green); border-color: rgba(66,242,143,0.24); background: rgba(66,242,143,0.08); }
+    .badge.bad { color: var(--red); border-color: rgba(255,95,95,0.26); background: rgba(255,95,95,0.08); }
+    .badge.wait { color: var(--yellow); border-color: rgba(255,209,102,0.24); background: rgba(255,209,102,0.08); }
+
+    .logbox {
+      min-height: 172px;
+      max-height: 240px;
+      overflow: auto;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,0.42);
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.55;
+      color: rgba(255,255,255,0.74);
+      white-space: pre-wrap;
+    }
+
+    .notice {
+      border: 1px solid rgba(255,122,24,0.24);
+      border-radius: 17px;
+      padding: 13px 14px;
+      background: rgba(255,122,24,0.08);
+      color: rgba(255,255,255,0.76);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .notice strong { color: #fff; }
+
+    .empty {
+      padding: 45px 18px;
+      text-align: center;
+      color: var(--faint);
+    }
+
+    @media (max-width: 1180px) {
+      .grid, .operation-grid, .default-settings { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .table-wrap { max-height: 62vh; }
+    }
+
+    @media (max-width: 720px) {
+      #app { padding: 12px; }
+      .hero { padding: 18px; }
+      .logo-wrap { width: 58px; height: 58px; border-radius: 18px; }
+      .logo-wrap img { width: 42px; height: 42px; }
+      .row-2, .row-3, .stats { grid-template-columns: 1fr; }
+      .tab-nav { width: 100%; }
+      .tab-btn { flex: 1; padding: 0 12px; }
+      .panel-body { padding: 14px; }
+      .toolbar { padding: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <main class="shell">
+      <section class="hero">
+        <div class="hero-top">
+          <div class="brand">
+            <div class="logo-wrap">
+              <img src="https://robinhood.opscx.com/logo.png" alt="罗宾汉 Logo" />
+            </div>
+            <div>
+              <h1>罗宾汉控制台</h1>
+              <div class="subtitle">最多 1000 个私钥 · 批量买入 / 卖出 · RobinhoodChain 主网 · 本地签名</div>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <span class="pill"><span id="netDot" class="dot"></span><span id="netState">未连接</span></span>
+            <span class="pill">Chain ID：4663</span>
+            <span class="pill">Router：<span class="mono">0xb6Bf...AaE</span></span>
+          </div>
+        </div>
+      </section>
+
+      <nav class="tab-nav" aria-label="主功能页签">
+        <button id="settingsTabBtn" class="tab-btn active" type="button" data-tab="settingsTab">默认设置</button>
+        <button id="operationTabBtn" class="tab-btn" type="button" data-tab="operationTab">导入私钥并操作</button>
+      </nav>
+
+      <section id="settingsTab" class="tab-panel active">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2 class="panel-title">默认设置</h2>
+              <div class="panel-sub">RPC、代币、比例、滑点、Gas、并发确认数</div>
+            </div>
+          </div>
+          <div class="panel-body settings default-settings">
+            <div class="notice">
+              <strong>安全提示：</strong>私钥只在当前浏览器页面内存中使用，不会上传、不写入本地存储。买卖会自动按滑点计算最低成交，卖出首次会无限授权 Router；操作前建议先小额测试。
+            </div>
+
+            <div class="field">
+              <label>RPC 地址 <span class="hint">默认 Robinhood 主网</span></label>
+              <input id="rpcUrl" class="control" value="https://rpc.mainnet.chain.robinhood.com" autocomplete="off" />
+            </div>
+
+            <div class="field">
+              <label>代币合约地址 <span class="hint">Factory 发出的 StandardToken</span></label>
+              <input id="tokenAddress" class="control" placeholder="0x..." autocomplete="off" />
+            </div>
+
+            <div class="row-3">
+              <div class="field">
+                <label>全局操作比例 <span class="hint">买/卖共用</span></label>
+                <input id="percent" class="control" value="100" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label>买入保留 ETH <span class="hint">默认 0.0001</span></label>
+                <input id="reserveEth" class="control" value="0.0001" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label>滑点保护 <span class="hint">默认 5%</span></label>
+                <input id="slippage" class="control" value="5" inputmode="decimal" />
+              </div>
+            </div>
+
+            <label class="checkline">
+              <input id="deductGas" type="checkbox" checked />
+              买入时自动扣除预估 Gas，尽量保证保留 ETH 不被吃掉
+            </label>
+
+            <div class="row-3">
+              <div class="field">
+                <label>Gas Price <span class="hint">Gwei，留空自动获取</span></label>
+                <input id="gasPrice" class="control" value="" placeholder="留空自动" inputmode="decimal" />
+              </div>
+              <div class="field">
+                <label>买入 Gas Limit <span class="hint">默认 700000</span></label>
+                <input id="buyGasLimit" class="control" value="700000" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <label>卖出 Gas Limit <span class="hint">默认 900000</span></label>
+                <input id="sellGasLimit" class="control" value="900000" inputmode="numeric" />
+              </div>
+            </div>
+
+            <div class="row-3">
+              <div class="field">
+                <label>授权 Gas Limit <span class="hint">默认 120000</span></label>
+                <input id="approveGasLimit" class="control" value="120000" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <label>并发数量 <span class="hint">最多 1000</span></label>
+                <input id="concurrency" class="control" value="20" inputmode="numeric" />
+              </div>
+              <div class="field">
+                <label>确认数 <span class="hint">默认 1</span></label>
+                <input id="confirmations" class="control" value="1" inputmode="numeric" />
+              </div>
+            </div>
+
+            <div class="actions">
+              <button id="connectBtn" class="btn primary">连接并读取代币</button>
+              <button id="toOperationBtn" class="btn ghost" type="button">去导入私钥并操作</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="operationTab" class="tab-panel">
+        <section class="operation-grid">
+          <aside class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">导入私钥</h2>
+                <div class="panel-sub">一行一个，最多 1000 个；只在本页面内存中使用</div>
+              </div>
+            </div>
+            <div class="panel-body settings">
+              <div class="field">
+                <label>私钥列表 <span id="keyCountHint" class="hint">0 / 1000</span></label>
+                <textarea id="privateKeys" spellcheck="false" placeholder="0xabc...
+0xdef..."></textarea>
+              </div>
+
+              <div class="actions">
+                <button id="connectOpBtn" class="btn primary">连接并读取代币</button>
+                <button id="importBtn" class="btn">导入私钥</button>
+                <button id="refreshBtn" class="btn ghost">刷新余额</button>
+                <button id="clearBtn" class="btn ghost">清空</button>
+              </div>
+
+              <div class="notice">
+                导入后每个地址会固定显示在右侧表格里。每一行右侧都有单独买入、单独卖出、刷新按钮；顶部按钮用于批量并发操作。
+              </div>
+            </div>
+          </aside>
+
+          <section class="workspace">
+            <div class="stats">
+              <div class="stat">
+                <div class="stat-label">已导入地址</div>
+                <div id="walletCount" class="stat-value">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">总 ETH</div>
+                <div id="totalEth" class="stat-value">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">总代币</div>
+                <div id="totalToken" class="stat-value">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">代币信息</div>
+                <div id="tokenInfo" class="stat-value">未读取</div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="toolbar">
+                <div class="actions">
+                  <button id="buyAllBtn" class="btn primary">一键全部买入</button>
+                  <button id="sellAllBtn" class="btn danger">一键全部卖出</button>
+                  <button id="stopBtn" class="btn ghost">停止队列</button>
+                  <button id="exportBtn" class="btn ghost">导出日志</button>
+                </div>
+                <div class="progress-wrap" title="批量进度">
+                  <div id="progress" class="progress"></div>
+                </div>
+                <span id="progressText" class="pill">0 / 0</span>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>地址</th>
+                      <th>ETH 余额</th>
+                      <th>代币余额</th>
+                      <th>预计买入 ETH</th>
+                      <th>预计卖出代币</th>
+                      <th>状态</th>
+                      <th>单地址操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="walletRows">
+                    <tr><td colspan="8" class="empty">先导入私钥，然后连接 RPC 和代币。</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2 class="panel-title">执行日志</h2>
+                  <div class="panel-sub">交易哈希、错误、授权记录会显示在这里</div>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div id="logBox" class="logbox">等待操作...</div>
+              </div>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script>
+    const ROUTER_ADDRESS = "0xb6Bf82936E1750F3a168Ec3671Deb360349c0AaE";
+    const CHAIN_ID = 4663n;
+    const DEFAULT_DECIMALS = 18;
+    const MAX_KEYS = 1000;
+
+    const ROUTER_ABI = [
+      "function buyExactBnb(address token,uint256 minTokenOut) external payable returns (uint256 tokenOut)",
+      "function sellExactTokens(address token,uint256 tokenAmount,uint256 minBnbOut,uint256 minMarketingSwapBnbOut) external returns (uint256 bnbOut)",
+      "function quoteNetSellAmount(address token,uint256 tokenAmount) external view returns (uint256 netSellAmount)"
+    ];
+
+    const ERC20_ABI = [
+      "function name() view returns (string)",
+      "function symbol() view returns (string)",
+      "function decimals() view returns (uint8)",
+      "function balanceOf(address) view returns (uint256)",
+      "function allowance(address owner,address spender) view returns (uint256)",
+      "function approve(address spender,uint256 amount) returns (bool)",
+      "function marketingTaxBps() view returns (uint16)",
+      "function marketingTokens() view returns (uint256)",
+      "function canSwapMarketing() view returns (bool)"
+    ];
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      provider: null,
+      token: null,
+      tokenAddress: "",
+      tokenName: "",
+      tokenSymbol: "TOKEN",
+      decimals: DEFAULT_DECIMALS,
+      marketingTaxBps: null,
+      feeData: null,
+      wallets: [],
+      logs: [],
+      running: false,
+      stop: false,
+      progressDone: 0,
+      progressTotal: 0
+    };
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (m) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[m]));
+    }
+
+    function now() {
+      return new Date().toLocaleTimeString("zh-CN", { hour12: false });
+    }
+
+    function log(message) {
+      const line = `[${now()}] ${message}`;
+      state.logs.push(line);
+      if (state.logs.length > 1200) state.logs.shift();
+      $("logBox").textContent = state.logs.join("\n") || "等待操作...";
+      $("logBox").scrollTop = $("logBox").scrollHeight;
+    }
+
+    function shortAddr(addr) {
+      if (!addr) return "-";
+      return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    }
+
+    function cleanNumber(value, fallback = "0") {
+      const text = String(value ?? "").trim().replace(/,/g, "");
+      if (!text) return fallback;
+      if (!/^\d+(\.\d+)?$/.test(text)) throw new Error(`数字格式错误：${value}`);
+      return text;
+    }
+
+    function parseUnitsInput(id, decimals = DEFAULT_DECIMALS) {
+      return ethers.parseUnits(cleanNumber($(id).value), decimals);
+    }
+
+    function parseEtherInput(id) {
+      return ethers.parseEther(cleanNumber($(id).value));
+    }
+
+    function parseOptionalGwei(id) {
+      const value = String($(id).value ?? "").trim();
+      if (!value) return null;
+      return ethers.parseUnits(cleanNumber(value), "gwei");
+    }
+
+    function percentBps() {
+      const raw = Number(cleanNumber($("percent").value, "100"));
+      if (!Number.isFinite(raw)) throw new Error("比例格式错误");
+      const clamped = Math.max(0, Math.min(100, raw));
+      $("percent").value = String(clamped);
+      return BigInt(Math.round(clamped * 100));
+    }
+
+    function slippageBps() {
+      const raw = Number(cleanNumber($("slippage").value, "5"));
+      if (!Number.isFinite(raw)) throw new Error("滑点格式错误");
+      const clamped = Math.max(0, Math.min(100, raw));
+      $("slippage").value = String(clamped);
+      return BigInt(Math.round(clamped * 100));
+    }
+
+    function applySlippage(quotedAmount) {
+      const bps = slippageBps();
+      return (quotedAmount * (10000n - bps)) / 10000n;
+    }
+
+    function getPositiveInt(id, fallback, max = Number.MAX_SAFE_INTEGER) {
+      const raw = String($(id).value ?? "").trim();
+      if (!raw) return fallback;
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 0) throw new Error(`${id} 必须是非负整数`);
+      return Math.min(n, max);
+    }
+
+    function formatUnits(value, decimals = DEFAULT_DECIMALS, maxDecimals = 6) {
+      if (value === null || value === undefined) return "-";
+      const text = ethers.formatUnits(value, decimals);
+      const [i, d = ""] = text.split(".");
+      const trimmed = d.slice(0, maxDecimals).replace(/0+$/, "");
+      return trimmed ? `${i}.${trimmed}` : i;
+    }
+
+    function setNetState(text, kind = "wait") {
+      $("netState").textContent = text;
+      $("netDot").className = `dot ${kind === "ok" ? "ok" : kind === "bad" ? "bad" : ""}`;
+    }
+
+    function safeError(error) {
+      const msg = error?.shortMessage || error?.reason || error?.info?.error?.message || error?.message || String(error);
+      return msg.replace(/\s+/g, " ").slice(0, 420);
+    }
+
+    function ensureEthers() {
+      if (!window.ethers) {
+        throw new Error("ethers.js 未加载，请确认浏览器能访问 CDN 后刷新页面");
+      }
+    }
+
+    async function connectProviderAndToken() {
+      try {
+        ensureEthers();
+        setNetState("连接中", "wait");
+
+        const rpc = $("rpcUrl").value.trim();
+        if (!rpc) throw new Error("请填写 RPC 地址");
+
+        state.provider = new ethers.JsonRpcProvider(rpc);
+        const network = await state.provider.getNetwork();
+        if (network.chainId !== CHAIN_ID) {
+          throw new Error(`当前 RPC Chain ID 为 ${network.chainId}，不是 RobinhoodChain 主网 4663`);
+        }
+
+        await updateFeeData();
+
+        const tokenInput = $("tokenAddress").value.trim();
+        if (tokenInput) {
+          if (!ethers.isAddress(tokenInput)) throw new Error("代币合约地址格式不正确");
+          state.tokenAddress = ethers.getAddress(tokenInput);
+          state.token = new ethers.Contract(state.tokenAddress, ERC20_ABI, state.provider);
+          await readTokenInfo();
+        }
+
+        setNetState("已连接主网", "ok");
+        log(`已连接 RobinhoodChain 主网 RPC`);
+        if (state.tokenAddress) log(`已读取代币：${state.tokenSymbol} (${state.tokenAddress})`);
+        renderAll();
+      } catch (error) {
+        setNetState("连接失败", "bad");
+        log(`连接失败：${safeError(error)}`);
+        throw error;
+      }
+    }
+
+    async function updateFeeData() {
+      if (!state.provider) return;
+      try {
+        state.feeData = await state.provider.getFeeData();
+      } catch (error) {
+        state.feeData = null;
+        log(`读取 Gas 信息失败：${safeError(error)}`);
+      }
+    }
+
+    async function readTokenInfo() {
+      if (!state.token) return;
+      const calls = [
+        state.token.name().catch(() => ""),
+        state.token.symbol().catch(() => "TOKEN"),
+        state.token.decimals().catch(() => DEFAULT_DECIMALS),
+        state.token.marketingTaxBps().catch(() => null)
+      ];
+      const [name, symbol, decimals, tax] = await Promise.all(calls);
+      state.tokenName = name || "";
+      state.tokenSymbol = symbol || "TOKEN";
+      state.decimals = Number(decimals || DEFAULT_DECIMALS);
+      state.marketingTaxBps = tax === null ? null : Number(tax);
+
+      const taxText = state.marketingTaxBps === null ? "" : ` · 税 ${state.marketingTaxBps / 100}%`;
+      $("tokenInfo").textContent = `${state.tokenSymbol}${taxText}`;
+    }
+
+    function importPrivateKeys() {
+      try {
+        ensureEthers();
+        const raw = $("privateKeys").value.trim();
+        if (!raw) throw new Error("请先粘贴私钥");
+
+        const chunks = raw.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean);
+        const seen = new Set();
+        const rows = [];
+        const invalid = [];
+
+        for (const item of chunks) {
+          let pk = item.startsWith("0x") ? item : `0x${item}`;
+          if (!/^0x[0-9a-fA-F]{64}$/.test(pk)) {
+            invalid.push(item.slice(0, 12));
+            continue;
+          }
+          pk = pk.toLowerCase();
+          if (seen.has(pk)) continue;
+          seen.add(pk);
+          if (rows.length >= MAX_KEYS) break;
+          const wallet = new ethers.Wallet(pk);
+          rows.push({
+            pk,
+            address: wallet.address,
+            eth: null,
+            token: null,
+            buyValue: null,
+            sellValue: null,
+            status: "已导入",
+            phase: "wait",
+            tx: ""
+          });
+        }
+
+        if (!rows.length) throw new Error("没有有效私钥");
+        state.wallets = rows;
+
+        const skipped = chunks.length - rows.length;
+        log(`已导入 ${rows.length} 个地址${skipped > 0 ? `，跳过 ${skipped} 条重复/超限/无效内容` : ""}`);
+        if (invalid.length) log(`无效私钥示例：${invalid.join("、")}`);
+        renderAll();
+      } catch (error) {
+        log(`导入失败：${safeError(error)}`);
+      }
+    }
+
+    function getSigner(row) {
+      if (!state.provider) throw new Error("请先连接 RPC");
+      return new ethers.Wallet(row.pk, state.provider);
+    }
+
+    function getTokenContract(signerOrProvider = state.provider) {
+      if (!state.tokenAddress || !ethers.isAddress(state.tokenAddress)) throw new Error("请先填写并读取代币合约地址");
+      return new ethers.Contract(state.tokenAddress, ERC20_ABI, signerOrProvider);
+    }
+
+    function getRouterContract(signer) {
+      return new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, signer);
+    }
+
+    async function ensureReadyForTrading() {
+      ensureEthers();
+      const tokenInput = $("tokenAddress").value.trim();
+      if (!tokenInput) throw new Error("请先填写代币合约地址");
+      if (!ethers.isAddress(tokenInput)) throw new Error("代币合约地址格式不正确");
+      const normalizedToken = ethers.getAddress(tokenInput);
+      if (!state.provider || state.tokenAddress !== normalizedToken) {
+        await connectProviderAndToken();
+      }
+      if (!state.tokenAddress) throw new Error("请先连接并读取代币");
+    }
+
+    function gasLimitFor(kind) {
+      const id = kind === "buy" ? "buyGasLimit" : kind === "sell" ? "sellGasLimit" : "approveGasLimit";
+      const value = getPositiveInt(id, 0);
+      return value > 0 ? BigInt(value) : null;
+    }
+
+    function feePerGasForBudget() {
+      return parseOptionalGwei("gasPrice") || state.feeData?.gasPrice || state.feeData?.maxFeePerGas || 0n;
+    }
+
+    function gasBudget(kind) {
+      const limit = gasLimitFor(kind);
+      if (!limit) return 0n;
+      return limit * feePerGasForBudget();
+    }
+
+    function txOverrides(kind, value) {
+      const overrides = {};
+      const limit = gasLimitFor(kind);
+      if (limit) overrides.gasLimit = limit;
+      if (value !== undefined) overrides.value = value;
+
+      const gasPrice = parseOptionalGwei("gasPrice");
+      if (gasPrice) overrides.gasPrice = gasPrice;
+      return overrides;
+    }
+
+    async function quoteBuyMinTokenOut(router, value, row) {
+      row.status = "预估买入滑点";
+      renderRows();
+      try {
+        const quoted = await router.buyExactBnb.staticCall(state.tokenAddress, 0n, txOverrides("buy", value));
+        const minOut = applySlippage(quoted);
+        log(`${shortAddr(row.address)} 预估买到 ${formatUnits(quoted, state.decimals, 4)} ${state.tokenSymbol}，滑点后最低 ${formatUnits(minOut, state.decimals, 4)}`);
+        return minOut;
+      } catch (error) {
+        throw new Error(`买入预估失败，已取消交易：${safeError(error)}`);
+      }
+    }
+
+    async function quoteSellMinEthOut(router, amount, row) {
+      row.status = "预估卖出滑点";
+      renderRows();
+      try {
+        const quoted = await router.sellExactTokens.staticCall(state.tokenAddress, amount, 0n, 0n, txOverrides("sell"));
+        const minOut = applySlippage(quoted);
+        log(`${shortAddr(row.address)} 预估卖出 ${formatUnits(quoted, 18, 8)} ETH，滑点后最低 ${formatUnits(minOut, 18, 8)} ETH`);
+        return minOut;
+      } catch (error) {
+        throw new Error(`卖出预估失败，已取消交易：${safeError(error)}`);
+      }
+    }
+
+    function estimateBuyValue(row) {
+      if (row.eth === null || row.eth === undefined) return null;
+      const reserve = parseEtherInput("reserveEth");
+      let available = row.eth > reserve ? row.eth - reserve : 0n;
+      if ($("deductGas").checked) {
+        const budget = gasBudget("buy");
+        available = available > budget ? available - budget : 0n;
+      }
+      const bps = percentBps();
+      return (available * bps) / 10000n;
+    }
+
+    function estimateSellValue(row) {
+      if (row.token === null || row.token === undefined) return null;
+      return (row.token * percentBps()) / 10000n;
+    }
+
+    function statusBadge(row) {
+      const cls = row.phase === "ok" ? "ok" : row.phase === "bad" ? "bad" : "wait";
+      return `<span class="badge ${cls}">${esc(row.status || "等待")}</span>`;
+    }
+
+    function renderStats() {
+      $("walletCount").textContent = String(state.wallets.length);
+      const totalEth = state.wallets.reduce((sum, row) => sum + (row.eth ?? 0n), 0n);
+      const totalToken = state.wallets.reduce((sum, row) => sum + (row.token ?? 0n), 0n);
+      $("totalEth").textContent = formatUnits(totalEth, 18, 5);
+      $("totalToken").textContent = formatUnits(totalToken, state.decimals, 3);
+      if (!state.tokenAddress) $("tokenInfo").textContent = "未读取";
+    }
+
+    function renderRows() {
+      const tbody = $("walletRows");
+      if (!state.wallets.length) {
+        tbody.innerHTML = `<tr><td colspan="8" class="empty">先导入私钥，然后连接 RPC 和代币。</td></tr>`;
+        return;
+      }
+
+      let html = "";
+      for (let i = 0; i < state.wallets.length; i++) {
+        const row = state.wallets[i];
+        try {
+          row.buyValue = estimateBuyValue(row);
+          row.sellValue = estimateSellValue(row);
+        } catch {
+          row.buyValue = null;
+          row.sellValue = null;
+        }
+
+        html += `
+          <tr>
+            <td class="mono">${i + 1}</td>
+            <td><span class="addr" title="${esc(row.address)}">${esc(shortAddr(row.address))}</span></td>
+            <td class="mono">${formatUnits(row.eth, 18, 6)}</td>
+            <td class="mono">${formatUnits(row.token, state.decimals, 4)}</td>
+            <td class="mono">${formatUnits(row.buyValue, 18, 6)}</td>
+            <td class="mono">${formatUnits(row.sellValue, state.decimals, 4)}</td>
+            <td>${statusBadge(row)}</td>
+            <td>
+              <button class="btn small primary" data-action="buy" data-index="${i}">单独买入</button>
+              <button class="btn small danger" data-action="sell" data-index="${i}">单独卖出</button>
+              <button class="btn small ghost" data-action="refresh" data-index="${i}">刷新</button>
+            </td>
+          </tr>`;
+      }
+      tbody.innerHTML = html;
+    }
+
+    function renderProgress() {
+      const total = state.progressTotal || 0;
+      const done = state.progressDone || 0;
+      const pct = total ? Math.min(100, (done / total) * 100) : 0;
+      $("progress").style.width = `${pct}%`;
+      $("progressText").textContent = `${done} / ${total}`;
+    }
+
+    function renderAll() {
+      renderStats();
+      renderRows();
+      renderProgress();
+      $("keyCountHint").textContent = `${state.wallets.length || 0} / ${MAX_KEYS}`;
+    }
+
+    async function refreshOne(row, silent = false) {
+      if (!state.provider) throw new Error("请先连接 RPC");
+      const prevStatus = row.status;
+      const prevPhase = row.phase;
+      try {
+        if (!silent) {
+          row.phase = "wait";
+          row.status = "刷新中";
+          renderRows();
+        }
+
+        const ethPromise = state.provider.getBalance(row.address);
+        const tokenPromise = state.tokenAddress
+          ? getTokenContract(state.provider).balanceOf(row.address).catch(() => null)
+          : Promise.resolve(null);
+        const [ethBal, tokenBal] = await Promise.all([ethPromise, tokenPromise]);
+
+        row.eth = ethBal;
+        if (tokenBal !== null) row.token = tokenBal;
+        if (!silent) {
+          row.phase = "ok";
+          row.status = "余额已刷新";
+        } else {
+          row.phase = prevPhase;
+          row.status = prevStatus;
+        }
+        if (!silent) log(`${shortAddr(row.address)} 余额已刷新`);
+      } catch (error) {
+        if (!silent) {
+          row.phase = "bad";
+          row.status = `刷新失败：${safeError(error)}`;
+        }
+        if (!silent) log(`${shortAddr(row.address)} 刷新失败：${safeError(error)}`);
+      } finally {
+        renderAll();
+      }
+    }
+
+    async function refreshBalances() {
+      if (!state.wallets.length) {
+        log("没有可刷新的地址");
+        return;
+      }
+      try {
+        if (!state.provider) await connectProviderAndToken();
+        await updateFeeData();
+        await runLimited(state.wallets, Math.min(getPositiveInt("concurrency", 20, MAX_KEYS), 80), async (row) => {
+          await refreshOne(row, true);
+        });
+        log(`余额刷新完成：${state.wallets.length} 个地址`);
+        renderAll();
+      } catch (error) {
+        log(`刷新失败：${safeError(error)}`);
+      }
+    }
+
+    async function waitForTx(tx, confirmations, row, label) {
+      row.tx = tx.hash;
+      row.status = `${label}已发送`;
+      row.phase = "wait";
+      renderRows();
+      log(`${shortAddr(row.address)} ${label}交易已发送：${tx.hash}`);
+      if (confirmations > 0) {
+        const receipt = await tx.wait(confirmations);
+        if (receipt?.status === 0) throw new Error(`${label}交易执行失败`);
+      }
+    }
+
+    async function buyOne(row) {
+      if (state.running && state.stop) return;
+      await ensureReadyForTrading();
+
+      const confirmations = getPositiveInt("confirmations", 1, 12);
+      const signer = getSigner(row);
+      const router = getRouterContract(signer);
+
+      try {
+        row.phase = "wait";
+        row.status = "计算买入金额";
+        renderRows();
+
+        row.eth = await state.provider.getBalance(row.address);
+        const value = estimateBuyValue(row);
+        if (!value || value <= 0n) throw new Error("可买入 ETH 为 0，请检查余额、保留金额、比例或 Gas 设置");
+
+        const minTokenOut = await quoteBuyMinTokenOut(router, value, row);
+        const tx = await router.buyExactBnb(state.tokenAddress, minTokenOut, txOverrides("buy", value));
+        await waitForTx(tx, confirmations, row, "买入");
+
+        row.phase = "ok";
+        row.status = "买入完成";
+        log(`${shortAddr(row.address)} 买入完成，使用 ${formatUnits(value, 18, 8)} ETH`);
+      } catch (error) {
+        row.phase = "bad";
+        row.status = `买入失败：${safeError(error)}`;
+        log(`${shortAddr(row.address)} 买入失败：${safeError(error)}`);
+      } finally {
+        await refreshOne(row, true).catch(() => {});
+        renderAll();
+      }
+    }
+
+    async function sellOne(row) {
+      if (state.running && state.stop) return;
+      await ensureReadyForTrading();
+
+      const confirmations = getPositiveInt("confirmations", 1, 12);
+      const signer = getSigner(row);
+      const token = getTokenContract(signer);
+      const router = getRouterContract(signer);
+
+      try {
+        row.phase = "wait";
+        row.status = "计算卖出数量";
+        renderRows();
+
+        row.token = await token.balanceOf(row.address);
+        const amount = estimateSellValue(row);
+        if (!amount || amount <= 0n) throw new Error("可卖出代币为 0，请检查余额或比例");
+
+        const allowance = await token.allowance(row.address, ROUTER_ADDRESS);
+        if (allowance < amount) {
+          row.status = "无限授权中";
+          renderRows();
+          const approveTx = await token.approve(ROUTER_ADDRESS, ethers.MaxUint256, txOverrides("approve"));
+          await waitForTx(approveTx, Math.max(confirmations, 1), row, "授权");
+          log(`${shortAddr(row.address)} 已对 Router 无限授权 ${state.tokenSymbol}，后续卖出不再重复授权`);
+        }
+
+        const minEthOut = await quoteSellMinEthOut(router, amount, row);
+        const tx = await router.sellExactTokens(
+          state.tokenAddress,
+          amount,
+          minEthOut,
+          0n,
+          txOverrides("sell")
+        );
+        await waitForTx(tx, confirmations, row, "卖出");
+
+        row.phase = "ok";
+        row.status = "卖出完成";
+        log(`${shortAddr(row.address)} 卖出完成：${formatUnits(amount, state.decimals, 4)} ${state.tokenSymbol}`);
+      } catch (error) {
+        row.phase = "bad";
+        row.status = `卖出失败：${safeError(error)}`;
+        log(`${shortAddr(row.address)} 卖出失败：${safeError(error)}`);
+      } finally {
+        await refreshOne(row, true).catch(() => {});
+        renderAll();
+      }
+    }
+
+    async function runLimited(items, limit, handler) {
+      let index = 0;
+      const workerCount = Math.max(1, Math.min(limit, items.length || 1));
+      async function worker() {
+        while (index < items.length) {
+          if (state.stop) break;
+          const current = items[index++];
+          await handler(current);
+        }
+      }
+      await Promise.all(Array.from({ length: workerCount }, worker));
+    }
+
+    async function runBatch(type) {
+      if (state.running) {
+        log("队列正在执行中，请先停止或等待完成");
+        return;
+      }
+      if (!state.wallets.length) {
+        log("没有导入地址");
+        return;
+      }
+
+      try {
+        state.running = true;
+        state.stop = false;
+        state.progressDone = 0;
+        state.progressTotal = state.wallets.length;
+        renderProgress();
+
+        await ensureReadyForTrading();
+        await updateFeeData();
+
+        const conc = getPositiveInt("concurrency", 20, MAX_KEYS);
+        log(`开始批量${type === "buy" ? "买入" : "卖出"}：${state.wallets.length} 个地址，并发 ${conc}`);
+
+        await runLimited(state.wallets, conc, async (row) => {
+          if (type === "buy") await buyOne(row);
+          else await sellOne(row);
+          state.progressDone += 1;
+          renderProgress();
+        });
+
+        log(state.stop ? "队列已停止，已发出的交易无法撤回" : `批量${type === "buy" ? "买入" : "卖出"}队列执行完毕`);
+      } catch (error) {
+        log(`批量执行失败：${safeError(error)}`);
+      } finally {
+        state.running = false;
+        renderAll();
+      }
+    }
+
+    function stopQueue() {
+      state.stop = true;
+      log("已请求停止队列；正在等待当前并发中的交易返回");
+    }
+
+    function exportLogs() {
+      const content = state.logs.join("\n") || "无日志";
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `robinhood-console-log-${Date.now()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearAll() {
+      state.wallets = [];
+      state.logs = [];
+      $("privateKeys").value = "";
+      $("logBox").textContent = "等待操作...";
+      state.progressDone = 0;
+      state.progressTotal = 0;
+      renderAll();
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll(".tab-panel").forEach((panel) => {
+        panel.classList.toggle("active", panel.id === tabId);
+      });
+      document.querySelectorAll(".tab-btn").forEach((button) => {
+        button.classList.toggle("active", button.dataset.tab === tabId);
+      });
+    }
+
+    $("connectBtn").addEventListener("click", () => connectProviderAndToken().catch(() => {}));
+    $("connectOpBtn").addEventListener("click", () => connectProviderAndToken().catch(() => {}));
+    $("toOperationBtn").addEventListener("click", () => switchTab("operationTab"));
+    document.querySelectorAll(".tab-btn").forEach((button) => {
+      button.addEventListener("click", () => switchTab(button.dataset.tab));
+    });
+    $("importBtn").addEventListener("click", importPrivateKeys);
+    $("refreshBtn").addEventListener("click", refreshBalances);
+    $("clearBtn").addEventListener("click", clearAll);
+    $("buyAllBtn").addEventListener("click", () => runBatch("buy"));
+    $("sellAllBtn").addEventListener("click", () => runBatch("sell"));
+    $("stopBtn").addEventListener("click", stopQueue);
+    $("exportBtn").addEventListener("click", exportLogs);
+
+    $("walletRows").addEventListener("click", async (event) => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const index = Number(button.dataset.index);
+      const row = state.wallets[index];
+      if (!row) return;
+      const action = button.dataset.action;
+      if (state.running && action !== "refresh") {
+        log("批量队列执行中，暂不执行单地址交易");
+        return;
+      }
+      if (action === "buy") await buyOne(row);
+      if (action === "sell") await sellOne(row);
+      if (action === "refresh") await refreshOne(row);
+    });
+
+    ["percent", "reserveEth", "slippage", "deductGas", "gasPrice", "buyGasLimit", "sellGasLimit", "approveGasLimit"].forEach((id) => {
+      $(id).addEventListener("input", () => {
+        try { renderAll(); } catch {}
+      });
+      $(id).addEventListener("change", () => {
+        try { renderAll(); } catch {}
+      });
+    });
+
+    $("privateKeys").addEventListener("input", () => {
+      const count = $("privateKeys").value.trim() ? $("privateKeys").value.trim().split(/[\s,;]+/).filter(Boolean).length : 0;
+      $("keyCountHint").textContent = `${Math.min(count, MAX_KEYS)} / ${MAX_KEYS}`;
+    });
+
+    window.addEventListener("error", (event) => {
+      log(`页面错误：${safeError(event.error || event.message)}`);
+    });
+
+    renderAll();
+    log("控制台已加载。请先填写代币合约地址、导入私钥，然后连接并读取代币。");
+  </script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1,"server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
