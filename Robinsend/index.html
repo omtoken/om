@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050505" />
+  <title>SPCX批量转账</title>
+  <link rel="icon" href="https://spcx.build/spcx-logo.png" type="image/png" />
+  <link rel="apple-touch-icon" href="https://spcx.build/spcx-logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Noto+Serif+SC:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050505;
+      --panel: rgba(18, 18, 18, 0.88);
+      --panel-strong: rgba(24, 24, 24, 0.96);
+      --panel-soft: rgba(255, 255, 255, 0.055);
+      --line: rgba(255, 255, 255, 0.12);
+      --line-strong: rgba(255, 255, 255, 0.2);
+      --text: #ffffff;
+      --muted: rgba(255, 255, 255, 0.66);
+      --faint: rgba(255, 255, 255, 0.46);
+      --orange: #ff7a18;
+      --orange-2: #ff9f2f;
+      --orange-3: #ff4f00;
+      --green: #44d19d;
+      --red: #ff5f57;
+      --yellow: #ffc857;
+      --shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+      --radius: 28px;
+      --radius-sm: 18px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      --sans: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+      --serif: "Noto Serif SC", "Songti SC", serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--sans);
+      background:
+        radial-gradient(circle at 12% 8%, rgba(255, 122, 24, 0.2), transparent 32vw),
+        radial-gradient(circle at 88% 18%, rgba(255, 79, 0, 0.13), transparent 30vw),
+        linear-gradient(135deg, rgba(255,255,255,0.055) 0 1px, transparent 1px 38px),
+        #050505;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, transparent, rgba(255,255,255,0.035), transparent),
+        radial-gradient(circle at center, transparent 0, transparent 45%, rgba(0,0,0,0.65) 100%);
+      mask-image: linear-gradient(to bottom, #000 0%, transparent 78%);
+      opacity: 0.45;
+      z-index: 0;
+    }
+
+    a { color: inherit; }
+
+    button, input, textarea { font: inherit; }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 26px 0 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      background: rgba(8, 8, 8, 0.62);
+      backdrop-filter: blur(18px);
+      border-radius: 999px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.38);
+      position: sticky;
+      top: 14px;
+      z-index: 5;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      background: #111;
+      border: 1px solid rgba(255, 122, 24, 0.35);
+      padding: 5px;
+      box-shadow: 0 0 32px rgba(255, 122, 24, 0.22);
+      object-fit: contain;
+    }
+
+    .brand-title {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .brand-title strong {
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      white-space: nowrap;
+    }
+
+    .brand-title span {
+      color: var(--faint);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .wallet-cluster {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      padding: 9px 13px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 18px currentColor;
+    }
+
+    .dot.ok { background: var(--green); }
+    .dot.warn { background: var(--yellow); }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 18px;
+      min-height: 44px;
+      color: #100804;
+      background: linear-gradient(135deg, var(--orange-2), var(--orange) 54%, var(--orange-3));
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 14px 36px rgba(255, 122, 24, 0.24), inset 0 1px 0 rgba(255,255,255,0.35);
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      filter: saturate(1.08);
+      box-shadow: 0 18px 48px rgba(255, 122, 24, 0.34), inset 0 1px 0 rgba(255,255,255,0.4);
+    }
+
+    .btn:active:not(:disabled) { transform: translateY(1px); }
+
+    .btn:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+      box-shadow: none;
+      filter: grayscale(0.35);
+    }
+
+    .btn.secondary {
+      background: rgba(255,255,255,0.075);
+      color: var(--text);
+      border: 1px solid var(--line-strong);
+      box-shadow: none;
+    }
+
+    .btn.ghost {
+      background: transparent;
+      color: var(--orange-2);
+      border: 1px solid rgba(255, 122, 24, 0.38);
+      box-shadow: none;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 24px;
+      align-items: end;
+      padding: 64px 0 28px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      padding: 7px 12px;
+      border-radius: 999px;
+      color: var(--orange-2);
+      border: 1px solid rgba(255, 122, 24, 0.3);
+      background: rgba(255, 122, 24, 0.08);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(42px, 8vw, 92px);
+      line-height: .96;
+      letter-spacing: -0.06em;
+    }
+
+    .hero-copy {
+      max-width: 640px;
+      margin: 22px 0 0;
+      color: var(--muted);
+      line-height: 1.8;
+      font-size: 16px;
+    }
+
+    .hero-card {
+      border: 1px solid rgba(255, 122, 24, 0.22);
+      background:
+        linear-gradient(145deg, rgba(255, 122, 24, 0.13), transparent 45%),
+        rgba(14, 14, 14, 0.86);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-card::after {
+      content: "";
+      position: absolute;
+      width: 210px;
+      height: 210px;
+      right: -68px;
+      bottom: -68px;
+      background: radial-gradient(circle, rgba(255,122,24,0.35), transparent 68%);
+      pointer-events: none;
+    }
+
+    .contract-line {
+      position: relative;
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .contract-value {
+      font-family: var(--mono);
+      color: var(--text);
+      word-break: break-all;
+      padding: 13px 14px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,0.35);
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .metric {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .metric span {
+      display: block;
+      color: var(--faint);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .metric strong {
+      font-family: var(--mono);
+      font-size: 16px;
+    }
+
+    .app-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 22px 24px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .panel-head h2, .side-card h3 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -0.04em;
+    }
+
+    .panel-body { padding: 24px; }
+
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .mode-tab {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.055);
+      color: var(--muted);
+      padding: 16px;
+      border-radius: 20px;
+      cursor: pointer;
+      display: grid;
+      text-align: left;
+      gap: 6px;
+      transition: border .18s ease, background .18s ease, transform .18s ease;
+    }
+
+    .mode-tab strong { color: var(--text); font-size: 16px; }
+    .mode-tab span { font-size: 13px; line-height: 1.5; }
+
+    .mode-tab.active {
+      border-color: rgba(255, 122, 24, 0.72);
+      background: linear-gradient(135deg, rgba(255,122,24,0.16), rgba(255,255,255,0.045));
+      box-shadow: inset 0 0 0 1px rgba(255,122,24,0.08), 0 14px 42px rgba(255,122,24,0.1);
+    }
+
+    .mode-tab:hover { transform: translateY(-1px); }
+
+    .form-grid { display: grid; gap: 18px; }
+
+    .field { display: grid; gap: 9px; }
+
+    .field-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    label { color: var(--text); font-weight: 800; }
+
+    input, textarea {
+      width: 100%;
+      color: var(--text);
+      background: rgba(0,0,0,0.34);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      outline: none;
+      padding: 15px 16px;
+      transition: border .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+
+    textarea {
+      min-height: 210px;
+      resize: vertical;
+      line-height: 1.7;
+      font-family: var(--mono);
+      font-size: 13px;
+    }
+
+    input::placeholder, textarea::placeholder { color: rgba(255,255,255,0.35); }
+
+    input:focus, textarea:focus {
+      border-color: rgba(255, 122, 24, 0.72);
+      box-shadow: 0 0 0 4px rgba(255, 122, 24, 0.12);
+      background: rgba(0,0,0,0.44);
+    }
+
+    .token-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: end;
+    }
+
+    .inline-info {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .info-box {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.045);
+      border-radius: 18px;
+      padding: 13px;
+      min-width: 0;
+    }
+
+    .info-box span {
+      display: block;
+      color: var(--faint);
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .info-box strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-family: var(--mono);
+      font-size: 14px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 2px;
+    }
+
+    .summary-card {
+      border-radius: 20px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(145deg, rgba(255,122,24,0.1), transparent 72%),
+        rgba(255,255,255,0.045);
+    }
+
+    .summary-card span {
+      display: block;
+      color: var(--faint);
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .summary-card strong {
+      display: block;
+      font-size: 20px;
+      word-break: break-all;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
+    .actions .btn { flex: 1 1 180px; }
+
+    .status-box {
+      border: 1px solid rgba(255, 122, 24, 0.28);
+      background: rgba(255, 122, 24, 0.07);
+      color: rgba(255,255,255,0.82);
+      border-radius: 20px;
+      padding: 14px 16px;
+      line-height: 1.65;
+      min-height: 54px;
+    }
+
+    .status-box.error { border-color: rgba(255,95,87,0.36); background: rgba(255,95,87,0.09); }
+    .status-box.ok { border-color: rgba(68,209,157,0.36); background: rgba(68,209,157,0.09); }
+    .status-box.warn { border-color: rgba(255,200,87,0.36); background: rgba(255,200,87,0.09); }
+
+    .side-stack { display: grid; gap: 16px; }
+
+    .side-card {
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      box-shadow: 0 18px 55px rgba(0,0,0,0.32);
+    }
+
+    .side-card p, .side-card li {
+      color: var(--muted);
+      line-height: 1.75;
+      font-size: 14px;
+    }
+
+    .side-card ul {
+      margin: 12px 0 0;
+      padding-left: 18px;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .tag {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.055);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .log {
+      display: grid;
+      gap: 8px;
+      max-height: 260px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .log-row {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.04);
+      border-radius: 14px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      word-break: break-word;
+    }
+
+    .log-row a { color: var(--orange-2); text-decoration: none; }
+
+    .hidden { display: none !important; }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 2px solid rgba(0,0,0,0.25);
+      border-top-color: rgba(0,0,0,0.9);
+      animation: spin .8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 940px) {
+      .hero, .app-grid { grid-template-columns: 1fr; }
+      .hero { padding-top: 44px; }
+      .topbar { align-items: flex-start; border-radius: 28px; flex-direction: column; }
+      .wallet-cluster { justify-content: flex-start; width: 100%; }
+    }
+
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 20px, 1180px); padding-top: 10px; }
+      .metrics, .summary, .inline-info, .mode-tabs { grid-template-columns: 1fr; }
+      .panel-head, .panel-body { padding: 18px; }
+      .token-row { grid-template-columns: 1fr; }
+      h1 { font-size: clamp(38px, 15vw, 64px); }
+      .brand-title span { display: none; }
+      .wallet-cluster .pill { width: 100%; justify-content: center; }
+      .wallet-cluster .btn { width: 100%; }
+    }
+
+    .single-app {
+      width: min(860px, 100%);
+      margin: 42px auto 0;
+    }
+
+    .clean-title {
+      margin: 42px auto 0;
+      width: min(860px, 100%);
+      display: grid;
+      gap: 12px;
+    }
+
+    .clean-title h1 {
+      font-size: clamp(34px, 7vw, 72px);
+    }
+
+    .clean-title p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar" aria-label="顶部导航">
+      <div class="brand">
+        <img class="brand-mark" src="https://spcx.build/spcx-logo.png" alt="SPCX Logo" />
+        <div class="brand-title">
+          <strong>SPCX批量转账</strong>
+          <span>Robinhood Chain</span>
+        </div>
+      </div>
+      <div class="wallet-cluster">
+        <div class="pill"><span class="dot" id="networkDot"></span><span id="networkLabel">未连接网络</span></div>
+        <div class="pill" id="accountPill">未连接钱包</div>
+        <button class="btn" id="connectButton">连接钱包</button>
+      </div>
+    </header>
+
+    <section class="clean-title">
+      <div class="eyebrow">ERC20 代币批量转账</div>
+      <h1>SPCX批量转账</h1>
+      <p>输入代币合约地址和收款列表，每行一笔：地址,数量。</p>
+    </section>
+
+    <section class="single-app">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>批量转账</h2>
+        </div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="field">
+              <div class="field-top">
+                <label for="tokenAddressInput">代币合约地址</label>
+                <span>Robinhood Chain ERC20</span>
+              </div>
+              <div class="token-row">
+                <input id="tokenAddressInput" autocomplete="off" spellcheck="false" placeholder="0x..." />
+                <button class="btn secondary" id="refreshTokenButton" type="button">读取代币</button>
+              </div>
+            </div>
+
+            <div class="inline-info">
+              <div class="info-box"><span>代币符号</span><strong id="tokenSymbol">--</strong></div>
+              <div class="info-box"><span>小数位</span><strong id="tokenDecimals">--</strong></div>
+              <div class="info-box"><span>钱包余额</span><strong id="tokenBalance">--</strong></div>
+            </div>
+
+            <div class="field">
+              <div class="field-top">
+                <label for="transferList">收款列表</label>
+                <span>每行：地址,数量；最多 200 行</span>
+              </div>
+              <textarea id="transferList" spellcheck="false" placeholder="0x1111111111111111111111111111111111111111,10&#10;0x2222222222222222222222222222222222222222,25.5"></textarea>
+            </div>
+
+            <div class="summary" aria-label="转账汇总">
+              <div class="summary-card"><span>有效笔数</span><strong id="summaryCount">0</strong></div>
+              <div class="summary-card"><span>总数量</span><strong id="summaryTotal">0</strong></div>
+              <div class="summary-card"><span>授权状态</span><strong id="summaryAllowance">--</strong></div>
+            </div>
+
+            <div class="actions">
+              <button class="btn" id="approveButton" type="button" disabled>一次性授权</button>
+              <button class="btn" id="transferButton" type="button" disabled>开始批量转账</button>
+              <button class="btn secondary" id="clearButton" type="button">清空</button>
+            </div>
+
+            <div class="status-box" id="statusBox">请先连接钱包。</div>
+
+            <div class="log" id="txLog">
+              <div class="log-row">暂无交易记录。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.4/dist/web3.min.js"></script>
+  <script>
+    const CONFIG = {
+      maxAllowance: '115792089237316195423570985008687907853269984665640564039457584007913129639935',
+      batchContract: '0x3AD552ceCc1D93Db32292AdaE8Bf9f008F8c101f',
+      maxRecipients: 200,
+      chain: {
+        chainId: 4663,
+        chainIdHex: '0x1237',
+        chainName: 'Robinhood Chain',
+        nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+        rpcUrls: ['https://rpc.mainnet.chain.robinhood.com'],
+        blockExplorerUrls: ['https://robinhoodchain.blockscout.com']
+      }
+    };
+
+    const batchAbi = [
+      {
+        inputs: [
+          { internalType: 'address', name: 'tokenAddress', type: 'address' },
+          { internalType: 'address[]', name: 'recipients', type: 'address[]' },
+          { internalType: 'uint256[]', name: 'amounts', type: 'uint256[]' }
+        ],
+        name: 'batchTransfer',
+        outputs: [],
+        stateMutability: 'nonpayable',
+        type: 'function'
+      }
+    ];
+
+    const erc20Abi = [
+      { constant: true, inputs: [{ name: 'account', type: 'address' }], name: 'balanceOf', outputs: [{ name: '', type: 'uint256' }], type: 'function' },
+      { constant: true, inputs: [{ name: 'owner', type: 'address' }, { name: 'spender', type: 'address' }], name: 'allowance', outputs: [{ name: '', type: 'uint256' }], type: 'function' },
+      { constant: false, inputs: [{ name: 'spender', type: 'address' }, { name: 'amount', type: 'uint256' }], name: 'approve', outputs: [{ name: '', type: 'bool' }], type: 'function' },
+      { constant: true, inputs: [], name: 'decimals', outputs: [{ name: '', type: 'uint8' }], type: 'function' },
+      { constant: true, inputs: [], name: 'symbol', outputs: [{ name: '', type: 'string' }], type: 'function' }
+    ];
+
+    const el = {
+      connectButton: document.getElementById('connectButton'),
+      accountPill: document.getElementById('accountPill'),
+      networkDot: document.getElementById('networkDot'),
+      networkLabel: document.getElementById('networkLabel'),
+      tokenAddressInput: document.getElementById('tokenAddressInput'),
+      refreshTokenButton: document.getElementById('refreshTokenButton'),
+      transferList: document.getElementById('transferList'),
+      tokenSymbol: document.getElementById('tokenSymbol'),
+      tokenDecimals: document.getElementById('tokenDecimals'),
+      tokenBalance: document.getElementById('tokenBalance'),
+      summaryCount: document.getElementById('summaryCount'),
+      summaryTotal: document.getElementById('summaryTotal'),
+      summaryAllowance: document.getElementById('summaryAllowance'),
+      approveButton: document.getElementById('approveButton'),
+      transferButton: document.getElementById('transferButton'),
+      clearButton: document.getElementById('clearButton'),
+      statusBox: document.getElementById('statusBox'),
+      txLog: document.getElementById('txLog')
+    };
+
+    let web3;
+    let account = '';
+    let batchContract;
+    let tokenContract;
+    let tokenMeta = { address: '', symbol: '--', decimals: 18, balance: 0n, allowance: 0n, ready: false };
+    let parsed = { valid: false, recipients: [], amounts: [], total: 0n, errors: [] };
+
+    function shortAddress(addr) {
+      return addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '--';
+    }
+
+    function shortHash(hash) {
+      return hash ? `${hash.slice(0, 10)}...${hash.slice(-8)}` : '--';
+    }
+
+    function setStatus(message, type = '') {
+      el.statusBox.className = `status-box${type ? ` ${type}` : ''}`;
+      el.statusBox.textContent = message;
+    }
+
+    function setBusy(button, busy, text) {
+      if (!button.dataset.label) button.dataset.label = button.textContent;
+      button.disabled = busy;
+      button.innerHTML = busy ? `<span class="spinner"></span>${text}` : button.dataset.label;
+    }
+
+    function setNetworkState(ok, text, warn = false) {
+      el.networkDot.className = `dot ${ok ? 'ok' : warn ? 'warn' : ''}`;
+      el.networkLabel.textContent = text;
+    }
+
+    function pow10(decimals) {
+      return 10n ** BigInt(decimals);
+    }
+
+    function parseUnits(value, decimals) {
+      const raw = String(value).trim();
+      if (!/^\d+(\.\d+)?$/.test(raw)) throw new Error(`数量格式错误：${value}`);
+      const [whole, fraction = ''] = raw.split('.');
+      if (fraction.length > decimals) throw new Error(`数量小数位超过 ${decimals} 位：${value}`);
+      return BigInt(whole) * pow10(decimals) + BigInt((fraction || '').padEnd(decimals, '0') || '0');
+    }
+
+    function formatUnits(value, decimals, precision = 6) {
+      const n = BigInt(value || 0);
+      const base = pow10(decimals);
+      const whole = n / base;
+      const fraction = n % base;
+      if (fraction === 0n) return whole.toString();
+      let frac = fraction.toString().padStart(decimals, '0').slice(0, precision).replace(/0+$/, '');
+      return frac ? `${whole}.${frac}` : whole.toString();
+    }
+
+    function parseTransferList() {
+      const lines = el.transferList.value.split('\n').map(line => line.trim()).filter(Boolean);
+      const result = { valid: false, recipients: [], amounts: [], total: 0n, errors: [] };
+
+      if (!lines.length) {
+        result.errors.push('请填写收款列表。');
+        return result;
+      }
+      if (lines.length > CONFIG.maxRecipients) {
+        result.errors.push(`单次最多 ${CONFIG.maxRecipients} 行。`);
+        return result;
+      }
+
+      const seen = new Set();
+      lines.forEach((line, index) => {
+        const normalized = line.replace(/，/g, ',');
+        const parts = normalized.split(',').map(v => v.trim()).filter(Boolean);
+        if (parts.length !== 2) {
+          result.errors.push(`第 ${index + 1} 行格式错误，应为：地址,数量。`);
+          return;
+        }
+
+        const [recipient, amountText] = parts;
+        if (!web3 || !web3.utils.isAddress(recipient)) {
+          result.errors.push(`第 ${index + 1} 行地址无效。`);
+          return;
+        }
+
+        try {
+          const checksum = web3.utils.toChecksumAddress(recipient);
+          if (seen.has(checksum)) {
+            result.errors.push(`第 ${index + 1} 行地址重复。`);
+            return;
+          }
+          const amount = parseUnits(amountText, tokenMeta.decimals);
+          if (amount <= 0n) throw new Error('数量必须大于 0');
+          seen.add(checksum);
+          result.recipients.push(checksum);
+          result.amounts.push(amount.toString());
+          result.total += amount;
+        } catch (error) {
+          result.errors.push(`第 ${index + 1} 行${error.message || '数量无效'}`);
+        }
+      });
+
+      result.valid = result.errors.length === 0 && result.recipients.length > 0;
+      return result;
+    }
+
+    async function ensureWeb3() {
+      if (!window.ethereum) throw new Error('未检测到钱包，请安装 MetaMask 或兼容 EVM 钱包。');
+      if (!window.Web3) throw new Error('Web3 加载失败，请刷新页面。');
+      web3 = web3 || new Web3(window.ethereum);
+      return web3;
+    }
+
+    async function switchToRobinhood() {
+      await ensureWeb3();
+      try {
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CONFIG.chain.chainIdHex }] });
+      } catch (error) {
+        if (error.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: CONFIG.chain.chainIdHex,
+              chainName: CONFIG.chain.chainName,
+              nativeCurrency: CONFIG.chain.nativeCurrency,
+              rpcUrls: CONFIG.chain.rpcUrls,
+              blockExplorerUrls: CONFIG.chain.blockExplorerUrls
+            }]
+          });
+          return;
+        }
+        throw error;
+      }
+    }
+
+    async function verifyNetwork() {
+      if (!web3) return false;
+      const chainId = await web3.eth.getChainId();
+      const ok = Number(chainId) === CONFIG.chain.chainId;
+      setNetworkState(ok, ok ? 'Robinhood Chain' : `网络错误：${chainId}`, !ok);
+      return ok;
+    }
+
+    async function connectWallet() {
+      try {
+        setBusy(el.connectButton, true, '连接中');
+        await ensureWeb3();
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        await switchToRobinhood();
+        const accounts = await web3.eth.getAccounts();
+        account = accounts[0] || '';
+        if (!account) throw new Error('钱包未返回账户。');
+        batchContract = new web3.eth.Contract(batchAbi, CONFIG.batchContract);
+        el.accountPill.textContent = `钱包：${shortAddress(account)}`;
+        el.connectButton.dataset.label = '已连接';
+        el.connectButton.textContent = '已连接';
+        await verifyNetwork();
+        setStatus('钱包已连接。', 'ok');
+        if (el.tokenAddressInput.value.trim()) await refreshToken();
+        renderState();
+      } catch (error) {
+        console.error(error);
+        setStatus(error.code === 4001 ? '你取消了钱包连接。' : (error.message || '连接钱包失败。'), 'error');
+      } finally {
+        setBusy(el.connectButton, false);
+      }
+    }
+
+    function resetTokenMeta(keepAddress = true) {
+      tokenContract = null;
+      tokenMeta = {
+        address: keepAddress ? el.tokenAddressInput.value.trim() : '',
+        symbol: '--',
+        decimals: 18,
+        balance: 0n,
+        allowance: 0n,
+        ready: false
+      };
+    }
+
+    async function refreshToken() {
+      if (!web3 || !account) {
+        setStatus('请先连接钱包。', 'warn');
+        return;
+      }
+      const address = el.tokenAddressInput.value.trim();
+      if (!web3.utils.isAddress(address)) {
+        resetTokenMeta(true);
+        setStatus('请输入有效的代币合约地址。', 'warn');
+        renderState();
+        return;
+      }
+      try {
+        tokenContract = new web3.eth.Contract(erc20Abi, web3.utils.toChecksumAddress(address));
+        const [symbol, decimals, balance, allowance] = await Promise.all([
+          tokenContract.methods.symbol().call().catch(() => 'TOKEN'),
+          tokenContract.methods.decimals().call().catch(() => '18'),
+          tokenContract.methods.balanceOf(account).call(),
+          tokenContract.methods.allowance(account, CONFIG.batchContract).call()
+        ]);
+        tokenMeta = {
+          address: web3.utils.toChecksumAddress(address),
+          symbol: String(symbol || 'TOKEN'),
+          decimals: Number(decimals || 18),
+          balance: BigInt(balance || '0'),
+          allowance: BigInt(allowance || '0'),
+          ready: true
+        };
+        setStatus(`已读取代币：${tokenMeta.symbol}。`, 'ok');
+      } catch (error) {
+        console.error(error);
+        resetTokenMeta(true);
+        setStatus('读取代币失败。', 'error');
+      } finally {
+        renderState();
+      }
+    }
+
+    function renderState() {
+      parsed = web3 ? parseTransferList() : { valid: false, recipients: [], amounts: [], total: 0n, errors: ['请先连接钱包。'] };
+      el.tokenSymbol.textContent = tokenMeta.symbol;
+      el.tokenDecimals.textContent = tokenMeta.ready ? tokenMeta.decimals : '--';
+      el.tokenBalance.textContent = tokenMeta.ready ? `${formatUnits(tokenMeta.balance, tokenMeta.decimals)} ${tokenMeta.symbol}` : '--';
+      el.summaryCount.textContent = parsed.valid ? String(parsed.recipients.length) : '0';
+      el.summaryTotal.textContent = parsed.valid ? `${formatUnits(parsed.total, tokenMeta.decimals)} ${tokenMeta.ready ? tokenMeta.symbol : ''}` : '0';
+      el.summaryAllowance.textContent = tokenMeta.ready && parsed.total > 0n ? (tokenMeta.allowance >= parsed.total ? '已足够' : '需授权') : '--';
+
+      const connected = Boolean(web3 && account);
+      const allowanceOk = tokenMeta.ready && parsed.total > 0n && tokenMeta.allowance >= parsed.total;
+      el.approveButton.disabled = !(connected && tokenMeta.ready);
+      el.transferButton.disabled = !(connected && tokenMeta.ready && parsed.valid && allowanceOk);
+
+      if (connected && el.transferList.value.trim() && parsed.errors.length) {
+        setStatus(parsed.errors[0], 'warn');
+      }
+    }
+
+    async function approveToken() {
+      try {
+        if (!tokenContract || !tokenMeta.ready) throw new Error('请先读取代币。');
+        setBusy(el.approveButton, true, '授权中');
+        setStatus('请在钱包中确认一次性最大额度授权。', 'warn');
+        const estimatedGas = await tokenContract.methods.approve(CONFIG.batchContract, CONFIG.maxAllowance).estimateGas({ from: account });
+        const gas = '0x' + (BigInt(estimatedGas) * 13n / 10n).toString(16);
+        const tx = await tokenContract.methods.approve(CONFIG.batchContract, CONFIG.maxAllowance).send({ from: account, gas });
+        addLog(`一次性授权成功：<a href="${CONFIG.chain.blockExplorerUrls[0]}/tx/${tx.transactionHash}" target="_blank" rel="noopener">${shortHash(tx.transactionHash)}</a>`);
+        setStatus('一次性授权成功；后续额度足够时无需重复授权。', 'ok');
+        await refreshToken();
+      } catch (error) {
+        console.error(error);
+        setStatus(formatError(error, '授权失败。'), 'error');
+      } finally {
+        setBusy(el.approveButton, false);
+        renderState();
+      }
+    }
+
+    async function batchTransfer() {
+      try {
+        const networkOk = await verifyNetwork();
+        if (!networkOk) throw new Error('请先切换到 Robinhood Chain。');
+        if (!tokenContract || !tokenMeta.ready) throw new Error('请先读取代币。');
+        if (!parsed.valid) throw new Error(parsed.errors[0] || '收款列表无效。');
+        if (tokenMeta.balance < parsed.total) throw new Error('代币余额不足。');
+        if (tokenMeta.allowance < parsed.total) throw new Error('授权额度不足。');
+
+        setBusy(el.transferButton, true, '转账中');
+        setStatus('请在钱包中确认批量转账。', 'warn');
+        const estimatedGas = await batchContract.methods.batchTransfer(tokenMeta.address, parsed.recipients, parsed.amounts).estimateGas({ from: account });
+        const gas = '0x' + (BigInt(estimatedGas) * 13n / 10n).toString(16);
+        const tx = await batchContract.methods.batchTransfer(tokenMeta.address, parsed.recipients, parsed.amounts).send({ from: account, gas });
+        addLog(`批量转账成功：${parsed.recipients.length} 笔，<a href="${CONFIG.chain.blockExplorerUrls[0]}/tx/${tx.transactionHash}" target="_blank" rel="noopener">${shortHash(tx.transactionHash)}</a>`);
+        setStatus(`批量转账完成，共 ${parsed.recipients.length} 笔。`, 'ok');
+        await refreshToken();
+      } catch (error) {
+        console.error(error);
+        setStatus(formatError(error, '批量转账失败。'), 'error');
+      } finally {
+        setBusy(el.transferButton, false);
+        renderState();
+      }
+    }
+
+    function addLog(html) {
+      if (el.txLog.textContent.includes('暂无交易记录')) el.txLog.innerHTML = '';
+      const row = document.createElement('div');
+      row.className = 'log-row';
+      row.innerHTML = `${new Date().toLocaleString('zh-CN')} · ${html}`;
+      el.txLog.prepend(row);
+    }
+
+    function formatError(error, fallback) {
+      if (!error) return fallback;
+      if (error.code === 4001) return '你取消了钱包确认。';
+      const msg = error.message || String(error);
+      if (msg.includes('insufficient funds')) return '余额不足，或 gas 不足。';
+      if (msg.includes('allowance')) return '授权额度不足。';
+      if (msg.includes('balance')) return '余额不足。';
+      if (msg.includes('Exceeds max batch size')) return `单次最多 ${CONFIG.maxRecipients} 行。`;
+      if (msg.includes('Arrays length mismatch')) return '地址和数量列表不匹配。';
+      if (msg.includes('User denied')) return '你取消了钱包确认。';
+      return `${fallback} ${msg}`;
+    }
+
+    function clearForm() {
+      el.transferList.value = '';
+      el.tokenAddressInput.value = '';
+      resetTokenMeta(false);
+      setStatus('已清空。');
+      renderState();
+    }
+
+    el.connectButton.addEventListener('click', connectWallet);
+    el.refreshTokenButton.addEventListener('click', refreshToken);
+    el.tokenAddressInput.addEventListener('input', () => { resetTokenMeta(true); renderState(); });
+    el.transferList.addEventListener('input', renderState);
+    el.approveButton.addEventListener('click', approveToken);
+    el.transferButton.addEventListener('click', batchTransfer);
+    el.clearButton.addEventListener('click', clearForm);
+
+    if (window.ethereum) {
+      window.ethereum.on?.('accountsChanged', accounts => {
+        account = accounts[0] || '';
+        el.accountPill.textContent = account ? `钱包：${shortAddress(account)}` : '未连接钱包';
+        if (account && web3 && el.tokenAddressInput.value.trim()) refreshToken();
+        renderState();
+      });
+      window.ethereum.on?.('chainChanged', () => window.location.reload());
+    }
+
+    setNetworkState(false, '未连接网络');
+    renderState();
+  </script>
+</body>
+</html>
