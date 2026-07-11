@@ -236,7 +236,7 @@ tbody tr:hover td:last-child { background: rgba(31, 18, 8, 0.96); }
             </div>
 
             <div class="notice">
-              <strong>SPCX/Robinhood 税币 V2 交易适配：</strong>买入和网站税币详情页一致，走 Sale 合约 <span class="mono">buyOnly(buyEth, slippageBps, deadline)</span>；卖出走 <span class="mono">TaxSellAndProcess.sellToETHAndProcess</span>，授权对象也是税币卖出器，不再使用老版 tradingRouter。支持 <span class="mono">?token=0x...</span> 自动填代币，并自动读取 Sale 地址；如跨域失败可手动填写。
+              <strong>SPCX/Robinhood 税币 V2 交易适配：</strong>买入直接走 Uniswap Router <span class="mono">swapExactETHForTokensSupportingFeeOnTransferTokens</span>；卖出走 <span class="mono">TaxSellAndProcess.sellToETHAndProcess</span>，授权对象也是税币卖出器，不再使用老版 tradingRouter。支持 <span class="mono">?token=0x...</span> 自动填代币，并自动读取 Sale 地址；如跨域失败可手动填写。
             </div>
 
             <div class="field">
@@ -420,7 +420,8 @@ tbody tr:hover td:last-child { background: rgba(31, 18, 8, 0.96); }
 
     const V2_ROUTER_ABI = [
       "function getAmountsOut(uint256 amountIn,address[] path) external view returns (uint256[] amounts)",
-      "function factory() external view returns (address)"
+      "function factory() external view returns (address)",
+      "function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256 amountOutMin,address[] path,address to,uint256 deadline) external payable"
     ];
 
     const V2_SALE_ABI = [
@@ -768,9 +769,8 @@ tbody tr:hover td:last-child { background: rgba(31, 18, 8, 0.96); }
         await connectProviderAndToken();
       }
       state.tokenAddress = normalizedToken;
-      await loadV2TokenMeta({ required: true });
+      await loadV2TokenMeta({ required: false });
       if (!state.tokenAddress) throw new Error("请先连接并读取代币");
-      if (!state.saleAddress) throw new Error("请先填写或自动读取 Sale 合约地址");
     }
 
     function gasLimitFor(kind) {
@@ -800,13 +800,16 @@ tbody tr:hover td:last-child { background: rgba(31, 18, 8, 0.96); }
       return overrides;
     }
 
-    async function quoteBuyMinTokenOut(sale, value, row) {
+    async function quoteBuyMinTokenOut(router, value, row) {
       row.status = "预估买入滑点";
       renderRows();
       try {
-        const quoted = await sale.estimateBuy(value);
-        const minOut = applySlippage(quoted);
-        log(`${shortAddr(row.address)} 按网站税币 Sale 预估买到 ${formatUnits(quoted, state.decimals, 4)} ${state.tokenSymbol}，滑点后约 ${formatUnits(minOut, state.decimals, 4)}`);
+        const amounts = await router.getAmountsOut(value, [WETH_ADDRESS, state.tokenAddress]);
+        const quoted = amounts[amounts.length - 1];
+        const totalTaxBps = BigInt(Math.max(0, Math.min(10000, Number(state.totalTaxBps ?? state.marketingTaxBps ?? 0))));
+        const taxAwareQuoted = (quoted * (10000n - totalTaxBps)) / 10000n;
+        const minOut = applySlippage(taxAwareQuoted);
+        log(`${shortAddr(row.address)} 按 Uniswap 路线预估买到 ${formatUnits(quoted, state.decimals, 4)} ${state.tokenSymbol}，扣税/滑点后最低 ${formatUnits(minOut, state.decimals, 4)}`);
         return minOut;
       } catch (error) {
         throw new Error(`买入预估失败，已取消交易：${safeError(error)}`);
@@ -995,7 +998,7 @@ tbody tr:hover td:last-child { background: rgba(31, 18, 8, 0.96); }
 
       const confirmations = getPositiveInt("confirmations", 1, 12);
       const signer = getSigner(row);
-      const sale = getSaleContract(signer);
+      const router = getRouterContract(signer);
 
       try {
         row.phase = "wait";
@@ -1007,13 +1010,19 @@ tbody tr:hover td:last-child { background: rgba(31, 18, 8, 0.96); }
         row.buyValue = value;
         if (!value || value <= 0n) throw new Error("可买入 ETH 为 0，请检查余额、保留金额、比例/随机范围或 Gas 设置");
 
-        await quoteBuyMinTokenOut(sale, value, row);
-        const tx = await sale.buyOnly(value, slippageBpsNumber(), deadline20m(), txOverrides("buy", value));
+        const minTokenOut = await quoteBuyMinTokenOut(router, value, row);
+        const tx = await router.swapExactETHForTokensSupportingFeeOnTransferTokens(
+          minTokenOut,
+          [WETH_ADDRESS, state.tokenAddress],
+          row.address,
+          deadline20m(),
+          txOverrides("buy", value)
+        );
         await waitForTx(tx, confirmations, row, "买入");
 
         row.phase = "ok";
         row.status = "买入完成";
-        log(`${shortAddr(row.address)} 税币买入完成，使用 ${formatUnits(value, 18, 8)} ETH`);
+        log(`${shortAddr(row.address)} Uniswap 买入完成，使用 ${formatUnits(value, 18, 8)} ETH`);
       } catch (error) {
         row.phase = "bad";
         row.status = `买入失败：${safeError(error)}`;
