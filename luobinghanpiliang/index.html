@@ -314,6 +314,10 @@ tbody tr:hover td:last-child { background: rgba(31, 18, 8, 0.96); }
                 <input id="queueInterval" class="control" value="3" inputmode="decimal">
               </div>
               <div class="field">
+                <label>循环次数 <span class="hint">跑完整列表几轮</span></label>
+                <input id="loopCount" class="control" value="1" inputmode="numeric">
+              </div>
+              <div class="field">
                 <label>确认数 <span class="hint">默认 1</span></label>
                 <input id="confirmations" class="control" value="1" inputmode="numeric">
               </div>
@@ -351,7 +355,7 @@ tbody tr:hover td:last-child { background: rgba(31, 18, 8, 0.96); }
               </div>
 
               <div class="notice">
-                导入后每个地址会固定显示在右侧表格里。顶部“自动买入/卖出”会从第 1 个私钥开始，按顺序逐个执行；每个地址都会重新随机生成一次金额，然后按设置的时间间隔等待。
+                导入后每个地址会固定显示在右侧表格里。顶部“自动买入/卖出”会从第 1 个私钥开始，按顺序逐个执行；设置循环次数后，会跑完整列表多轮，每轮每个地址都会重新随机生成一次金额，然后按设置的时间间隔等待。
               </div>
             </div>
           </aside>
@@ -1189,12 +1193,13 @@ tbody tr:hover td:last-child { background: rgba(31, 18, 8, 0.96); }
       }
 
       try {
+        const loops = Math.max(1, getPositiveInt("loopCount", 1, 100000));
         state.running = true;
         state.stop = false;
         state.progressDone = 0;
-        state.progressTotal = state.wallets.length;
+        state.progressTotal = state.wallets.length * loops;
         state.currentIndex = 0;
-        state.currentMode = type === "buy" ? "顺序买入" : "顺序卖出";
+        state.currentMode = type === "buy" ? `顺序买入 · ${loops}轮` : `顺序卖出 · ${loops}轮`;
         renderProgress();
 
         await ensureReadyForTrading();
@@ -1202,30 +1207,37 @@ tbody tr:hover td:last-child { background: rgba(31, 18, 8, 0.96); }
 
         const intervalMs = Math.round(getPositiveNumber("queueInterval", 3, 86400) * 1000);
         const intervalText = (intervalMs / 1000).toString();
-        log(`开始自动${type === "buy" ? "买入" : "卖出"}：${state.wallets.length} 个地址，按导入顺序逐个执行，间隔 ${intervalText} 秒`);
+        log(`开始自动${type === "buy" ? "买入" : "卖出"}：${state.wallets.length} 个地址，共 ${loops} 轮，按导入顺序逐个执行，间隔 ${intervalText} 秒`);
 
-        for (let i = 0; i < state.wallets.length; i++) {
+        for (let round = 0; round < loops; round++) {
           if (state.stop) break;
-          state.currentIndex = i;
-          const row = state.wallets[i];
-          row.phase = "wait";
-          row.status = `队列执行中 #${i + 1}`;
-          renderAll();
-          log(`执行第 ${i + 1}/${state.wallets.length} 个地址：${shortAddr(row.address)}`);
+          log(`开始第 ${round + 1}/${loops} 轮`);
 
-          if (type === "buy") await buyOne(row);
-          else await sellOne(row);
+          for (let i = 0; i < state.wallets.length; i++) {
+            if (state.stop) break;
+            const overallIndex = round * state.wallets.length + i;
+            state.currentIndex = overallIndex;
+            const row = state.wallets[i];
+            row.phase = "wait";
+            row.status = `第 ${round + 1}/${loops} 轮 · #${i + 1}`;
+            renderAll();
+            log(`第 ${round + 1}/${loops} 轮，执行第 ${i + 1}/${state.wallets.length} 个地址：${shortAddr(row.address)}`);
 
-          state.progressDone += 1;
-          renderProgress();
+            if (type === "buy") await buyOne(row);
+            else await sellOne(row);
 
-          if (!state.stop && i < state.wallets.length - 1 && intervalMs > 0) {
-            log(`等待 ${intervalText} 秒后执行下一个地址`);
-            await delay(intervalMs);
+            state.progressDone += 1;
+            renderProgress();
+
+            const isLastTask = round === loops - 1 && i === state.wallets.length - 1;
+            if (!state.stop && !isLastTask && intervalMs > 0) {
+              log(`等待 ${intervalText} 秒后执行下一笔`);
+              await delay(intervalMs);
+            }
           }
         }
 
-        log(state.stop ? "自动队列已停止，已发出的交易无法撤回" : `自动${type === "buy" ? "买入" : "卖出"}队列执行完毕`);
+        log(state.stop ? "自动队列已停止，已发出的交易无法撤回" : `自动${type === "buy" ? "买入" : "卖出"}队列执行完毕，共 ${loops} 轮`);
       } catch (error) {
         log(`自动队列执行失败：${safeError(error)}`);
       } finally {
