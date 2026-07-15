@@ -147,18 +147,18 @@ tr:hover td{background:rgba(255,255,255,.02)}
     </section>
     <!-- TABS -->
     <nav id="tabNav" class="tabs">
-      <button class="tab active" onclick="switchTab('ownership')">所有权管理</button>
-      <button class="tab" onclick="switchTab('withdraw')">资金提取</button>
-      <button class="tab" onclick="switchTab('distribute')">BNB 分配</button>
-      <button class="tab" onclick="switchTab('isolated')">隔离地址</button>
-      <button class="tab" onclick="switchTab('settings')">参数设置</button>
-      <button class="tab" onclick="switchTab('query')">数据查询</button>
+      <button class="tab admin-only" onclick="switchTab('ownership')">所有权管理</button>
+      <button class="tab admin-only" onclick="switchTab('withdraw')">资金提取</button>
+      <button class="tab active" onclick="switchTab('distribute')">BNB 两步分配</button>
+      <button class="tab admin-only" onclick="switchTab('isolated')">隔离地址</button>
+      <button class="tab admin-only" onclick="switchTab('settings')">参数设置</button>
+      <button class="tab admin-only" onclick="switchTab('query')">数据查询</button>
     </nav>
     <!-- TAB CONTENT -->
     <div id="tabContent">
 
       <!-- 所有权管理 -->
-      <div class="tab-panel active" id="panel-ownership">
+      <div class="tab-panel admin-only" id="panel-ownership">
         <div class="card">
           <div class="card-title">转让所有权 (两步验证)</div>
           <p class="section-desc">两步转让：先发起转让请求，新 Owner 需要调用"接受所有权"来确认。只有当前 Owner 可以操作。</p>
@@ -178,7 +178,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
 
       <!-- 资金提取 -->
-      <div class="tab-panel" id="panel-withdraw">
+      <div class="tab-panel admin-only" id="panel-withdraw">
         <div class="card">
           <div class="card-title">提取 BNB</div>
           <p class="section-desc">提取指定数量的 BNB 到目标地址。仅 Owner 可操作。</p>
@@ -245,22 +245,18 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
 
       <!-- BNB 分配 -->
-      <div class="tab-panel" id="panel-distribute">
+      <div class="tab-panel active" id="panel-distribute">
         <div class="card">
-          <div class="card-title">预览分配</div>
-          <p class="section-desc">查看当前合约 BNB 按 NFT 持有情况的分配预览，不会实际执行分配。</p>
-          <button class="btn btn-outline" onclick="previewDistribution()">预览分配情况</button>
+          <div class="card-title">第一步分配</div>
+          <p class="section-desc">先执行旧分配合约的 BNB 分配。任何人都可以调用。可先预览，再执行。</p>
+          <button class="btn btn-outline" onclick="previewDistribution()">预览第一步分配</button>
+          <button class="btn btn-green" onclick="distribute()" style="margin-left:8px">执行第一步分配</button>
           <div class="result-box" id="result-previewDistribution"></div>
-        </div>
-        <div class="card">
-          <div class="card-title">执行 BNB 分配</div>
-          <p class="section-desc">将合约中的 BNB 按 NFT 持有数量比例分配给所有符合条件的持有者。任何人都可以调用此函数。分配时会自动跳过隔离地址。</p>
-          <button class="btn btn-green" onclick="distribute()">执行分配</button>
           <div class="result-box" id="result-distribute"></div>
         </div>
         <div class="card">
-          <div class="card-title">基金会 / 开发者分配</div>
-          <p class="section-desc">额外分配入口：任何人都可以点击，将新奖励合约中的 BNB 按当前比例分配给基金会地址和开发者地址，默认比例为基金会 90%、开发者 10%。</p>
+          <div class="card-title">第二步分配</div>
+          <p class="section-desc">第二步：执行新奖励合约分配，将 BNB 按当前比例分配给基金会地址和开发者地址，默认基金会 90%、开发者 10%。任何人都可以调用。</p>
           <div class="info-grid" style="margin-bottom:16px">
             <div class="info-item">
               <div class="info-label">新奖励合约地址</div>
@@ -271,11 +267,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
               <div class="info-value" id="rewardContractBalance">点击预览加载</div>
             </div>
           </div>
-          <button class="btn btn-outline" onclick="previewRewardDistribution()">预览基金会 / 开发者分配</button>
-          <button class="btn btn-green" onclick="distributeRewardBNB()" style="margin-left:8px">任何人一键分配</button>
+          <button class="btn btn-outline" onclick="previewRewardDistribution()">预览第二步分配</button>
+          <button class="btn btn-green" onclick="distributeRewardBNB()" style="margin-left:8px">执行第二步分配</button>
           <div class="result-box" id="result-rewardDistribution"></div>
         </div>
-        <div class="card" id="rewardOwnerSettings" style="display:none">
+        <div class="card reward-owner-only" id="rewardOwnerSettings" style="display:none">
           <div class="card-title">新奖励合约 Owner 设置</div>
           <p class="section-desc">仅新奖励合约 Owner 可见。可设置基金会地址、开发者地址，以及两边的分配比例。</p>
           <div class="info-grid" style="margin-bottom:16px">
@@ -326,7 +322,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
 
       <!-- 隔离地址 -->
-      <div class="tab-panel" id="panel-isolated">
+      <div class="tab-panel admin-only" id="panel-isolated">
         <div class="card">
           <div class="card-title">添加单个隔离地址</div>
           <p class="section-desc">将地址加入隔离列表，该地址将不参与 BNB 分配。仅 Owner 可操作。</p>
@@ -374,7 +370,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
 
       <!-- 参数设置 -->
-      <div class="tab-panel" id="panel-settings">
+      <div class="tab-panel admin-only" id="panel-settings">
         <div class="card">
           <div class="card-title">设置起始 Token ID</div>
           <p class="section-desc">修改 NFT 扫描的起始 Token ID。默认为 1。仅 Owner 可操作。</p>
@@ -399,7 +395,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       </div>
 
       <!-- 数据查询 -->
-      <div class="tab-panel" id="panel-query">
+      <div class="tab-panel admin-only" id="panel-query">
         <div class="card">
           <div class="card-title">查询所有 NFT 持有者</div>
           <p class="section-desc">获取所有 88 个 SPCX NFT 的当前持有者地址列表。</p>
@@ -599,6 +595,7 @@ async function loadContractInfo() {
     console.error('加载合约信息失败:', err);
   }
   await loadRewardAdminInfo();
+  updateVisibility();
 }
 
 function formatSharePercent(bps, denominator) {
@@ -627,6 +624,7 @@ async function loadRewardAdminInfo() {
     if (!document.getElementById('newFoundationShare').value) document.getElementById('newFoundationShare').value = foundationPct;
     if (!document.getElementById('newDeveloperShare').value) document.getElementById('newDeveloperShare').value = developerPct;
   } catch (err) {
+    rewardIsOwner = false;
     console.error('加载新奖励合约设置失败:', err);
     const settings = document.getElementById('rewardOwnerSettings');
     if (settings) settings.style.display = 'none';
@@ -641,6 +639,19 @@ function requireRewardOwner() {
   return true;
 }
 
+function updateVisibility() {
+  document.querySelectorAll('.admin-only').forEach(function(el) {
+    el.style.display = isOwner ? '' : 'none';
+  });
+  const rewardSettings = document.getElementById('rewardOwnerSettings');
+  if (rewardSettings) rewardSettings.style.display = rewardIsOwner ? 'block' : 'none';
+
+  const activePanel = document.querySelector('.tab-panel.active');
+  if (!activePanel || activePanel.style.display === 'none' || (!isOwner && activePanel.classList.contains('admin-only'))) {
+    switchTab('distribute', true);
+  }
+}
+
 function percentToBps(value) {
   const text = String(value).trim();
   if (!text || isNaN(text)) throw new Error('请输入有效的比例');
@@ -649,11 +660,17 @@ function percentToBps(value) {
   return Math.round(num * 100);
 }
 
-function switchTab(name) {
+function switchTab(name, internal) {
+  const targetPanel = document.getElementById('panel-' + name);
+  if (!targetPanel) return;
+  if (!isOwner && targetPanel.classList.contains('admin-only')) return;
   document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
   document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
-  event.target.classList.add('active');
-  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(function(t) {
+    const attr = t.getAttribute('onclick') || '';
+    if (attr.indexOf("'" + name + "'") !== -1) t.classList.add('active');
+  });
+  targetPanel.classList.add('active');
 }
 
 function requireOwner() {
