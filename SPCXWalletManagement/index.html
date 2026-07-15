@@ -258,6 +258,71 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <button class="btn btn-green" onclick="distribute()">执行分配</button>
           <div class="result-box" id="result-distribute"></div>
         </div>
+        <div class="card">
+          <div class="card-title">基金会 / 开发者分配</div>
+          <p class="section-desc">额外分配入口：任何人都可以点击，将新奖励合约中的 BNB 按当前比例分配给基金会地址和开发者地址，默认比例为基金会 90%、开发者 10%。</p>
+          <div class="info-grid" style="margin-bottom:16px">
+            <div class="info-item">
+              <div class="info-label">新奖励合约地址</div>
+              <div class="info-value mono">0x1d0fF82a2736C2B6DFfBf5Cddb09602e750F2a32</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">新奖励合约 BNB 余额</div>
+              <div class="info-value" id="rewardContractBalance">点击预览加载</div>
+            </div>
+          </div>
+          <button class="btn btn-outline" onclick="previewRewardDistribution()">预览基金会 / 开发者分配</button>
+          <button class="btn btn-green" onclick="distributeRewardBNB()" style="margin-left:8px">任何人一键分配</button>
+          <div class="result-box" id="result-rewardDistribution"></div>
+        </div>
+        <div class="card" id="rewardOwnerSettings" style="display:none">
+          <div class="card-title">新奖励合约 Owner 设置</div>
+          <p class="section-desc">仅新奖励合约 Owner 可见。可设置基金会地址、开发者地址，以及两边的分配比例。</p>
+          <div class="info-grid" style="margin-bottom:16px">
+            <div class="info-item">
+              <div class="info-label">新奖励合约 Owner</div>
+              <div class="info-value mono" id="rewardOwnerAddr">加载中...</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">当前基金会地址</div>
+              <div class="info-value mono" id="currentFoundationWallet">加载中...</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">当前开发者地址</div>
+              <div class="info-value mono" id="currentDeveloperWallet">加载中...</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">当前比例</div>
+              <div class="info-value" id="currentRewardShares">加载中...</div>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>基金会地址</label>
+              <input type="text" id="newFoundationWallet" placeholder="0x...">
+            </div>
+            <div class="form-group">
+              <label>开发者地址</label>
+              <input type="text" id="newDeveloperWallet" placeholder="0x...">
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="setRewardWallets()">设置收款地址</button>
+          <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+            <div class="form-row">
+              <div class="form-group">
+                <label>基金会比例 (%)</label>
+                <input type="text" id="newFoundationShare" placeholder="例如: 90">
+              </div>
+              <div class="form-group">
+                <label>开发者比例 (%)</label>
+                <input type="text" id="newDeveloperShare" placeholder="例如: 10">
+              </div>
+            </div>
+            <div class="form-hint" style="margin-bottom:12px">两项比例必须合计 100%。支持最多两位小数。</div>
+            <button class="btn btn-primary" onclick="setRewardShares()">设置分配比例</button>
+          </div>
+          <div class="result-box" id="result-rewardOwnerSettings"></div>
+        </div>
       </div>
 
       <!-- 隔离地址 -->
@@ -371,8 +436,18 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 <script>
 const CONTRACT_ADDR = '0xEFe3313555ff48cD401c48966e457Ee4F8037c24';
+const REWARD_CONTRACT_ADDR = '0x1d0fF82a2736C2B6DFfBf5Cddb09602e750F2a32';
 const BSC_CHAIN_ID = '0x38';
 const BSC_CHAIN_ID_DEC = 56;
+
+const REWARD_ABI = [
+  "function owner() view returns (address)",
+  "function allocateAllAvailable()",
+  "function setBNBShareWallets(address newFoundationWallet, address newDeveloperWallet)",
+  "function setBNBShares(uint256 newFoundationShareBps, uint256 newDeveloperShareBps)",
+  "function getBNBShareConfig() view returns (address currentFoundationWallet, address currentDeveloperWallet, uint256 currentFoundationShareBps, uint256 currentDeveloperShareBps, uint256 denominator)",
+  "function previewBNBShares(uint256 amount) view returns (uint256 foundationAmount, uint256 developerAmount, uint256 rewardAmount)"
+];
 
 const ABI = [
   "function owner() view returns (address)",
@@ -402,7 +477,7 @@ const ABI = [
   "event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)"
 ];
 
-let provider, signer, contract, userAddress, isOwner = false;
+let provider, signer, contract, userAddress, isOwner = false, rewardIsOwner = false;
 
 function showResult(id, msg, isError) {
   const el = document.getElementById(id);
@@ -523,6 +598,55 @@ async function loadContractInfo() {
   } catch (err) {
     console.error('加载合约信息失败:', err);
   }
+  await loadRewardAdminInfo();
+}
+
+function formatSharePercent(bps, denominator) {
+  return ethers.utils.formatUnits(bps.mul(10000).div(denominator), 2).replace(/\.00$/, '');
+}
+
+async function loadRewardAdminInfo() {
+  try {
+    const readOnly = new ethers.Contract(REWARD_CONTRACT_ADDR, REWARD_ABI, provider);
+    const [rewardOwner, config, balance] = await Promise.all([
+      readOnly.owner(),
+      readOnly.getBNBShareConfig(),
+      provider.getBalance(REWARD_CONTRACT_ADDR)
+    ]);
+    rewardIsOwner = rewardOwner.toLowerCase() === userAddress.toLowerCase();
+    document.getElementById('rewardContractBalance').textContent = ethers.utils.formatEther(balance) + ' BNB';
+    document.getElementById('rewardOwnerSettings').style.display = rewardIsOwner ? 'block' : 'none';
+    document.getElementById('rewardOwnerAddr').textContent = rewardOwner;
+    document.getElementById('currentFoundationWallet').textContent = config.currentFoundationWallet;
+    document.getElementById('currentDeveloperWallet').textContent = config.currentDeveloperWallet;
+    const foundationPct = formatSharePercent(config.currentFoundationShareBps, config.denominator);
+    const developerPct = formatSharePercent(config.currentDeveloperShareBps, config.denominator);
+    document.getElementById('currentRewardShares').textContent = '基金会 ' + foundationPct + '% / 开发者 ' + developerPct + '%';
+    if (!document.getElementById('newFoundationWallet').value) document.getElementById('newFoundationWallet').value = config.currentFoundationWallet;
+    if (!document.getElementById('newDeveloperWallet').value) document.getElementById('newDeveloperWallet').value = config.currentDeveloperWallet;
+    if (!document.getElementById('newFoundationShare').value) document.getElementById('newFoundationShare').value = foundationPct;
+    if (!document.getElementById('newDeveloperShare').value) document.getElementById('newDeveloperShare').value = developerPct;
+  } catch (err) {
+    console.error('加载新奖励合约设置失败:', err);
+    const settings = document.getElementById('rewardOwnerSettings');
+    if (settings) settings.style.display = 'none';
+  }
+}
+
+function requireRewardOwner() {
+  if (!rewardIsOwner) {
+    alert('当前连接的钱包不是新奖励合约 Owner，无法执行此操作');
+    return false;
+  }
+  return true;
+}
+
+function percentToBps(value) {
+  const text = String(value).trim();
+  if (!text || isNaN(text)) throw new Error('请输入有效的比例');
+  const num = Number(text);
+  if (num < 0 || num > 100) throw new Error('比例必须在 0 到 100 之间');
+  return Math.round(num * 100);
 }
 
 function switchTab(name) {
@@ -625,6 +749,61 @@ async function previewDistribution() {
 async function distribute() {
   if (!confirm('确定要执行 BNB 分配吗？此操作将把合约中所有 BNB 按 NFT 持有比例分配给持有者。')) return;
   await txWrapper(function() { return contract.distribute(); }, 'result-distribute');
+}
+
+async function previewRewardDistribution() {
+  try {
+    showResult('result-rewardDistribution', '查询中...', false);
+    const readOnly = new ethers.Contract(REWARD_CONTRACT_ADDR, REWARD_ABI, provider);
+    const balance = await provider.getBalance(REWARD_CONTRACT_ADDR);
+    const config = await readOnly.getBNBShareConfig();
+    const shares = await readOnly.previewBNBShares(balance);
+    document.getElementById('rewardContractBalance').textContent = ethers.utils.formatEther(balance) + ' BNB';
+    const foundationPct = ethers.utils.formatUnits(config.currentFoundationShareBps.mul(10000).div(config.denominator), 2);
+    const developerPct = ethers.utils.formatUnits(config.currentDeveloperShareBps.mul(10000).div(config.denominator), 2);
+    const msg = '新奖励合约 BNB 余额: ' + ethers.utils.formatEther(balance) + ' BNB\n' +
+      '基金会地址: ' + config.currentFoundationWallet + '\n' +
+      '开发者地址: ' + config.currentDeveloperWallet + '\n' +
+      '基金会比例: ' + foundationPct + '%\n' +
+      '开发者比例: ' + developerPct + '%\n' +
+      '本次基金会可得: ' + ethers.utils.formatEther(shares.foundationAmount) + ' BNB\n' +
+      '本次开发者可得: ' + ethers.utils.formatEther(shares.developerAmount) + ' BNB';
+    showResult('result-rewardDistribution', msg, false);
+  } catch (err) {
+    showResult('result-rewardDistribution', '查询失败: ' + (err.reason || err.message), true);
+  }
+}
+
+async function distributeRewardBNB() {
+  if (!confirm('确定要执行基金会 / 开发者分配吗？任何人都可以调用，合约余额会按当前比例转出。')) return;
+  const rewardContract = new ethers.Contract(REWARD_CONTRACT_ADDR, REWARD_ABI, signer);
+  await txWrapper(function() { return rewardContract.allocateAllAvailable(); }, 'result-rewardDistribution');
+}
+
+async function setRewardWallets() {
+  if (!requireRewardOwner()) return;
+  const foundation = document.getElementById('newFoundationWallet').value.trim();
+  const developer = document.getElementById('newDeveloperWallet').value.trim();
+  if (!ethers.utils.isAddress(foundation)) { alert('请输入有效的基金会地址'); return; }
+  if (!ethers.utils.isAddress(developer)) { alert('请输入有效的开发者地址'); return; }
+  const rewardContract = new ethers.Contract(REWARD_CONTRACT_ADDR, REWARD_ABI, signer);
+  await txWrapper(function() { return rewardContract.setBNBShareWallets(foundation, developer); }, 'result-rewardOwnerSettings');
+}
+
+async function setRewardShares() {
+  if (!requireRewardOwner()) return;
+  try {
+    const foundationBps = percentToBps(document.getElementById('newFoundationShare').value);
+    const developerBps = percentToBps(document.getElementById('newDeveloperShare').value);
+    if (foundationBps + developerBps !== 10000) {
+      alert('基金会比例和开发者比例必须合计 100%');
+      return;
+    }
+    const rewardContract = new ethers.Contract(REWARD_CONTRACT_ADDR, REWARD_ABI, signer);
+    await txWrapper(function() { return rewardContract.setBNBShares(foundationBps, developerBps); }, 'result-rewardOwnerSettings');
+  } catch (err) {
+    alert(err.message || String(err));
+  }
 }
 
 // === 隔离地址 ===
