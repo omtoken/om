@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WoofSwap Owner Admin</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    :root{color-scheme:dark;--bg:#070707;--card:#111217;--card2:#171922;--line:#272a34;--text:#f4f4f5;--muted:#a3a7b7;--orange:#ff8a00;--red:#ff5c6c;--green:#22c55e;--blue:#60a5fa}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top left,#331800,transparent 28rem),radial-gradient(circle at top right,#1d243c,transparent 28rem),var(--bg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}button,input,select{font:inherit}button{border:0;border-radius:14px;padding:11px 14px;background:linear-gradient(135deg,#ffb000,#ff7a00);color:#090909;font-weight:800;cursor:pointer}button.secondary{background:#20232d;color:var(--text);border:1px solid var(--line)}button.danger{background:linear-gradient(135deg,#ff6b6b,#ef4444);color:#fff}button:disabled{opacity:.45;cursor:not-allowed}input,select{width:100%;border:1px solid var(--line);background:#0b0c10;color:var(--text);border-radius:13px;padding:12px 13px;outline:none}input:focus,select:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,138,0,.12)}a{color:var(--blue);text-decoration:none}.wrap{max-width:1240px;margin:0 auto;padding:26px}.top{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:20px}.brand{display:flex;gap:14px;align-items:center}.logo{width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#ff8a00,#ffd166);display:grid;place-items:center;color:#080808;font-weight:900}.brand h1{margin:0;font-size:24px}.brand p{margin:3px 0 0;color:var(--muted)}.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.pill{border:1px solid var(--line);background:rgba(17,18,23,.8);padding:9px 12px;border-radius:999px;color:var(--muted)}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}.card{background:linear-gradient(180deg,rgba(23,25,34,.92),rgba(13,14,18,.95));border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.24)}.card h2{margin:0 0 4px;font-size:18px}.card h3{margin:0 0 12px;font-size:15px;color:#fff}.hint{color:var(--muted);font-size:13px;line-height:1.55}.section{margin-top:16px}.rows{display:grid;gap:8px;margin-top:13px}.row{display:grid;grid-template-columns:190px 1fr auto;gap:10px;align-items:center;border:1px solid rgba(255,255,255,.06);background:#0c0d12;border-radius:14px;padding:10px}.row b{font-size:13px;color:var(--muted);font-weight:700}.addr{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all;font-size:13px}.mini{padding:7px 10px;border-radius:10px;font-size:12px}.forms{display:grid;gap:14px}.form{border:1px solid rgba(255,255,255,.07);background:#0b0c10;border-radius:18px;padding:14px}.form-title{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}.form-title span{font-weight:900}.form-title small{color:var(--muted)}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.form-grid.one{grid-template-columns:1fr}.form-grid.three{grid-template-columns:1fr 1fr 130px}.field small{display:block;color:var(--muted);margin:0 0 6px}.full{grid-column:1/-1}.status{position:fixed;right:18px;bottom:18px;width:min(440px,calc(100vw - 36px));display:grid;gap:8px;z-index:20}.toast{border:1px solid var(--line);background:#101116;padding:12px;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.35);font-size:13px}.toast.ok{border-color:rgba(34,197,94,.45)}.toast.err{border-color:rgba(255,92,108,.55)}.toast.info{border-color:rgba(96,165,250,.45)}.badge{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:5px 8px;color:var(--muted)}.unsupported{opacity:.5}.split{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.warn{border:1px solid rgba(255,138,0,.28);background:rgba(255,138,0,.08);color:#ffd29b;border-radius:16px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.6}.success{color:var(--green)}.error{color:var(--red)}@media(max-width:900px){.grid{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}.row{grid-template-columns:1fr}.form-grid,.form-grid.three{grid-template-columns:1fr}.wrap{padding:16px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand"><div class="logo">W</div><div><h1>WoofSwap Owner Admin</h1><p>三条主网 owner 管理面板 · 交易前请核对钱包弹窗</p></div></div>
+      <div class="actions">
+        <select id="network" style="width:220px"></select>
+        <button id="connectBtn">连接钱包</button>
+        <button id="refreshBtn" class="secondary">刷新状态</button>
+      </div>
+    </div>
+    <div class="warn">这个页面只负责发起合约 owner 操作，不保存私钥，不经过后端。平台收益地址、owner 转移、提款等都是敏感操作，确认钱包弹窗里的合约地址和参数后再签名。</div>
+    <div class="grid">
+      <div class="card">
+        <div class="split"><h2>链上状态</h2><span class="badge" id="walletBadge">未连接</span><span class="badge" id="chainBadge">-</span></div>
+        <p class="hint" id="netHint">选择网络后刷新。</p>
+        <div class="rows" id="stateRows"></div>
+        <div class="section">
+          <h3>LP 手续费</h3>
+          <div class="form-grid">
+            <div class="field"><small>LP NFT Token ID</small><input id="collectTokenId" placeholder="例如 1" /></div>
+            <div class="field"><small>操作</small><div class="split"><button class="secondary" onclick="readPendingFees()">查询待收</button><button onclick="collectFees()">收取并分账/销毁</button></div></div>
+          </div>
+          <p class="hint" id="pendingFees">WETH 收益会自动转 ETH 分给平台/创建者；发射代币收益会转到 dead 地址。</p>
+        </div>
+      </div>
+      <div class="card">
+        <h2>当前网络合约</h2>
+        <p class="hint">会随网络切换自动更新。</p>
+        <div class="rows" id="contractRows"></div>
+      </div>
+    </div>
+    <div class="section grid">
+      <div class="card">
+        <h2>FeeDistributor owner 设置</h2>
+        <p class="hint">管理平台收款、分成比例、collector/recipient manager 授权。</p>
+        <div class="forms">
+          <div class="form"><div class="form-title"><span>转移 FeeDistributor owner</span><small>transferOwnership</small></div><div class="form-grid"><div class="field"><small>新 owner</small><input id="feeNewOwner" placeholder="0x..." /></div><div class="field"><small>提交</small><button class="danger" onclick="feeTransferOwnership()">转移 owner</button></div></div></div>
+          <div class="form"><div class="form-title"><span>设置平台收益地址</span><small>setPlatformRecipient</small></div><div class="form-grid"><div class="field"><small>平台 ETH 收款地址</small><input id="platformRecipient" placeholder="0x..." /></div><div class="field"><small>提交</small><button onclick="setPlatformRecipient()">保存平台地址</button></div></div></div>
+          <div class="form"><div class="form-title"><span>设置分成比例</span><small>setFeeSplit，Robinhood 支持</small></div><div class="form-grid three"><div class="field"><small>平台 bps</small><input id="platformBps" placeholder="3000" /></div><div class="field"><small>创建者 bps</small><input id="creatorBps" placeholder="7000" /></div><div class="field"><small>提交</small><button onclick="setFeeSplit()">保存比例</button></div></div><p class="hint">两项相加必须等于 10000。</p></div>
+          <div class="form"><div class="form-title"><span>授权收取 LP 手续费的合约</span><small>setAuthorizedCollector</small></div><div class="form-grid three"><div class="field"><small>collector 地址</small><input id="collectorAddr" placeholder="默认 LiquidityLocker" /></div><div class="field"><small>授权</small><select id="collectorAuth"><option value="true">true</option><option value="false">false</option></select></div><div class="field"><small>提交</small><button onclick="setAuthorizedCollector()">设置</button></div></div></div>
+          <div class="form"><div class="form-title"><span>授权接管创建者地址的管理合约</span><small>setAuthorizedRecipientManager，Robinhood 支持</small></div><div class="form-grid three"><div class="field"><small>manager 地址</small><input id="managerAddr" placeholder="默认 TokenFactory" /></div><div class="field"><small>授权</small><select id="managerAuth"><option value="true">true</option><option value="false">false</option></select></div><div class="field"><small>提交</small><button onclick="setAuthorizedRecipientManager()">设置</button></div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>TokenFactory owner 设置</h2>
+        <p class="hint">管理工厂 owner、接管创建者收款地址、救援提款。</p>
+        <div class="forms">
+          <div class="form"><div class="form-title"><span>转移 TokenFactory owner</span><small>transferOwnership</small></div><div class="form-grid"><div class="field"><small>新 owner</small><input id="factoryNewOwner" placeholder="0x..." /></div><div class="field"><small>提交</small><button class="danger" onclick="factoryTransferOwnership()">转移 owner</button></div></div></div>
+          <div class="form"><div class="form-title"><span>按代币接管创建者收款地址</span><small>setTokenCreatorRecipient，Robinhood 支持</small></div><div class="form-grid"><div class="field"><small>发射代币地址</small><input id="takeoverToken" placeholder="0x..." /></div><div class="field"><small>新的创建者收款地址</small><input id="takeoverRecipient" placeholder="0x..." /></div><div class="field full"><button onclick="setTokenCreatorRecipient()">接管/更新地址</button></div></div></div>
+          <div class="form"><div class="form-title"><span>按 Launch ID 接管创建者收款地址</span><small>setLaunchCreatorRecipient，Robinhood 支持</small></div><div class="form-grid"><div class="field"><small>Launch ID</small><input id="takeoverLaunchId" placeholder="1" /></div><div class="field"><small>新的创建者收款地址</small><input id="takeoverLaunchRecipient" placeholder="0x..." /></div><div class="field full"><button onclick="setLaunchCreatorRecipient()">接管/更新地址</button></div></div></div>
+          <div class="form"><div class="form-title"><span>提取工厂合约里的 ETH</span><small>withdrawAllBNB</small></div><div class="form-grid"><div class="field"><small>接收地址</small><input id="withdrawEthRecipient" placeholder="0x..." /></div><div class="field"><small>提交</small><button class="danger" onclick="withdrawAllBNB()">全部提取 ETH</button></div></div></div>
+          <div class="form"><div class="form-title"><span>提取工厂合约里的 ERC20</span><small>withdrawAllToken</small></div><div class="form-grid"><div class="field"><small>Token 地址</small><input id="withdrawTokenAddr" placeholder="0x..." /></div><div class="field"><small>接收地址</small><input id="withdrawTokenRecipient" placeholder="0x..." /></div><div class="field full"><button class="danger" onclick="withdrawAllToken()">全部提取 Token</button></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="status" id="toasts"></div>
+<script>
+const NETWORKS = {
+  robinhood:{key:'robinhood',name:'Robinhood Chain',short:'Robinhood',chainId:4663,hex:'0x1237',native:'ETH',rpc:'https://rpc.mainnet.chain.robinhood.com',explorer:'https://robinhoodchain.blockscout.com',fee:'0x8b31F9892Cc6f435ba07126A653C88a5AAb9845d',locker:'0x3dB0F19B4D921968ad69B812baA05Bd7Df48E1b9',factory:'0x31321E9fEf6FF05c5c9C823306fC25f29A33eae8',tradingRouter:'0xB94943e7F30e791B0BaEeb63b868456a683ae748'},
+  shibarium:{key:'shibarium',name:'Shibarium',short:'Shibarium',chainId:109,hex:'0x6d',native:'BONE',rpc:'https://shibarium.drpc.org',explorer:'https://shibariumscan.io',fee:'0xCCEBE2EEEf626e1b9BE0510D6bf91C9Def88884B',locker:'0x47cd5e3Bb2E35D8204a0D8bF5923BA81674a054b',factory:'0xA7d85893781B948ef029a061897f4a9c0121963f',tradingRouter:'0xcc06722d393c3Eb54Cd55f86c4E49b0DDcEB86C8'},
+  hashkey:{key:'hashkey',name:'HashKey Chain',short:'HashKey',chainId:177,hex:'0xb1',native:'HSK',rpc:'https://mainnet.hsk.xyz',explorer:'https://hsk.blockscout.com',fee:'0xe7c0535696B21F78a0D13408C68358Cb78881cF2',locker:'0x2ec80BbaAB0A9F9C6c5de35808D39da34755467B',factory:'0x74df62f32f2f3db8d0DAb68a432b77ad10Fd9d99',tradingRouter:'0x8Ce532691BE6DCEe1a20856BA4c5e98Ee8dFA5dC'}
+};
+const ABI = {
+  fee:[
+    'function owner() view returns(address)','function platformRecipient() view returns(address)','function platformBps() view returns(uint256)','function creatorBps() view returns(uint256)','function authorizedCollectors(address) view returns(bool)','function authorizedRecipientManagers(address) view returns(bool)','function transferOwnership(address newOwner)','function setPlatformRecipient(address newPlatformRecipient)','function setFeeSplit(uint256 newPlatformBps,uint256 newCreatorBps)','function setAuthorizedCollector(address collector,bool authorized)','function setAuthorizedRecipientManager(address manager,bool authorized)'
+  ],
+  factory:[
+    'function owner() view returns(address)','function launcher() view returns(address)','function feeDistributor() view returns(address)','function totalLaunches() view returns(uint256)','function transferOwnership(address newOwner)','function setTokenCreatorRecipient(address token,address recipient)','function setLaunchCreatorRecipient(uint256 launchId,address recipient)','function withdrawAllBNB(address payable recipient) returns(uint256)','function withdrawAllToken(address token,address recipient) returns(uint256)'
+  ],
+  locker:[
+    'function feeDistributor() view returns(address)','function lockedTokenIdsLength() view returns(uint256)','function pendingTokensOwed(uint256 tokenId) view returns(uint128 tokensOwed0,uint128 tokensOwed1)','function collectFees(uint256 tokenId) returns(uint256 amount0,uint256 amount1)'
+  ],
+  erc20:['function balanceOf(address) view returns(uint256)','function symbol() view returns(string)','function decimals() view returns(uint8)']
+};
+let account='', provider=null, signer=null;
+const $=id=>document.getElementById(id);
+const net=()=>NETWORKS[$('network').value]||NETWORKS.robinhood;
+function toast(text,type='info'){const box=document.createElement('div');box.className='toast '+type;box.textContent=text;$('toasts').appendChild(box);setTimeout(()=>box.remove(),7000)}
+function short(a){return a?`${a.slice(0,6)}...${a.slice(-4)}`:'-'}
+function isAddr(a){return ethers.utils.isAddress(String(a||'').trim())}
+function requireAddr(a,name){a=String(a||'').trim();if(!isAddr(a))throw Error(`${name} 地址不正确`);return ethers.utils.getAddress(a)}
+function explorerAddr(a){return `${net().explorer.replace(/\/$/,'')}/address/${a}`}
+function explorerTx(h){return `${net().explorer.replace(/\/$/,'')}/tx/${h}`}
+function rpcProvider(){return new ethers.providers.JsonRpcProvider(net().rpc,{name:net().name,chainId:net().chainId})}
+function readContract(kind){const n=net();return new ethers.Contract(n[kind],ABI[kind],rpcProvider())}
+async function writeContract(kind){await connect();await switchNetwork();const n=net();return new ethers.Contract(n[kind],ABI[kind],signer)}
+async function safe(label,fn){try{const v=await fn();return {ok:true,v}}catch(e){return {ok:false,e:e.reason||e.data?.message||e.message||'unsupported'}}}
+function addRow(root,label,value,link){const r=document.createElement('div');r.className='row';const b=document.createElement('b');b.textContent=label;const v=document.createElement('div');v.className='addr';v.textContent=value??'-';const a=document.createElement(link?'a':'button');a.className=link?'':'mini secondary';a.textContent=link?'Explorer':'复制';if(link){a.href=link;a.target='_blank';a.rel='noopener noreferrer'}else{a.onclick=()=>navigator.clipboard.writeText(value||'')}r.append(b,v,a);root.appendChild(r)}
+async function refresh(){const n=net();$('netHint').textContent=`${n.short} · Chain ID ${n.chainId} · Native ${n.native}`;$('chainBadge').textContent=`${n.short} ${n.chainId}`;$('contractRows').innerHTML='';[['FeeDistributor',n.fee],['LiquidityLocker',n.locker],['TokenFactory',n.factory],['TradingRouter',n.tradingRouter]].forEach(x=>addRow($('contractRows'),x[0],x[1],explorerAddr(x[1])));$('collectorAddr').placeholder=n.locker;$('managerAddr').placeholder=n.factory;const rows=$('stateRows');rows.innerHTML='读取中...';try{const fee=readContract('fee'), fac=readContract('factory'), lock=readContract('locker');const data={};data.feeOwner=await safe('fee owner',()=>fee.owner());data.platformRecipient=await safe('platformRecipient',()=>fee.platformRecipient());data.platformBps=await safe('platformBps',()=>fee.platformBps());data.creatorBps=await safe('creatorBps',()=>fee.creatorBps());data.collector=await safe('authorizedCollector',()=>fee.authorizedCollectors(n.locker));data.manager=await safe('authorizedRecipientManager',()=>fee.authorizedRecipientManagers(n.factory));data.factoryOwner=await safe('factory owner',()=>fac.owner());data.launcher=await safe('launcher',()=>fac.launcher());data.factoryFee=await safe('factory feeDistributor',()=>fac.feeDistributor());data.totalLaunches=await safe('totalLaunches',()=>fac.totalLaunches());data.lockerFee=await safe('locker feeDistributor',()=>lock.feeDistributor());data.lockedLen=await safe('lockedTokenIdsLength',()=>lock.lockedTokenIdsLength());rows.innerHTML='';const show=(label,x,addr=false)=>addRow(rows,label,x.ok?(x.v.toString()):`不支持/读取失败：${x.e}`,addr&&x.ok?explorerAddr(x.v.toString()):null);show('FeeDistributor owner',data.feeOwner,true);show('平台收益地址',data.platformRecipient,true);show('平台分成 bps',data.platformBps,false);show('创建者分成 bps',data.creatorBps,false);show('Locker collector 授权',data.collector,false);show('Factory manager 授权',data.manager,false);show('TokenFactory owner',data.factoryOwner,true);show('Launcher',data.launcher,true);show('Factory feeDistributor',data.factoryFee,true);show('总发射数量',data.totalLaunches,false);show('Locker feeDistributor',data.lockerFee,true);show('锁仓 LP 数量',data.lockedLen,false);if(data.platformRecipient.ok)$('platformRecipient').value=data.platformRecipient.v;if(data.platformBps.ok)$('platformBps').value=data.platformBps.v.toString();if(data.creatorBps.ok)$('creatorBps').value=data.creatorBps.v.toString();toast('状态已刷新','ok')}catch(e){rows.innerHTML='';toast(cleanErr(e),'err')}}
+function cleanErr(e){let m=e?.reason||e?.data?.message||e?.error?.message||e?.message||String(e);if(/user rejected|ACTION_REJECTED/i.test(m))return '用户取消了操作';if(/unsupported|missing revert data|CALL_EXCEPTION/i.test(m))return '当前链的这个合约版本可能不支持该函数';return m}
+async function connect(){if(!window.ethereum)throw Error('没有检测到钱包');provider=new ethers.providers.Web3Provider(window.ethereum,'any');await provider.send('eth_requestAccounts',[]);signer=provider.getSigner();account=await signer.getAddress();$('walletBadge').textContent=short(account);$('connectBtn').textContent=short(account);return account}
+async function switchNetwork(){const n=net();if(!window.ethereum)return;const current=await window.ethereum.request({method:'eth_chainId'});if(Number(current)!==n.chainId){try{await window.ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:n.hex}]})}catch(e){await window.ethereum.request({method:'wallet_addEthereumChain',params:[{chainId:n.hex,chainName:n.name,nativeCurrency:{name:n.native,symbol:n.native,decimals:18},rpcUrls:[n.rpc],blockExplorerUrls:[n.explorer]}]})}}}
+async function send(label,promise){try{toast(`请在钱包确认：${label}`);const tx=await promise;toast(`已提交：${short(tx.hash)}`,'info');const r=await tx.wait();toast(`成功：${label}`,'ok');console.log(label,r);await refresh();window.open(explorerTx(tx.hash),'_blank');}catch(e){toast(cleanErr(e),'err')}}
+async function feeTransferOwnership(){const c=await writeContract('fee');await send('FeeDistributor transferOwnership',c.transferOwnership(requireAddr($('feeNewOwner').value,'新 owner')))}
+async function setPlatformRecipient(){const c=await writeContract('fee');await send('setPlatformRecipient',c.setPlatformRecipient(requireAddr($('platformRecipient').value,'平台收益')))}
+async function setFeeSplit(){const c=await writeContract('fee');const p=Number($('platformBps').value),cr=Number($('creatorBps').value);if(!Number.isInteger(p)||!Number.isInteger(cr)||p+cr!==10000)throw toast('bps 必须是整数且相加等于 10000','err');await send('setFeeSplit',c.setFeeSplit(p,cr))}
+async function setAuthorizedCollector(){const c=await writeContract('fee');const a=$('collectorAddr').value.trim()||net().locker;await send('setAuthorizedCollector',c.setAuthorizedCollector(requireAddr(a,'collector'),$('collectorAuth').value==='true'))}
+async function setAuthorizedRecipientManager(){const c=await writeContract('fee');const a=$('managerAddr').value.trim()||net().factory;await send('setAuthorizedRecipientManager',c.setAuthorizedRecipientManager(requireAddr(a,'manager'),$('managerAuth').value==='true'))}
+async function factoryTransferOwnership(){const c=await writeContract('factory');await send('TokenFactory transferOwnership',c.transferOwnership(requireAddr($('factoryNewOwner').value,'新 owner')))}
+async function setTokenCreatorRecipient(){const c=await writeContract('factory');await send('setTokenCreatorRecipient',c.setTokenCreatorRecipient(requireAddr($('takeoverToken').value,'代币'),requireAddr($('takeoverRecipient').value,'接收')))}
+async function setLaunchCreatorRecipient(){const c=await writeContract('factory');const id=Number($('takeoverLaunchId').value);if(!Number.isInteger(id)||id<=0){toast('Launch ID 不正确','err');return}await send('setLaunchCreatorRecipient',c.setLaunchCreatorRecipient(id,requireAddr($('takeoverLaunchRecipient').value,'接收')))}
+async function withdrawAllBNB(){const c=await writeContract('factory');await send('withdrawAllBNB',c.withdrawAllBNB(requireAddr($('withdrawEthRecipient').value,'接收')))}
+async function withdrawAllToken(){const c=await writeContract('factory');await send('withdrawAllToken',c.withdrawAllToken(requireAddr($('withdrawTokenAddr').value,'Token'),requireAddr($('withdrawTokenRecipient').value,'接收')))}
+async function readPendingFees(){try{const id=Number($('collectTokenId').value);if(!Number.isInteger(id)||id<=0)throw Error('Token ID 不正确');const lock=readContract('locker');const r=await lock.pendingTokensOwed(id);$('pendingFees').textContent=`tokensOwed0: ${r.tokensOwed0.toString()} · tokensOwed1: ${r.tokensOwed1.toString()}`;toast('已读取待收手续费','ok')}catch(e){toast(cleanErr(e),'err')}}
+async function collectFees(){const id=Number($('collectTokenId').value);if(!Number.isInteger(id)||id<=0){toast('Token ID 不正确','err');return}const c=await writeContract('locker');await send('collectFees',c.collectFees(id))}
+$('network').innerHTML=Object.values(NETWORKS).map(n=>`<option value="${n.key}">${n.short} · ${n.chainId}</option>`).join('');$('network').value='robinhood';$('network').onchange=refresh;$('connectBtn').onclick=async()=>{try{await connect();await switchNetwork();await refresh()}catch(e){toast(cleanErr(e),'err')}};$('refreshBtn').onclick=refresh;if(window.ethereum){window.ethereum.on?.('accountsChanged',()=>connect().then(refresh).catch(()=>{}));window.ethereum.on?.('chainChanged',()=>setTimeout(refresh,300));}
+refresh();
+</script>
+</body>
+</html>
