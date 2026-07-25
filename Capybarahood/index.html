@@ -1,0 +1,744 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Capybarahood · 后台</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        ink: { 950:"#070811", 900:"#0b0e1a", 850:"#111527", 800:"#151a2e", 700:"#1f2540" },
+        line: "#232a44",
+        brand: { 400:"#9a7bff", 500:"#7c5cff", 600:"#5b3ff5" },
+        accent: { 400:"#4ce3c1", 500:"#22d3aa" },
+      },
+      boxShadow: {
+        glow: "0 0 0 1px rgba(124,92,255,.35), 0 20px 60px -20px rgba(124,92,255,.45)",
+      },
+      fontFamily: {
+        sans: ['"Inter"','"PingFang SC"','"Microsoft YaHei"','system-ui','sans-serif'],
+        mono: ['"JetBrains Mono"','ui-monospace','SFMono-Regular','Menlo','monospace'],
+      }
+    }
+  }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html,body{background:#070811}
+  body{
+    background:
+      radial-gradient(1000px 500px at 10% -10%, rgba(124,92,255,.20), transparent 60%),
+      radial-gradient(900px 500px at 110% 10%, rgba(34,211,170,.14), transparent 60%),
+      radial-gradient(1200px 700px at 50% 120%, rgba(124,92,255,.10), transparent 60%),
+      #070811;
+    min-height:100vh;
+  }
+  .glass{background:linear-gradient(180deg,rgba(21,26,46,.85),rgba(11,14,26,.85));backdrop-filter:blur(14px);border:1px solid #232a44;border-radius:18px}
+  .glass-tight{background:rgba(17,21,39,.7);border:1px solid #232a44;border-radius:14px}
+
+  /* buttons */
+  .btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:.4rem;padding:.55rem 1rem;border-radius:10px;font-size:.85rem;font-weight:600;letter-spacing:.01em;transition:all .18s ease;cursor:pointer;border:1px solid transparent;user-select:none}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:linear-gradient(180deg,#7c5cff,#5b3ff5);color:#fff;box-shadow:0 8px 20px -8px rgba(124,92,255,.7),inset 0 1px 0 rgba(255,255,255,.15)}
+  .btn-primary:hover{background:linear-gradient(180deg,#8f70ff,#6b50ff);box-shadow:0 12px 24px -8px rgba(124,92,255,.85)}
+  .btn-accent{background:linear-gradient(180deg,#22d3aa,#0eb597);color:#04231c;box-shadow:0 8px 20px -8px rgba(34,211,170,.6),inset 0 1px 0 rgba(255,255,255,.25)}
+  .btn-accent:hover{filter:brightness(1.08)}
+  .btn-warn{background:linear-gradient(180deg,#f59e0b,#d97706);color:#1c1200;box-shadow:0 8px 20px -8px rgba(245,158,11,.55)}
+  .btn-warn:hover{filter:brightness(1.08)}
+  .btn-danger{background:linear-gradient(180deg,#ef4444,#dc2626);color:#fff;box-shadow:0 8px 20px -8px rgba(239,68,68,.55)}
+  .btn-danger:hover{filter:brightness(1.08)}
+  .btn-ghost{background:rgba(35,42,68,.6);color:#cbd5e1;border:1px solid #2d3552}
+  .btn-ghost:hover{background:rgba(45,53,82,.9);color:#fff}
+  .btn-sm{padding:.35rem .7rem;font-size:.78rem;border-radius:8px}
+
+  /* inputs */
+  .field{display:block;font-size:.72rem;color:#8891b0;letter-spacing:.04em;font-weight:600;margin-bottom:.35rem;text-transform:uppercase}
+  .input, .textarea, .select{
+    width:100%;background:#0b0e1a;border:1px solid #2a3252;color:#e6ebff;padding:.65rem .85rem;border-radius:10px;font-size:.9rem;transition:all .15s;font-family:inherit;
+  }
+  .input:focus,.textarea:focus,.select:focus{outline:none;border-color:#7c5cff;box-shadow:0 0 0 3px rgba(124,92,255,.18)}
+  .input::placeholder,.textarea::placeholder{color:#4b567c}
+  .input-mono{font-family:'JetBrains Mono',ui-monospace,monospace;letter-spacing:.02em}
+
+  /* pill */
+  .pill{display:inline-flex;align-items:center;gap:.35rem;padding:.22rem .65rem;border-radius:9999px;font-size:.72rem;font-weight:700;letter-spacing:.02em}
+  .pill-on{background:rgba(34,211,170,.14);color:#5eead4;border:1px solid rgba(34,211,170,.4)}
+  .pill-off{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.4)}
+  .pill-warn{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.4)}
+  .pill-brand{background:rgba(124,92,255,.15);color:#c4b5fd;border:1px solid rgba(124,92,255,.4)}
+  .dot{width:.4rem;height:.4rem;border-radius:9999px;background:currentColor;box-shadow:0 0 8px currentColor}
+
+  /* tabs */
+  .tabs{display:flex;gap:.35rem;flex-wrap:wrap;padding:.4rem;background:rgba(11,14,26,.7);border:1px solid #232a44;border-radius:14px}
+  .tab{position:relative;display:inline-flex;align-items:center;gap:.5rem;padding:.6rem 1rem;border-radius:10px;color:#8891b0;font-weight:600;font-size:.88rem;cursor:pointer;transition:all .18s;user-select:none;white-space:nowrap}
+  .tab:hover{color:#e6ebff;background:rgba(35,42,68,.5)}
+  .tab.active{color:#fff;background:linear-gradient(180deg,rgba(124,92,255,.3),rgba(124,92,255,.15));box-shadow:inset 0 0 0 1px rgba(124,92,255,.5)}
+  .tab .badge{background:rgba(0,0,0,.3);padding:.05rem .5rem;border-radius:9999px;font-size:.7rem;color:#c4b5fd}
+
+  /* stat cards */
+  .stat{padding:1rem 1.1rem;border-radius:14px;background:linear-gradient(160deg,rgba(35,42,68,.6),rgba(17,21,39,.85));border:1px solid #232a44;display:flex;flex-direction:column;gap:.35rem;min-height:96px}
+  .stat-label{color:#8891b0;font-size:.72rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;display:flex;align-items:center;gap:.4rem}
+  .stat-val{color:#f5f7ff;font-size:1.35rem;font-weight:700;letter-spacing:-.01em;font-family:'JetBrains Mono',ui-monospace,monospace;word-break:break-all}
+  .stat-sub{color:#6d769c;font-size:.72rem}
+  .kv{display:flex;justify-content:space-between;align-items:center;padding:.7rem 0;border-bottom:1px dashed #232a44;font-size:.9rem;gap:1rem}
+  .kv:last-child{border-bottom:0}
+  .kv-k{color:#8891b0;font-size:.82rem;font-weight:500}
+  .kv-v{color:#e6ebff;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.85rem;text-align:right;word-break:break-all}
+
+  /* log */
+  .log{background:#050710;border:1px solid #1a2140;border-radius:12px;padding:.75rem;font-size:.78rem;max-height:260px;overflow-y:auto;font-family:'JetBrains Mono',ui-monospace,monospace}
+  .log > div{padding:.28rem .35rem;border-radius:6px;display:flex;gap:.5rem;align-items:baseline}
+  .log > div + div{margin-top:.1rem}
+  .log .time{color:#4b567c;flex-shrink:0}
+  .ok{color:#5eead4}.err{color:#fca5a5;background:rgba(239,68,68,.06)}.warn{color:#fcd34d}.info{color:#a5b4fc}
+
+  /* table */
+  table.data{width:100%;font-size:.82rem;font-family:'JetBrains Mono',ui-monospace,monospace;border-collapse:separate;border-spacing:0}
+  table.data thead th{color:#8891b0;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:.7rem .8rem;background:rgba(17,21,39,.7);border-bottom:1px solid #232a44;position:sticky;top:0;text-align:left}
+  table.data tbody td{padding:.7rem .8rem;border-bottom:1px solid #1a2140;color:#e6ebff}
+  table.data tbody tr:hover{background:rgba(124,92,255,.06)}
+
+  a.link{color:#a5b4fc;text-decoration:none;border-bottom:1px dashed rgba(165,180,252,.5);transition:color .15s}
+  a.link:hover{color:#c4b5fd;border-bottom-color:#c4b5fd}
+
+  /* animation */
+  @keyframes fadeInUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .panel{animation:fadeInUp .28s ease}
+  .hidden-panel{display:none}
+
+  /* hint */
+  .hint{background:linear-gradient(180deg,rgba(124,92,255,.08),rgba(124,92,255,.02));border:1px solid rgba(124,92,255,.25);border-radius:10px;padding:.7rem .9rem;font-size:.82rem;color:#c4b5fd;display:flex;gap:.6rem;align-items:flex-start;line-height:1.5}
+  .hint svg{flex-shrink:0;margin-top:.15rem}
+  .hint-warn{background:linear-gradient(180deg,rgba(245,158,11,.08),rgba(245,158,11,.02));border-color:rgba(245,158,11,.3);color:#fcd34d}
+  .hint-danger{background:linear-gradient(180deg,rgba(239,68,68,.08),rgba(239,68,68,.02));border-color:rgba(239,68,68,.3);color:#fca5a5}
+
+  .section-title{display:flex;align-items:center;gap:.6rem;font-size:1.05rem;font-weight:700;color:#f5f7ff;margin-bottom:.25rem}
+  .section-sub{color:#8891b0;font-size:.85rem;margin-bottom:1rem}
+
+  /* toggle switch */
+  .toggle{position:relative;display:inline-flex;align-items:center;cursor:pointer}
+  .toggle input{display:none}
+  .toggle-track{width:44px;height:24px;background:#1f2540;border-radius:9999px;transition:all .2s;border:1px solid #2a3252}
+  .toggle-thumb{position:absolute;top:3px;left:3px;width:18px;height:18px;background:#e6ebff;border-radius:9999px;transition:transform .2s}
+  .toggle input:checked ~ .toggle-track{background:linear-gradient(90deg,#7c5cff,#5b3ff5);border-color:#7c5cff}
+  .toggle input:checked ~ .toggle-thumb{transform:translateX(20px)}
+
+  /* header */
+  .brand-logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#7c5cff,#22d3aa);display:flex;align-items:center;justify-content:center;font-size:1.5rem;box-shadow:0 8px 24px -8px rgba(124,92,255,.6)}
+</style>
+</head>
+<body class="text-slate-200 font-sans">
+<div class="max-w-7xl mx-auto p-4 md:p-8">
+
+  <!-- Header -->
+  <header class="glass p-4 md:p-5 mb-5 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <div class="brand-logo">🐹</div>
+      <div>
+        <div class="text-lg md:text-xl font-bold text-white leading-tight">Capybarahood 后台</div>
+        <div class="text-xs text-slate-400 mt-0.5">Robinhood 链 · 合约 <a id="contractAddr" class="link mono" target="_blank"></a></div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap">
+      <span id="netPill" class="pill pill-off"><span class="dot"></span>未连接</span>
+      <span id="rolePill" class="pill pill-brand hidden"></span>
+      <button id="btnRefresh" class="btn btn-ghost btn-sm">🔄 刷新</button>
+      <button id="btnConnect" class="btn btn-primary">🔗 连接钱包</button>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <nav class="tabs mb-5" id="tabs">
+    <div class="tab active" data-tab="overview">📊 总览</div>
+    <div class="tab" data-tab="ownership">👑 主人转让</div>
+    <div class="tab" data-tab="revenue">🎯 收款配置</div>
+    <div class="tab" data-tab="whitelist">✅ 白名单</div>
+    <div class="tab" data-tab="cashout">💰 提现结算</div>
+    <div class="tab" data-tab="emergency">🚨 紧急操作</div>
+    <div class="tab" data-tab="records">📋 提审记录</div>
+  </nav>
+
+  <!-- Panels -->
+  <div id="panels"></div>
+
+  <footer class="text-center text-xs text-slate-500 mt-10 mb-4">
+    Capybarahood · 部署于 Robinhood 链 · 本页面不上传任何数据
+  </footer>
+</div>
+
+<!-- Panel: Overview -->
+<template id="tpl-overview">
+  <div class="panel space-y-5">
+    <!-- Stats grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="stat"><div class="stat-label">💵 合约里现有</div><div class="stat-val" id="ov_bal">-</div><div class="stat-sub">USDG（提审费收入）</div></div>
+      <div class="stat"><div class="stat-label">🎯 还欠收款人</div><div class="stat-val" id="ov_owed">-</div><div class="stat-sub">下次提现自动打给对方</div></div>
+      <div class="stat"><div class="stat-label">👑 你能提走</div><div class="stat-val" id="ov_withdrawable">-</div><div class="stat-sub">扣除欠款后的余额</div></div>
+      <div class="stat"><div class="stat-label">📥 累计已分成</div><div class="stat-val" id="ov_paidBen">-</div><div class="stat-sub">历史打给收款人的总额</div></div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div class="glass p-5 lg:col-span-1">
+        <div class="section-title">👑 权限身份</div>
+        <div class="section-sub">合约里最重要的三种角色。</div>
+        <div class="kv"><span class="kv-k">当前主人</span><span class="kv-v" id="ov_owner">-</span></div>
+        <div class="kv"><span class="kv-k">待接手的新主人</span><span class="kv-v" id="ov_pending">-</span></div>
+        <div class="kv"><span class="kv-k">分成收款人</span><span class="kv-v" id="ov_ben">-</span></div>
+        <div class="kv"><span class="kv-k">你的地址</span><span class="kv-v" id="ov_you">未连接</span></div>
+        <div class="kv"><span class="kv-k">合约状态</span><span class="kv-v" id="ov_paused">-</span></div>
+      </div>
+
+      <div class="glass p-5 lg:col-span-1">
+        <div class="section-title">💰 收费规则</div>
+        <div class="section-sub">USDG 单位。300 是固定的，另外两个可改。</div>
+        <div class="kv"><span class="kv-k">普通用户交多少</span><span class="kv-v" id="ov_feen">-</span></div>
+        <div class="kv"><span class="kv-k">白名单用户交多少</span><span class="kv-v" id="ov_feew">-</span></div>
+        <div class="kv"><span class="kv-k">每单分给收款人多少</span><span class="kv-v" id="ov_share">-</span></div>
+      </div>
+
+      <div class="glass p-5 lg:col-span-1">
+        <div class="section-title">📊 运营数据</div>
+        <div class="section-sub">收单和结算情况一览。</div>
+        <div class="kv"><span class="kv-k">总共接了几单</span><span class="kv-v" id="ov_total">-</span></div>
+        <div class="kv"><span class="kv-k">已给收款人结算几单</span><span class="kv-v" id="ov_settled">-</span></div>
+        <div class="kv"><span class="kv-k">还有几单没结</span><span class="kv-v" id="ov_unset">-</span></div>
+        <div class="kv"><span class="kv-k">合约里的主币</span><span class="kv-v" id="ov_eth">-</span></div>
+      </div>
+    </div>
+
+    <div class="glass p-5">
+      <div class="section-title">📜 操作日志</div>
+      <div id="log" class="log">
+        <div class="info"><span class="time">--:--:--</span><span>准备就绪，点击右上角「连接钱包」开始。</span></div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Panel: Ownership -->
+<template id="tpl-ownership">
+  <div class="panel grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div class="glass p-6">
+      <div class="section-title">📤 发起转让（第 1 步）</div>
+      <div class="section-sub">告诉合约「我要把主人身份交给这个地址」，但对方还没收到之前你依然是主人。</div>
+      <div class="hint hint-warn mb-4">
+        <span>⚠️</span>
+        <span>转让分两步，防止误操作。发起后，对方必须自己「领取」才算完成。</span>
+      </div>
+      <label class="field">新主人的地址</label>
+      <input id="in_newOwner" class="input input-mono" placeholder="0x..." />
+      <div class="flex justify-end mt-4">
+        <button data-fn="transferOwnership" class="btn btn-warn">📤 发起转让</button>
+      </div>
+    </div>
+    <div class="glass p-6">
+      <div class="section-title">📥 领取主人（第 2 步）</div>
+      <div class="section-sub">只有「待接手的新主人」用自己的钱包点这个按钮，才算真正接手。</div>
+      <div class="hint mb-4">
+        <span>ℹ️</span>
+        <span>如果你的当前地址就是待接手人，右上角角色会显示「PENDING OWNER」。</span>
+      </div>
+      <div class="kv"><span class="kv-k">当前主人</span><span class="kv-v" id="own_curr">-</span></div>
+      <div class="kv"><span class="kv-k">待接手的新主人</span><span class="kv-v" id="own_pending">-</span></div>
+      <div class="flex justify-end mt-4">
+        <button data-fn="acceptOwnership" class="btn btn-accent">📥 领取主人身份</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Panel: Revenue (Beneficiary + Fees) -->
+<template id="tpl-revenue">
+  <div class="panel grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div class="glass p-6">
+      <div class="section-title">🎯 改分成收款人</div>
+      <div class="section-sub">合约每收一笔提审费，都会切一部分给这个地址。</div>
+      <div class="hint mb-4"><span>✨</span><span>切换前合约会先自动把欠款打给旧收款人，账不会乱。</span></div>
+      <div class="kv"><span class="kv-k">当前收款人</span><span class="kv-v" id="rev_ben">-</span></div>
+      <label class="field mt-3">新的收款人地址</label>
+      <input id="in_newBen" class="input input-mono" placeholder="0x..." />
+      <div class="flex justify-end mt-4">
+        <button data-fn="setBeneficiary" class="btn btn-primary">保存新收款人</button>
+      </div>
+    </div>
+
+    <div class="glass p-6">
+      <div class="section-title">💵 改收费金额</div>
+      <div class="section-sub">USDG 单位。规则：分给收款人的金额 ≤ 白名单价 ≤ 300（固定）。</div>
+      <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="stat" style="min-height:auto;padding:.6rem"><div class="stat-label" style="font-size:.65rem">普通</div><div class="stat-val" id="rev_feen" style="font-size:1rem">-</div></div>
+        <div class="stat" style="min-height:auto;padding:.6rem"><div class="stat-label" style="font-size:.65rem">白名单</div><div class="stat-val" id="rev_feew" style="font-size:1rem">-</div></div>
+        <div class="stat" style="min-height:auto;padding:.6rem"><div class="stat-label" style="font-size:.65rem">分成</div><div class="stat-val" id="rev_share" style="font-size:1rem">-</div></div>
+      </div>
+      <label class="field">白名单用户交多少 (USDG)</label>
+      <div class="flex gap-2">
+        <input id="in_feeWl" class="input input-mono" placeholder="150" />
+        <button data-fn="setWhitelistFee" class="btn btn-primary shrink-0">保存</button>
+      </div>
+      <label class="field mt-4">每单分给收款人多少 (USDG)</label>
+      <div class="flex gap-2">
+        <input id="in_share" class="input input-mono" placeholder="99" />
+        <button data-fn="setBeneficiaryShare" class="btn btn-primary shrink-0">保存</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Panel: Whitelist -->
+<template id="tpl-whitelist">
+  <div class="panel grid grid-cols-1 md:grid-cols-2 gap-5">
+    <div class="glass p-6">
+      <div class="section-title">🔍 查询是否白名单</div>
+      <div class="section-sub">用任何地址查一下就知道有没有优惠。</div>
+      <label class="field">地址</label>
+      <div class="flex gap-2">
+        <input id="in_wlCheck" class="input input-mono" placeholder="0x..." />
+        <button id="btnCheckWl" class="btn btn-ghost shrink-0">查询</button>
+      </div>
+      <div id="wlResult" class="mt-4 hidden"></div>
+    </div>
+
+    <div class="glass p-6">
+      <div class="section-title">➕ 添加 / 移除（单个）</div>
+      <div class="section-sub">添加后，这个地址只需交白名单价。</div>
+      <label class="field">地址</label>
+      <input id="in_wlOne" class="input input-mono" placeholder="0x..." />
+      <div class="flex gap-2 mt-3 justify-end">
+        <button data-fn="removeWhitelist" class="btn btn-danger">➖ 移除</button>
+        <button data-fn="addWhitelist" class="btn btn-accent">➕ 添加</button>
+      </div>
+    </div>
+
+    <div class="glass p-6 md:col-span-2">
+      <div class="section-title">📦 批量操作</div>
+      <div class="section-sub">一行一个地址，或者用逗号隔开都行。</div>
+      <textarea id="in_wlBatch" class="textarea input-mono" rows="4" placeholder="0x1111...&#10;0x2222...&#10;0x3333..."></textarea>
+      <div class="flex gap-2 mt-3 justify-end">
+        <button data-fn="removeWhitelistBatch" class="btn btn-danger">➖ 批量移除</button>
+        <button data-fn="addWhitelistBatch" class="btn btn-accent">➕ 批量添加</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Panel: Cashout -->
+<template id="tpl-cashout">
+  <div class="panel space-y-5">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="stat"><div class="stat-label">💵 合约里有</div><div class="stat-val" id="co_bal">-</div><div class="stat-sub">USDG</div></div>
+      <div class="stat"><div class="stat-label">🎯 还欠收款人</div><div class="stat-val" id="co_owed">-</div><div class="stat-sub">提现时自动扣除</div></div>
+      <div class="stat"><div class="stat-label">👑 你能拿走</div><div class="stat-val" id="co_wd">-</div><div class="stat-sub">扣除欠款后的余额</div></div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="glass p-6">
+        <div class="section-title">🚚 立刻打款给收款人</div>
+        <div class="section-sub">任何人都能触发，把合约欠收款人的钱推过去。用于让账目立刻同步。</div>
+        <div class="hint mb-4"><span>💡</span><span>其实你在下面提现的时候，合约也会自动执行这一步，不做也没关系。</span></div>
+        <div class="flex justify-end">
+          <button data-fn="settleBeneficiary" class="btn btn-primary">🚚 立即结算欠款</button>
+        </div>
+      </div>
+
+      <div class="glass p-6">
+        <div class="section-title">💸 主人提现</div>
+        <div class="section-sub">合约会先把欠款打给收款人，再把剩下的转给你指定的地址。</div>
+        <label class="field">收款地址</label>
+        <input id="in_wdTo" class="input input-mono" placeholder="留空 = 你自己的地址" />
+        <label class="field mt-3">金额 (USDG，留空或 0 = 全部提走)</label>
+        <div class="flex gap-2">
+          <input id="in_wdAmount" class="input input-mono" placeholder="0 = 全部" />
+          <button data-fn="withdraw" class="btn btn-primary shrink-0">提指定金额</button>
+        </div>
+        <div class="flex justify-end mt-3">
+          <button data-fn="withdrawAll" class="btn btn-accent">💰 一键全部提走</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Panel: Emergency -->
+<template id="tpl-emergency">
+  <div class="panel space-y-5">
+    <div class="glass p-6">
+      <div class="section-title">🔒 暂停 / 恢复合约</div>
+      <div class="section-sub">暂停后新用户交不了钱（提审关门），但提现、结算、救援这些照常。</div>
+      <div class="flex items-center gap-4 mb-4">
+        <div class="stat flex-1"><div class="stat-label">当前状态</div><div class="stat-val" id="em_status">-</div></div>
+      </div>
+      <div class="flex gap-2 justify-end">
+        <button data-fn="unpause" class="btn btn-accent">🔓 恢复营业</button>
+        <button data-fn="pause" class="btn btn-danger">🔒 立即关门</button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="glass p-6">
+        <div class="section-title">🪙 救出误打进来的代币</div>
+        <div class="section-sub">如果有人手滑打了别的代币过来，可以救出来。</div>
+        <div class="hint hint-danger mb-4"><span>🚫</span><span>USDG 不能通过这里救出，否则会绕过分成规则。USDG 只能通过「提现」正常拿。</span></div>
+        <label class="field">代币合约地址</label>
+        <input id="in_rTok" class="input input-mono" placeholder="0x..." />
+        <label class="field mt-3">收款地址</label>
+        <input id="in_rTo" class="input input-mono" placeholder="0x..." />
+        <label class="field mt-3">数量（最小单位，0 = 全部）</label>
+        <div class="flex gap-2">
+          <input id="in_rAmt" class="input input-mono" placeholder="0" />
+          <button data-fn="rescueERC20" class="btn btn-danger shrink-0">救援代币</button>
+        </div>
+      </div>
+
+      <div class="glass p-6">
+        <div class="section-title">💠 救出误打进来的主币</div>
+        <div class="section-sub">合约可以接收主币（比如误转账过来的 ETH），主人可以救出。</div>
+        <label class="field">收款地址</label>
+        <input id="in_rnTo" class="input input-mono" placeholder="0x..." />
+        <label class="field mt-3">数量（wei，0 = 全部）</label>
+        <div class="flex gap-2">
+          <input id="in_rnAmt" class="input input-mono" placeholder="0" />
+          <button data-fn="rescueNative" class="btn btn-danger shrink-0">救援主币</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<!-- Panel: Records -->
+<template id="tpl-records">
+  <div class="panel glass p-6">
+    <div class="section-title">📋 提审记录查询</div>
+    <div class="section-sub">按提审序号区间查询。每单都会永久记录在链上。</div>
+    <div class="flex gap-2 items-end flex-wrap mb-5">
+      <div class="grow"><label class="field">起始序号</label><input id="in_from" class="input input-mono" placeholder="1" /></div>
+      <div class="grow"><label class="field">结束序号</label><input id="in_to" class="input input-mono" placeholder="10" /></div>
+      <button id="btnQuery" class="btn btn-primary">🔍 查询</button>
+    </div>
+    <div class="overflow-x-auto rounded-xl border border-line">
+      <table class="data">
+        <thead><tr>
+          <th>序号</th><th>提交者</th><th>代币地址</th><th class="text-right">交了</th><th class="text-right">应分</th><th>时间</th>
+        </tr></thead>
+        <tbody id="subTbody"><tr><td colspan="6" class="p-6 text-slate-500 text-center">还没查询哦，输入序号后点右上「查询」</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</template>
+
+<script>
+// Capybarahood 后台 · 大白话版
+const CONTRACT_ADDR = "0x0d6aa249A8F05dE56EAcF0Cd2f164D8ccA6D855D";
+const CHAIN_ID = 4663;
+const CHAIN_HEX = "0x" + (4663).toString(16);
+const RPC = "https://rpc.mainnet.chain.robinhood.com/";
+const EXPLORER = "https://robinhoodchain.blockscout.com";
+const USDG_DECIMALS = 6;
+
+let provider, signer, contract, readonly, account, abi, state = {};
+const __INLINE_ABI__ = [{"inputs":[{"internalType":"address","name":"_beneficiary","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"beneficiary","type":"address"},{"indexed":false,"internalType":"uint256","name":"settledCount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"BeneficiarySettled","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"previousShare","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"newShare","type":"uint256"}],"name":"BeneficiaryShareUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousBeneficiary","type":"address"},{"indexed":true,"internalType":"address","name":"newBeneficiary","type":"address"}],"name":"BeneficiaryUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"token","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"ERC20Rescued","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"FundsWithdrawn","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"NativeRescued","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferStarted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"by","type":"address"}],"name":"Paused","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":true,"internalType":"address","name":"submitter","type":"address"},{"indexed":true,"internalType":"address","name":"tokenCA","type":"address"},{"indexed":false,"internalType":"uint256","name":"feePaid","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"shareOwed","type":"uint256"}],"name":"Submitted","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"by","type":"address"}],"name":"Unpaused","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"account","type":"address"}],"name":"WhitelistAdded","type":"event"},{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint256","name":"previousFee","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"WhitelistFeeUpdated","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"account","type":"address"}],"name":"WhitelistRemoved","type":"event"},{"inputs":[],"name":"FEE_NORMAL","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"USDG","outputs":[{"internalType":"contract IERC20","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"acceptOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"addWhitelist","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address[]","name":"accounts","type":"address[]"}],"name":"addWhitelistBatch","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"beneficiary","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"beneficiarySettledCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"beneficiaryShare","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"getSubmission","outputs":[{"components":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"submitter","type":"address"},{"internalType":"address","name":"tokenCA","type":"address"},{"internalType":"uint256","name":"feePaid","type":"uint256"},{"internalType":"uint256","name":"shareOwed","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct Capybarahood.Submission","name":"","type":"tuple"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"fromId","type":"uint256"},{"internalType":"uint256","name":"toId","type":"uint256"}],"name":"getSubmissions","outputs":[{"components":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"submitter","type":"address"},{"internalType":"address","name":"tokenCA","type":"address"},{"internalType":"uint256","name":"feePaid","type":"uint256"},{"internalType":"uint256","name":"shareOwed","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"internalType":"struct Capybarahood.Submission[]","name":"list","type":"tuple[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"isWhitelisted","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"paused","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pendingBeneficiaryAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pendingOwed","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"pendingOwner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"removeWhitelist","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address[]","name":"accounts","type":"address[]"}],"name":"removeWhitelistBatch","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"rescueERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address payable","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"rescueNative","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"newBeneficiary","type":"address"}],"name":"setBeneficiary","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newShare","type":"uint256"}],"name":"setBeneficiaryShare","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"newFee","type":"uint256"}],"name":"setWhitelistFee","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"settleBeneficiary","outputs":[{"internalType":"uint256","name":"amount","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"submissions","outputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address","name":"submitter","type":"address"},{"internalType":"address","name":"tokenCA","type":"address"},{"internalType":"uint256","name":"feePaid","type":"uint256"},{"internalType":"uint256","name":"shareOwed","type":"uint256"},{"internalType":"uint256","name":"timestamp","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"tokenCA","type":"address"}],"name":"submit","outputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"totalPaidToBeneficiary","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSubmissions","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"unpause","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"whitelistFee","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"to","type":"address"}],"name":"withdrawAll","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"withdrawable","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"stateMutability":"payable","type":"receive"}];
+
+const $ = (id) => document.getElementById(id);
+const contractLink = $("contractAddr");
+contractLink.textContent = short(CONTRACT_ADDR);
+contractLink.href = EXPLORER + "/address/" + CONTRACT_ADDR;
+
+function short(a) { return a && a !== ethers.ZeroAddress ? a.slice(0, 6) + "…" + a.slice(-4) : (a === ethers.ZeroAddress ? "（空）" : "-"); }
+function addrLink(a) {
+  if (!a || a === ethers.ZeroAddress) return `<span class="text-slate-500">（暂无）</span>`;
+  return `<a class="link" target="_blank" href="${EXPLORER}/address/${a}">${short(a)}</a>`;
+}
+function txLink(h) { return `<a class="link" target="_blank" href="${EXPLORER}/tx/${h}">${short(h)}</a>`; }
+function fmt(u, d = USDG_DECIMALS) {
+  try { const s = ethers.formatUnits(u, d); return s.replace(/\.?0+$/, "") || "0"; } catch { return u.toString(); }
+}
+
+function log(msg, cls = "info") {
+  const el = $("log");
+  if (!el) return;
+  const d = document.createElement("div");
+  d.className = cls;
+  d.innerHTML = `<span class="time">${new Date().toLocaleTimeString()}</span><span>${msg}</span>`;
+  el.prepend(d);
+  while (el.childElementCount > 40) el.lastChild.remove();
+}
+
+async function loadAbi(){ abi = __INLINE_ABI__; }
+
+async function ensureReadOnly() {
+  if (!readonly) {
+    const p = new ethers.JsonRpcProvider(RPC, CHAIN_ID);
+    readonly = new ethers.Contract(CONTRACT_ADDR, abi, p);
+  }
+}
+
+/* ------------ Tabs ------------ */
+const panelIds = ["overview","ownership","revenue","whitelist","cashout","emergency","records"];
+let currentTab = "overview";
+function renderTab(name) {
+  const tpl = document.getElementById("tpl-" + name);
+  if (!tpl) return;
+  const holder = $("panels");
+  holder.innerHTML = "";
+  holder.appendChild(tpl.content.cloneNode(true));
+  bindPanel(name);
+  applyState();
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.tab === name));
+  currentTab = name;
+}
+document.getElementById("tabs").addEventListener("click", (e) => {
+  const t = e.target.closest(".tab");
+  if (!t) return;
+  renderTab(t.dataset.tab);
+});
+
+/* ------------ Wallet ------------ */
+async function connect() {
+  if (!window.ethereum) { log("没找到钱包插件，装个 MetaMask 之类的再来。", "err"); return; }
+  try {
+    await window.ethereum.request({ method: "eth_requestAccounts" });
+    try {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN_HEX }] });
+    } catch (e) {
+      if (e.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: CHAIN_HEX, chainName: "Robinhood Chain",
+            rpcUrls: [RPC], nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+            blockExplorerUrls: [EXPLORER + "/"],
+          }],
+        });
+      } else throw e;
+    }
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    account = await signer.getAddress();
+    contract = new ethers.Contract(CONTRACT_ADDR, abi, signer);
+
+    $("netPill").innerHTML = `<span class="dot"></span>Robinhood 链已连接`;
+    $("netPill").className = "pill pill-on";
+    $("btnConnect").innerHTML = "🟢 " + short(account);
+    log(`已连接钱包 ${short(account)}`, "ok");
+    await refresh();
+
+    window.ethereum.on("accountsChanged", () => location.reload());
+    window.ethereum.on("chainChanged", () => location.reload());
+  } catch (e) {
+    log("连接失败：" + (e.message || e), "err");
+  }
+}
+
+/* ------------ Read all state ------------ */
+async function refresh() {
+  await ensureReadOnly();
+  const c = readonly;
+  try {
+    const usdgAddr = await c.USDG();
+    const erc20 = new ethers.Contract(usdgAddr, ["function balanceOf(address) view returns (uint256)"], c.runner);
+    const [owner, pOwner, paused, feeN, feeW, share, ben, total, settled, owed, withdrawable, paidBen, bal, ethBal] = await Promise.all([
+      c.owner(), c.pendingOwner(), c.paused(),
+      c.FEE_NORMAL(), c.whitelistFee(), c.beneficiaryShare(),
+      c.beneficiary(),
+      c.totalSubmissions(), c.beneficiarySettledCount(),
+      c.pendingBeneficiaryAmount(), c.withdrawable(), c.totalPaidToBeneficiary(),
+      erc20.balanceOf(CONTRACT_ADDR),
+      c.runner.provider.getBalance(CONTRACT_ADDR),
+    ]);
+    state = { owner, pOwner, paused, feeN, feeW, share, ben, total, settled, owed, withdrawable, paidBen, bal, ethBal };
+
+    // role pill
+    if (account) {
+      const isOwner = account.toLowerCase() === owner.toLowerCase();
+      const isPending = pOwner !== ethers.ZeroAddress && account.toLowerCase() === pOwner.toLowerCase();
+      const isBen = account.toLowerCase() === ben.toLowerCase();
+      const rp = $("rolePill");
+      rp.classList.remove("hidden","pill-on","pill-off","pill-warn","pill-brand");
+      if (isOwner) { rp.classList.add("pill-on"); rp.textContent = "👑 你是主人"; }
+      else if (isPending) { rp.classList.add("pill-warn"); rp.textContent = "⏳ 你是待接手主人"; }
+      else if (isBen) { rp.classList.add("pill-brand"); rp.textContent = "🎯 你是收款人"; }
+      else { rp.classList.add("pill-off"); rp.textContent = "👤 你是普通用户"; }
+    }
+    applyState();
+  } catch (e) {
+    log("刷数据失败：" + (e.message || e), "err");
+  }
+}
+
+function applyState() {
+  if (!state.owner) return;
+  const s = state;
+  const setTxt = (id, val) => { const el = $(id); if (el) el.textContent = val; };
+  const setHtml = (id, val) => { const el = $(id); if (el) el.innerHTML = val; };
+
+  // overview
+  setTxt("ov_bal", fmt(s.bal));
+  setTxt("ov_owed", fmt(s.owed));
+  setTxt("ov_withdrawable", fmt(s.withdrawable));
+  setTxt("ov_paidBen", fmt(s.paidBen));
+  setHtml("ov_owner", addrLink(s.owner));
+  setHtml("ov_pending", addrLink(s.pOwner));
+  setHtml("ov_ben", addrLink(s.ben));
+  setHtml("ov_you", account ? addrLink(account) : `<span class="text-slate-500">未连接</span>`);
+  setHtml("ov_paused", s.paused
+    ? `<span class="pill pill-off"><span class="dot"></span>已暂停</span>`
+    : `<span class="pill pill-on"><span class="dot"></span>正常</span>`);
+  setTxt("ov_feen", fmt(s.feeN) + " USDG");
+  setTxt("ov_feew", fmt(s.feeW) + " USDG");
+  setTxt("ov_share", fmt(s.share) + " USDG");
+  setTxt("ov_total", s.total.toString() + " 单");
+  setTxt("ov_settled", s.settled.toString() + " 单");
+  setTxt("ov_unset", (s.total - s.settled).toString() + " 单");
+  setTxt("ov_eth", ethers.formatEther(s.ethBal) + " ETH");
+
+  // ownership
+  setHtml("own_curr", addrLink(s.owner));
+  setHtml("own_pending", addrLink(s.pOwner));
+
+  // revenue
+  setHtml("rev_ben", addrLink(s.ben));
+  setTxt("rev_feen", fmt(s.feeN));
+  setTxt("rev_feew", fmt(s.feeW));
+  setTxt("rev_share", fmt(s.share));
+
+  // cashout
+  setTxt("co_bal", fmt(s.bal));
+  setTxt("co_owed", fmt(s.owed));
+  setTxt("co_wd", fmt(s.withdrawable));
+
+  // emergency
+  setHtml("em_status", s.paused
+    ? `<span class="pill pill-off"><span class="dot"></span>已暂停</span>`
+    : `<span class="pill pill-on"><span class="dot"></span>正常营业</span>`);
+}
+
+/* ------------ Actions ------------ */
+function requireSigner() {
+  if (!signer) { log("先点右上「连接钱包」再操作哦", "warn"); throw new Error("no wallet"); }
+}
+function parseAddrList(s) { return s.split(/[,\s\n]+/).map(x => x.trim()).filter(Boolean); }
+function parseUsdg(v) { if (v === "" || v == null) return 0n; return ethers.parseUnits(String(v), USDG_DECIMALS); }
+function actionLabel(fn) {
+  const map = {
+    transferOwnership: "发起主人转让", acceptOwnership: "领取主人身份",
+    setBeneficiary: "修改收款人", setWhitelistFee: "修改白名单价", setBeneficiaryShare: "修改分成金额",
+    addWhitelist: "加入白名单", removeWhitelist: "移出白名单",
+    addWhitelistBatch: "批量加入白名单", removeWhitelistBatch: "批量移出白名单",
+    settleBeneficiary: "结算收款人", withdraw: "指定金额提现", withdrawAll: "一键全部提现",
+    pause: "暂停合约", unpause: "恢复合约",
+    rescueERC20: "救出代币", rescueNative: "救出主币",
+  };
+  return map[fn] || fn;
+}
+
+async function send(fn, args = []) {
+  const label = actionLabel(fn);
+  requireSigner();
+  try {
+    log(`⏳ 正在「${label}」，请到钱包里确认…`, "info");
+    const tx = await contract[fn](...args);
+    log(`📤 已发出交易 ${txLink(tx.hash)}，等待打包…`, "warn");
+    const rc = await tx.wait();
+    log(`✅ 「${label}」成功！区块 #${rc.blockNumber} · ${txLink(tx.hash)}`, "ok");
+    await refresh();
+  } catch (e) {
+    const reason = e.reason || e.shortMessage || e.message || String(e);
+    log(`❌ 「${label}」失败：${reason}`, "err");
+  }
+}
+
+const handlers = {
+  transferOwnership: () => send("transferOwnership", [$("in_newOwner").value.trim()]),
+  acceptOwnership: () => send("acceptOwnership", []),
+  setBeneficiary: () => send("setBeneficiary", [$("in_newBen").value.trim()]),
+  setWhitelistFee: () => send("setWhitelistFee", [parseUsdg($("in_feeWl").value)]),
+  setBeneficiaryShare: () => send("setBeneficiaryShare", [parseUsdg($("in_share").value)]),
+  addWhitelist: () => send("addWhitelist", [$("in_wlOne").value.trim()]),
+  removeWhitelist: () => send("removeWhitelist", [$("in_wlOne").value.trim()]),
+  addWhitelistBatch: () => send("addWhitelistBatch", [parseAddrList($("in_wlBatch").value)]),
+  removeWhitelistBatch: () => send("removeWhitelistBatch", [parseAddrList($("in_wlBatch").value)]),
+  settleBeneficiary: () => send("settleBeneficiary", []),
+  withdraw: () => send("withdraw", [$("in_wdTo").value.trim() || account, parseUsdg($("in_wdAmount").value || "0")]),
+  withdrawAll: () => send("withdrawAll", [$("in_wdTo").value.trim() || account]),
+  pause: () => send("pause", []),
+  unpause: () => send("unpause", []),
+  rescueERC20: () => send("rescueERC20", [$("in_rTok").value.trim(), $("in_rTo").value.trim(), BigInt($("in_rAmt").value.trim() || "0")]),
+  rescueNative: () => send("rescueNative", [$("in_rnTo").value.trim(), BigInt($("in_rnAmt").value.trim() || "0")]),
+};
+
+/* ------------ Per-panel bindings ------------ */
+function bindPanel(name) {
+  // action buttons (uniform)
+  document.querySelectorAll("[data-fn]").forEach(btn => {
+    if (btn._bound) return;
+    btn._bound = true;
+    btn.addEventListener("click", () => {
+      const fn = btn.dataset.fn;
+      if (handlers[fn]) handlers[fn]();
+    });
+  });
+
+  if (name === "whitelist") {
+    $("btnCheckWl").addEventListener("click", async () => {
+      await ensureReadOnly();
+      const addr = $("in_wlCheck").value.trim();
+      if (!addr) return;
+      try {
+        const r = await readonly.isWhitelisted(addr);
+        const el = $("wlResult");
+        el.classList.remove("hidden");
+        el.innerHTML = r
+          ? `<div class="hint" style="background:linear-gradient(180deg,rgba(34,211,170,.1),rgba(34,211,170,.02));border-color:rgba(34,211,170,.35);color:#5eead4"><span>✅</span><span>是白名单，可用白名单价（${fmt(state.feeW || 0n)} USDG）交费</span></div>`
+          : `<div class="hint hint-warn"><span>❌</span><span>不是白名单，按普通价（${fmt(state.feeN || 0n)} USDG）交费</span></div>`;
+      } catch (e) { log("查询失败：" + e.message, "err"); }
+    });
+  }
+
+  if (name === "records") {
+    $("btnQuery").addEventListener("click", async () => {
+      await ensureReadOnly();
+      const fromV = $("in_from").value.trim();
+      const toV = $("in_to").value.trim();
+      const from = BigInt(fromV || "1");
+      let to = BigInt(toV || fromV || "1");
+      try {
+        const total = await readonly.totalSubmissions();
+        const tbody = $("subTbody");
+        if (total === 0n) { tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-slate-500 text-center">合约还没接过单</td></tr>`; return; }
+        if (to > total) to = total;
+        if (from > total) { tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-slate-500 text-center">起始序号超出范围，目前只有 ${total} 单</td></tr>`; return; }
+        const rows = await readonly.getSubmissions(from, to);
+        tbody.innerHTML = rows.map(r => `
+          <tr>
+            <td>#${r.id}</td>
+            <td>${addrLink(r.submitter)}</td>
+            <td>${addrLink(r.tokenCA)}</td>
+            <td class="text-right">${fmt(r.feePaid)}</td>
+            <td class="text-right">${fmt(r.shareOwed)}</td>
+            <td class="text-slate-400">${new Date(Number(r.timestamp) * 1000).toLocaleString()}</td>
+          </tr>`).join("");
+        log(`查到 ${rows.length} 条提审记录`, "info");
+      } catch (e) { log("查询失败：" + (e.reason || e.message), "err"); }
+    });
+  }
+}
+
+/* ------------ Boot ------------ */
+$("btnConnect").addEventListener("click", connect);
+$("btnRefresh").addEventListener("click", () => refresh());
+
+(async () => {
+  await loadAbi();
+  renderTab("overview");
+  await refresh();
+})();
+
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1}' crossorigin="anonymous"></script>
+</body>
+</html>
