@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>WoofSwap 合约管理面板</title>
+<style>
+  :root{
+    --bg:#0b0d12; --panel:#151922; --panel2:#1c2130; --border:#262c3d;
+    --text:#e6e9f2; --sub:#9aa3b7; --accent:#f7a600; --accent-2:#ffb733;
+    --danger:#ef4444; --ok:#10b981; --info:#3b82f6;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:14px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  a{color:var(--accent);text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 16px 80px}
+  header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  h1{font-size:20px;margin:0}
+  .badge{display:inline-block;padding:3px 8px;border-radius:6px;background:var(--panel2);color:var(--sub);font-size:12px;margin-left:6px}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);cursor:pointer;font-size:13px;line-height:1;transition:all .15s}
+  .btn:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#111}
+  .btn.primary:hover{background:var(--accent-2);border-color:var(--accent-2);color:#111}
+  .btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}
+  .btn.danger:hover{background:var(--danger);color:#fff}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media (max-width:800px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .card h2{margin:0 0 4px;font-size:16px}
+  .card .desc{color:var(--sub);font-size:12px;margin-bottom:14px}
+  .kv{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;background:var(--panel2);border-radius:6px;font-size:12px;margin-bottom:6px;flex-wrap:wrap;word-break:break-all}
+  .kv b{color:var(--sub);font-weight:normal}
+  .kv span{color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  .action{border-top:1px solid var(--border);padding-top:14px;margin-top:14px}
+  .action h3{margin:0 0 4px;font-size:14px;color:var(--accent-2)}
+  .action p.hint{color:var(--sub);font-size:12px;margin:0 0 10px}
+  .input{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;margin-bottom:8px}
+  .input:focus{outline:none;border-color:var(--accent)}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .row .input{flex:1;margin:0}
+  select.input{font-family:inherit}
+  .status{margin-top:8px;padding:8px 10px;border-radius:6px;font-size:12px;word-break:break-all;display:none}
+  .status.show{display:block}
+  .status.ok{background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.4);color:#5efaba}
+  .status.err{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.4);color:#ff9494}
+  .status.info{background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.4);color:#a8c7ff}
+  .txlink{color:var(--accent);text-decoration:underline}
+  .foot{margin-top:24px;color:var(--sub);font-size:12px}
+  .warn{background:rgba(247,166,0,.08);border:1px solid rgba(247,166,0,.4);color:#ffcf6d;padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:16px}
+  .not-owner{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.4);color:#ffb0b0;padding:10px 12px;border-radius:8px;font-size:12px;margin-bottom:16px;display:none}
+  .not-owner.show{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>WoofSwap 合约管理面板<span class="badge" id="netBadge">未连接</span></h1>
+      <div style="color:var(--sub);font-size:12px;margin-top:4px">用来管理 <code>FeeDistributor</code> 和 <code>TokenFactory</code> 的 owner 权限（仅限当前 owner 钱包能成功操作）</div>
+    </div>
+    <div class="row">
+      <span id="acct" style="color:var(--sub);font-size:12px"></span>
+      <button class="btn primary" id="connectBtn">连接钱包</button>
+    </div>
+  </header>
+
+  <div class="warn">
+    ⚠ 请使用 <b>owner 钱包</b>（<code>0xF94f02057E08dE2f2658f69467AdDA79Cb61389a</code>）在<b>以太坊主网</b>连接。非 owner 提交交易会 revert，只会浪费一点 gas。
+  </div>
+  <div class="not-owner" id="notOwnerBox"></div>
+
+  <div class="grid">
+
+    <!-- =========== FeeDistributor =========== -->
+    <div class="card">
+      <h2>FeeDistributor · 手续费分账合约</h2>
+      <div class="desc">收到 LP 手续费后，按每个代币锁定的比例，一部分转到<b>销毁地址</b>，剩余转到<b>平台收款地址</b>。</div>
+
+      <div class="kv"><b>合约地址</b><span>0x1fc39045035e37da1880d2102c380e8dd8e69a89</span></div>
+      <div class="kv"><b>当前 owner</b><span id="fd_owner">—</span></div>
+      <div class="kv"><b>平台收款地址</b><span id="fd_recipient">—</span></div>
+      <div class="kv"><b>销毁地址（固定）</b><span>0xdEAD000000000000000042069420694206942069</span></div>
+
+      <!-- setPlatformRecipient -->
+      <div class="action">
+        <h3>① 修改平台收款地址</h3>
+        <p class="hint">把"分给平台的那部分手续费"以后打到哪个钱包。<b>只对以后新收进来的手续费生效</b>；已经打出去的不会追回。</p>
+        <input class="input" id="fd_newRecipient" placeholder="新的平台收款地址 0x..." />
+        <button class="btn primary" data-act="fd_setRecipient">提交更改</button>
+        <div class="status" id="s_fd_setRecipient"></div>
+      </div>
+
+      <!-- setAuthorizedCollector -->
+      <div class="action">
+        <h3>② 授权 / 撤销 collector（触发领手续费的合约）</h3>
+        <p class="hint">只有被授权的地址才能调 <code>processFee</code> / <code>registerTokenIdBurnBps</code>。目前授权的是 <b>LiquidityLocker</b> <code>0x6C5E2c8571…0ca57E</code>。除非要换新的 locker，一般不要动。</p>
+        <input class="input" id="fd_collector" placeholder="collector 地址 0x..." />
+        <div class="row">
+          <select class="input" id="fd_collectorFlag" style="flex:0 0 140px">
+            <option value="true">授权 (true)</option>
+            <option value="false">撤销 (false)</option>
+          </select>
+          <button class="btn primary" data-act="fd_setCollector">提交</button>
+        </div>
+        <div class="status" id="s_fd_setCollector"></div>
+      </div>
+
+      <!-- transferOwnership -->
+      <div class="action">
+        <h3>③ 把 FeeDistributor 的 owner 转给其他地址</h3>
+        <p class="hint">⚠ <b>不可逆</b>操作。转出去以后，你这个钱包就再也改不了平台收款地址、也不能授权 collector 了。</p>
+        <input class="input" id="fd_newOwner" placeholder="新 owner 地址 0x..." />
+        <button class="btn danger" data-act="fd_transferOwner">转移 owner</button>
+        <div class="status" id="s_fd_transferOwner"></div>
+      </div>
+    </div>
+
+    <!-- =========== TokenFactory =========== -->
+    <div class="card">
+      <h2>TokenFactory · 代币工厂</h2>
+      <div class="desc">用户在 WoofSwap 发币走的入口合约。每次发币时会记录一个"默认销毁比例"到 tokenId 上，之后永久固定。</div>
+
+      <div class="kv"><b>合约地址</b><span>0x23620C3B2CcaEAe576eD1C40B4a670D84998A629</span></div>
+      <div class="kv"><b>当前 owner</b><span id="tf_owner">—</span></div>
+      <div class="kv"><b>当前默认销毁比例</b><span id="tf_burnBps">—</span></div>
+      <div class="kv"><b>已发币总数</b><span id="tf_total">—</span></div>
+
+      <!-- setBurnBps -->
+      <div class="action">
+        <h3>① 修改默认销毁比例</h3>
+        <p class="hint">影响<b>以后新发的币</b>：每笔 LP 手续费里有多少 % 被打到销毁地址。剩余走平台。<br>数值范围 0 ~ 10000（10000 = 100%）。当前 7000 表示 70% 销毁、30% 归平台。<b>已有代币的比例不会被改动</b>。</p>
+        <div class="row">
+          <input class="input" id="tf_newBps" placeholder="例如 7000 = 70%" />
+          <button class="btn primary" data-act="tf_setBps">提交</button>
+        </div>
+        <div class="status" id="s_tf_setBps"></div>
+      </div>
+
+      <!-- withdrawAllToken -->
+      <div class="action">
+        <h3>② 从工厂合约里救出被误转进去的代币</h3>
+        <p class="hint">如果有人误把 ERC20 代币直接转到工厂合约地址，用这个把它<b>全部</b>取到指定地址。<br>正常发币流程里工厂本身不会残留代币，这个是应急按钮。<b>不能取 ETH</b>。</p>
+        <input class="input" id="tf_wt_token" placeholder="要救出的 ERC20 代币合约地址 0x..." />
+        <input class="input" id="tf_wt_recipient" placeholder="转到哪个地址 0x..." />
+        <button class="btn primary" data-act="tf_withdraw">全部取出</button>
+        <div class="status" id="s_tf_withdraw"></div>
+      </div>
+
+      <!-- transferOwnership -->
+      <div class="action">
+        <h3>③ 把 TokenFactory 的 owner 转给其他地址</h3>
+        <p class="hint">⚠ <b>不可逆</b>。转走后你这个钱包就无法再改默认销毁比例、也不能用救援按钮了。</p>
+        <input class="input" id="tf_newOwner" placeholder="新 owner 地址 0x..." />
+        <button class="btn danger" data-act="tf_transferOwner">转移 owner</button>
+        <div class="status" id="s_tf_transferOwner"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div>销毁地址（DEAD）：<code>0xdEAD000000000000000042069420694206942069</code></div>
+    <div>建议在 Etherscan 里同步核对：
+      <a class="txlink" target="_blank" href="https://etherscan.io/address/0x1fc39045035e37da1880d2102c380e8dd8e69a89#readContract">FeeDistributor</a> ·
+      <a class="txlink" target="_blank" href="https://etherscan.io/address/0x23620C3B2CcaEAe576eD1C40B4a670D84998A629#readContract">TokenFactory</a>
+    </div>
+    <div style="margin-top:6px">页面完全离线运行，仅通过你的钱包（MetaMask / OKX Wallet 等）签名并发送交易，没有第三方后端。</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script>
+/* ============ 常量 ============ */
+const CHAIN_ID = 1;
+const CHAIN_HEX = '0x1';
+const FEE_DISTRIBUTOR = '0x1fc39045035e37da1880d2102c380e8dd8e69a89';
+const TOKEN_FACTORY   = '0x23620C3B2CcaEAe576eD1C40B4a670D84998A629';
+
+const FD_ABI = [
+  'function owner() view returns (address)',
+  'function platformRecipient() view returns (address)',
+  'function setPlatformRecipient(address newPlatformRecipient) external',
+  'function setAuthorizedCollector(address collector, bool authorized) external',
+  'function transferOwnership(address newOwner) external',
+];
+const TF_ABI = [
+  'function owner() view returns (address)',
+  'function currentBurnBps() view returns (uint16)',
+  'function totalLaunches() view returns (uint256)',
+  'function setBurnBps(uint16 newBurnBps) external',
+  'function withdrawAllToken(address token, address recipient) external returns (uint256)',
+  'function transferOwnership(address newOwner) external',
+];
+
+/* ============ 状态 ============ */
+let provider, signer, account, chainId;
+
+/* ============ 工具 ============ */
+const $ = (id) => document.getElementById(id);
+const short = (a) => a ? a.slice(0,6)+'...'+a.slice(-4) : '—';
+function setStatus(id, kind, html){
+  const el = $(id);
+  el.className = 'status show ' + kind;
+  el.innerHTML = html;
+}
+function clearStatus(id){ const el=$(id); el.className='status'; el.innerHTML=''; }
+function isAddr(a){ return /^0x[0-9a-fA-F]{40}$/.test((a||'').trim()); }
+function txLink(h){ return `<a class="txlink" target="_blank" href="https://etherscan.io/tx/${h}">${h.slice(0,10)}...${h.slice(-8)}</a>`; }
+
+/* ============ 钱包 ============ */
+async function connect(){
+  if(!window.ethereum){ alert('未检测到浏览器钱包，请安装 MetaMask / OKX Wallet / Rabby'); return; }
+  provider = new ethers.BrowserProvider(window.ethereum, 'any');
+  await window.ethereum.request({ method: 'eth_requestAccounts' });
+  const net = await provider.getNetwork();
+  chainId = Number(net.chainId);
+  if(chainId !== CHAIN_ID){
+    try{
+      await window.ethereum.request({ method:'wallet_switchEthereumChain', params:[{ chainId: CHAIN_HEX }] });
+    }catch(e){ alert('请切到以太坊主网 (chainId=1)'); return; }
+  }
+  provider = new ethers.BrowserProvider(window.ethereum, 'any');
+  signer = await provider.getSigner();
+  account = await signer.getAddress();
+  $('acct').textContent = short(account);
+  $('connectBtn').textContent = '已连接';
+  $('netBadge').textContent = 'Ethereum Mainnet';
+  await refresh();
+  window.ethereum.on?.('accountsChanged', ()=>location.reload());
+  window.ethereum.on?.('chainChanged',    ()=>location.reload());
+}
+$('connectBtn').addEventListener('click', connect);
+
+/* ============ 读链 ============ */
+async function refresh(){
+  const fd = new ethers.Contract(FEE_DISTRIBUTOR, FD_ABI, provider);
+  const tf = new ethers.Contract(TOKEN_FACTORY,   TF_ABI, provider);
+  try{
+    const [fdOwner, fdRecipient] = await Promise.all([fd.owner(), fd.platformRecipient()]);
+    $('fd_owner').textContent = fdOwner;
+    $('fd_recipient').textContent = fdRecipient;
+    checkOwner('FeeDistributor', fdOwner);
+  }catch(e){ console.error(e); }
+  try{
+    const [tfOwner, bps, total] = await Promise.all([tf.owner(), tf.currentBurnBps(), tf.totalLaunches()]);
+    $('tf_owner').textContent = tfOwner;
+    $('tf_burnBps').textContent = `${bps} (${(Number(bps)/100).toFixed(2)}% 销毁 / ${(100 - Number(bps)/100).toFixed(2)}% 平台)`;
+    $('tf_total').textContent = String(total);
+    checkOwner('TokenFactory', tfOwner);
+  }catch(e){ console.error(e); }
+}
+
+const ownerCheck = {};
+function checkOwner(name, owner){
+  ownerCheck[name] = owner;
+  const box = $('notOwnerBox');
+  const list = [];
+  for(const k of Object.keys(ownerCheck)){
+    if(account && ownerCheck[k].toLowerCase() !== account.toLowerCase()){
+      list.push(`${k} 的 owner 是 <code>${ownerCheck[k]}</code>`);
+    }
+  }
+  if(list.length){
+    box.classList.add('show');
+    box.innerHTML = `当前连接钱包 <code>${account}</code> 不是 owner，以下合约无法写入：<br>· ${list.join('<br>· ')}<br>请换成正确的 owner 钱包再操作。`;
+  } else {
+    box.classList.remove('show');
+    box.innerHTML='';
+  }
+}
+
+/* ============ 提交交易通用逻辑 ============ */
+async function send(statusId, label, contractAddr, abi, method, args){
+  if(!signer){ setStatus(statusId,'err','请先连接钱包'); return; }
+  clearStatus(statusId);
+  setStatus(statusId,'info', `正在唤起钱包签名 ${label}...`);
+  try{
+    const c = new ethers.Contract(contractAddr, abi, signer);
+    const tx = await c[method](...args);
+    setStatus(statusId,'info', `已提交交易 ${txLink(tx.hash)}，等待打包...`);
+    const receipt = await tx.wait();
+    if(receipt.status === 1){
+      setStatus(statusId,'ok', `✅ 成功。tx ${txLink(tx.hash)}，gasUsed ${receipt.gasUsed}`);
+      setTimeout(refresh, 1000);
+    } else {
+      setStatus(statusId,'err', `交易失败（status=0）。tx ${txLink(tx.hash)}`);
+    }
+  }catch(e){
+    console.error(e);
+    const msg = e?.shortMessage || e?.info?.error?.message || e?.reason || e?.message || String(e);
+    setStatus(statusId,'err', `❌ ${msg}`);
+  }
+}
+
+/* ============ 各按钮 ============ */
+document.body.addEventListener('click', async (ev)=>{
+  const b = ev.target.closest('[data-act]');
+  if(!b) return;
+  const act = b.dataset.act;
+
+  if(act==='fd_setRecipient'){
+    const a = $('fd_newRecipient').value.trim();
+    if(!isAddr(a)){ setStatus('s_fd_setRecipient','err','地址格式不对'); return; }
+    await send('s_fd_setRecipient','setPlatformRecipient',FEE_DISTRIBUTOR,FD_ABI,'setPlatformRecipient',[a]);
+  }
+  if(act==='fd_setCollector'){
+    const a = $('fd_collector').value.trim();
+    const f = $('fd_collectorFlag').value === 'true';
+    if(!isAddr(a)){ setStatus('s_fd_setCollector','err','地址格式不对'); return; }
+    await send('s_fd_setCollector','setAuthorizedCollector',FEE_DISTRIBUTOR,FD_ABI,'setAuthorizedCollector',[a, f]);
+  }
+  if(act==='fd_transferOwner'){
+    const a = $('fd_newOwner').value.trim();
+    if(!isAddr(a)){ setStatus('s_fd_transferOwner','err','地址格式不对'); return; }
+    if(!confirm('确定要把 FeeDistributor 的 owner 转给 '+a+' 吗？不可逆！')) return;
+    await send('s_fd_transferOwner','transferOwnership',FEE_DISTRIBUTOR,FD_ABI,'transferOwnership',[a]);
+  }
+  if(act==='tf_setBps'){
+    const raw = $('tf_newBps').value.trim();
+    const n = Number(raw);
+    if(!Number.isInteger(n) || n<0 || n>10000){ setStatus('s_tf_setBps','err','请输入 0~10000 的整数'); return; }
+    await send('s_tf_setBps','setBurnBps',TOKEN_FACTORY,TF_ABI,'setBurnBps',[n]);
+  }
+  if(act==='tf_withdraw'){
+    const t = $('tf_wt_token').value.trim();
+    const r = $('tf_wt_recipient').value.trim();
+    if(!isAddr(t)){ setStatus('s_tf_withdraw','err','代币地址格式不对'); return; }
+    if(!isAddr(r)){ setStatus('s_tf_withdraw','err','收款地址格式不对'); return; }
+    await send('s_tf_withdraw','withdrawAllToken',TOKEN_FACTORY,TF_ABI,'withdrawAllToken',[t, r]);
+  }
+  if(act==='tf_transferOwner'){
+    const a = $('tf_newOwner').value.trim();
+    if(!isAddr(a)){ setStatus('s_tf_transferOwner','err','地址格式不对'); return; }
+    if(!confirm('确定要把 TokenFactory 的 owner 转给 '+a+' 吗？不可逆！')) return;
+    await send('s_tf_transferOwner','transferOwnership',TOKEN_FACTORY,TF_ABI,'transferOwnership',[a]);
+  }
+});
+
+/* ============ 只读模式（未连接钱包也能看数据） ============ */
+(async function boot(){
+  try{
+    const ro = new ethers.JsonRpcProvider('https://ethereum-rpc.publicnode.com');
+    const fd = new ethers.Contract(FEE_DISTRIBUTOR, FD_ABI, ro);
+    const tf = new ethers.Contract(TOKEN_FACTORY,   TF_ABI, ro);
+    const [fdOwner, fdRecipient, tfOwner, bps, total] = await Promise.all([
+      fd.owner(), fd.platformRecipient(), tf.owner(), tf.currentBurnBps(), tf.totalLaunches()
+    ]);
+    $('fd_owner').textContent = fdOwner;
+    $('fd_recipient').textContent = fdRecipient;
+    $('tf_owner').textContent = tfOwner;
+    $('tf_burnBps').textContent = `${bps} (${(Number(bps)/100).toFixed(2)}% 销毁 / ${(100 - Number(bps)/100).toFixed(2)}% 平台)`;
+    $('tf_total').textContent = String(total);
+  }catch(e){ console.warn('只读模式加载失败', e); }
+})();
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1}' crossorigin="anonymous"></script>
+</body>
+</html>
