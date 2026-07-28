@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SHIB Bridge · UlnConfig Fixer</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0b0e14; --panel:#131824; --panel2:#1a2030; --border:#262d3d;
+    --text:#e6e9f2; --muted:#8a93a8; --accent:#c084fc; --accent2:#7c3aed;
+    --ok:#4ade80; --warn:#fbbf24; --err:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:radial-gradient(1200px 800px at 20% -10%,#1c1030 0,transparent 60%),
+               radial-gradient(900px 700px at 100% 100%,#0a1a2e 0,transparent 55%),var(--bg);
+    color:var(--text);display:flex;flex-direction:column;align-items:center;padding-bottom:60px}
+  header{width:100%;max-width:1000px;padding:24px;display:flex;justify-content:space-between;align-items:center}
+  .brand{display:flex;gap:12px;align-items:center;font-weight:700;font-size:20px}
+  .brand .logo{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900}
+  .btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:10px;
+    padding:10px 16px;font-weight:600;cursor:pointer;font-size:14px}
+  .btn:hover{filter:brightness(1.1)}
+  .btn:disabled{opacity:.5;cursor:not-allowed;filter:grayscale(.4)}
+  .btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+  main{width:100%;max-width:1000px;padding:0 20px}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:24px;margin-bottom:20px;
+    box-shadow:0 20px 60px rgba(0,0,0,.4)}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:16px;margin:0 0 12px;color:var(--accent)}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:16px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}}
+  .box{background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:16px}
+  .box h3{margin:0 0 10px;font-size:14px;color:var(--text)}
+  .kv{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--border)}
+  .kv:last-child{border-bottom:none}
+  .kv .k{color:var(--muted)}
+  .kv .v{color:var(--text);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+    text-align:right;word-break:break-all;max-width:65%}
+  .badge{font-size:10px;padding:2px 6px;border-radius:4px;text-transform:uppercase;font-weight:600}
+  .badge.ok{background:rgba(74,222,128,.15);color:var(--ok)}
+  .badge.warn{background:rgba(251,191,36,.15);color:var(--warn)}
+  .badge.err{background:rgba(239,68,68,.15);color:var(--err)}
+  .row{display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap}
+  input[type=number],input[type=text]{flex:1;min-width:120px;background:var(--panel);border:1px solid var(--border);
+    border-radius:8px;padding:10px 12px;color:var(--text);font:inherit;font-size:14px;outline:none}
+  input:focus{border-color:var(--accent)}
+  .status{margin-top:14px;padding:12px;border-radius:10px;font-size:13px;word-break:break-all;
+    background:var(--panel2);border:1px solid var(--border);display:none}
+  .status.show{display:block}
+  .status.ok{border-color:rgba(74,222,128,.4);color:var(--ok)}
+  .status.err{border-color:rgba(239,68,68,.4);color:var(--err)}
+  .status.info{border-color:rgba(192,132,252,.4);color:var(--accent)}
+  .status a{color:var(--accent)}
+  .banner{padding:12px;border-radius:10px;font-size:13px;background:rgba(251,191,36,.08);
+    border:1px solid rgba(251,191,36,.3);color:#ffd58a;margin-bottom:16px}
+  .banner.err{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.3);color:#fca5a5}
+  .banner.ok{background:rgba(74,222,128,.08);border-color:rgba(74,222,128,.3);color:#bbf7d0}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.2);
+    border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin-right:6px;vertical-align:middle}
+  .diag{font-size:12px;color:var(--muted);margin-top:8px;font-family:ui-monospace,monospace;word-break:break-all}
+  .direction-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .arrow{font-size:14px;color:var(--accent);font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">⚙</div><div>UlnConfig Fixer</div></div>
+  <button id="connectBtn" class="btn">Connect Wallet</button>
+</header>
+
+<main>
+  <div class="card">
+    <h1>SHIB Bridge · UlnConfig Fixer</h1>
+    <div class="sub">修复 ETH ↔ Robinhood Chain 之间 UlnConfig confirmations 不匹配 · LayerZero V2</div>
+    <div id="ownerBanner" class="banner">请用 owner 钱包 <code id="ownerAddrShow">0xF94f...389a</code> 连接。当前钱包不是 owner 无法发送 setConfig。</div>
+    <div id="netBanner" class="banner" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <h2>方向 1 · Ethereum → Robinhood Chain</h2>
+    <div class="sub">要让 ETH→RH 消息通过 DVN 验证：<b>ETH 上 SEND.confirmations ≥ RH 上 RECV.confirmations</b></div>
+    <div class="grid2">
+
+      <div class="box">
+        <div class="direction-title">
+          <h3>ETH 侧 · SEND (发往 EID 30416)</h3>
+          <span id="ethSendBadge" class="badge warn">loading…</span>
+        </div>
+        <div class="kv"><span class="k">Chain</span><span class="v">Ethereum (1)</span></div>
+        <div class="kv"><span class="k">OApp</span><span class="v">0x3ad5…101f</span></div>
+        <div class="kv"><span class="k">SendLib</span><span class="v">0xbB2E…dCe1</span></div>
+        <div class="kv"><span class="k">confirmations</span><span class="v" id="ethSendConf">—</span></div>
+        <div class="kv"><span class="k">required DVNs</span><span class="v" id="ethSendDvns">—</span></div>
+        <div class="kv"><span class="k">optional DVNs</span><span class="v" id="ethSendOpt">—</span></div>
+        <div class="row">
+          <input id="ethSendNew" type="number" min="1" placeholder="new confirmations" />
+          <button id="ethSendBtn" class="btn" disabled>写入 ETH SEND</button>
+        </div>
+        <div id="ethSendStatus" class="status"></div>
+      </div>
+
+      <div class="box">
+        <div class="direction-title">
+          <h3>RH 侧 · RECV (来自 EID 30101)</h3>
+          <span id="rhRecvBadge" class="badge warn">loading…</span>
+        </div>
+        <div class="kv"><span class="k">Chain</span><span class="v">Robinhood (4663)</span></div>
+        <div class="kv"><span class="k">OApp</span><span class="v">0x7881…0951</span></div>
+        <div class="kv"><span class="k">RecvLib</span><span class="v">0xe184…1043</span></div>
+        <div class="kv"><span class="k">confirmations</span><span class="v" id="rhRecvConf">—</span></div>
+        <div class="kv"><span class="k">required DVNs</span><span class="v" id="rhRecvDvns">—</span></div>
+        <div class="kv"><span class="k">optional DVNs</span><span class="v" id="rhRecvOpt">—</span></div>
+        <div class="row">
+          <input id="rhRecvNew" type="number" min="1" placeholder="new confirmations" />
+          <button id="rhRecvBtn" class="btn" disabled>写入 RH RECV</button>
+        </div>
+        <div id="rhRecvStatus" class="status"></div>
+      </div>
+
+    </div>
+    <div id="dir1Diag" class="diag"></div>
+  </div>
+
+  <div class="card">
+    <h2>方向 2 · Robinhood Chain → Ethereum</h2>
+    <div class="sub">要让 RH→ETH 消息通过 DVN 验证：<b>RH 上 SEND.confirmations ≥ ETH 上 RECV.confirmations</b></div>
+    <div class="grid2">
+
+      <div class="box">
+        <div class="direction-title">
+          <h3>RH 侧 · SEND (发往 EID 30101)</h3>
+          <span id="rhSendBadge" class="badge warn">loading…</span>
+        </div>
+        <div class="kv"><span class="k">Chain</span><span class="v">Robinhood (4663)</span></div>
+        <div class="kv"><span class="k">OApp</span><span class="v">0x7881…0951</span></div>
+        <div class="kv"><span class="k">SendLib</span><span class="v">0xC391…2de7</span></div>
+        <div class="kv"><span class="k">confirmations</span><span class="v" id="rhSendConf">—</span></div>
+        <div class="kv"><span class="k">required DVNs</span><span class="v" id="rhSendDvns">—</span></div>
+        <div class="kv"><span class="k">optional DVNs</span><span class="v" id="rhSendOpt">—</span></div>
+        <div class="row">
+          <input id="rhSendNew" type="number" min="1" placeholder="new confirmations" />
+          <button id="rhSendBtn" class="btn" disabled>写入 RH SEND</button>
+        </div>
+        <div id="rhSendStatus" class="status"></div>
+      </div>
+
+      <div class="box">
+        <div class="direction-title">
+          <h3>ETH 侧 · RECV (来自 EID 30416)</h3>
+          <span id="ethRecvBadge" class="badge warn">loading…</span>
+        </div>
+        <div class="kv"><span class="k">Chain</span><span class="v">Ethereum (1)</span></div>
+        <div class="kv"><span class="k">OApp</span><span class="v">0x3ad5…101f</span></div>
+        <div class="kv"><span class="k">RecvLib</span><span class="v">0xc02A…24C2</span></div>
+        <div class="kv"><span class="k">confirmations</span><span class="v" id="ethRecvConf">—</span></div>
+        <div class="kv"><span class="k">required DVNs</span><span class="v" id="ethRecvDvns">—</span></div>
+        <div class="kv"><span class="k">optional DVNs</span><span class="v" id="ethRecvOpt">—</span></div>
+        <div class="row">
+          <input id="ethRecvNew" type="number" min="1" placeholder="new confirmations" />
+          <button id="ethRecvBtn" class="btn" disabled>写入 ETH RECV</button>
+        </div>
+        <div id="ethRecvStatus" class="status"></div>
+      </div>
+
+    </div>
+    <div id="dir2Diag" class="diag"></div>
+  </div>
+
+  <div class="card">
+    <h2>💡 建议操作</h2>
+    <div id="advice" class="sub">连接钱包后会读取链上状态，然后给出具体的一键修复建议。</div>
+    <button id="refreshBtn" class="btn btn-ghost">🔄 重新读取链上配置</button>
+  </div>
+</main>
+
+<script>
+/* ========= 配置 ========= */
+const OWNER_ADDR = '0xF94f02057E08dE2f2658f69467AdDA79Cb61389a';
+
+const ETH = {
+  name:'Ethereum', chainId:1, chainIdHex:'0x1', eid:30101,
+  rpcs:['https://eth.llamarpc.com','https://cloudflare-eth.com','https://ethereum-rpc.publicnode.com','https://rpc.ankr.com/eth'],
+  explorer:'https://etherscan.io', nativeSymbol:'ETH',
+  oapp:'0x3ad552cecc1d93db32292adae8bf9f008f8c101f',
+  endpoint:'0x1a44076050125825900e736c501f859c50fE728c',
+  sendLib:'0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1',
+  recvLib:'0xc02Ab410f0734EFa3F14628780e6e695156024C2'
+};
+const RH = {
+  name:'Robinhood Chain', chainId:4663, chainIdHex:'0x1237', eid:30416,
+  rpcs:['https://rpc.mainnet.chain.robinhood.com'],
+  explorer:'https://robinhoodchain.blockscout.com', nativeSymbol:'RBH',
+  oapp:'0x788121cc5ff2fba0d0d3c63b3dd0d21e6abc0951',
+  endpoint:'0x6F475642a6e85809B1c36Fa62763669b1b48DD5B',
+  sendLib:'0xC39161c743D0307EB9BCc9FEF03eeb9Dc4802de7',
+  recvLib:'0xe1844c5D63a9543023008D332Bd3d2e6f1FE1043'
+};
+
+/* LayerZero V2 UlnConfig 结构（真实字段顺序） */
+const ULN_TUPLE = 'tuple(uint64 confirmations, uint8 requiredDVNCount, uint8 optionalDVNCount, uint8 optionalDVNThreshold, address[] requiredDVNs, address[] optionalDVNs)';
+const CONFIG_TYPE_ULN = 2;
+
+const ENDPOINT_ABI = [
+  'function getConfig(address _oapp, address _lib, uint32 _eid, uint32 _configType) view returns (bytes)',
+  'function setConfig(address _oapp, address _lib, tuple(uint32 eid, uint32 configType, bytes config)[] _params)'
+];
+const OAPP_ABI = [
+  'function owner() view returns (address)'
+];
+
+/* ========= 状态 ========= */
+let wallet = { provider:null, signer:null, account:null, chainId:null };
+let cfg = {}; /* {ethSend, rhRecv, rhSend, ethRecv} */
+
+const $ = id => document.getElementById(id);
+const short = a => a ? a.slice(0,6)+'…'+a.slice(-4) : '—';
+const abi = ethers.AbiCoder.defaultAbiCoder();
+
+/* ========= 通用工具 ========= */
+async function readProvider(chain) {
+  if (wallet.provider) {
+    try {
+      const n = await wallet.provider.getNetwork();
+      if (Number(n.chainId) === chain.chainId) return wallet.provider;
+    } catch {}
+  }
+  let lastErr;
+  for (const url of chain.rpcs) {
+    try {
+      const p = new ethers.JsonRpcProvider(url, { chainId: chain.chainId, name: chain.name });
+      await p.getBlockNumber();
+      return p;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('no rpc: '+chain.name);
+}
+
+async function ensureChain(chain) {
+  if (!wallet.provider) throw new Error('wallet not connected');
+  const n = await wallet.provider.getNetwork();
+  if (Number(n.chainId) === chain.chainId) return;
+  try {
+    await window.ethereum.request({
+      method:'wallet_switchEthereumChain',
+      params:[{chainId: chain.chainIdHex}]
+    });
+  } catch (e) {
+    if (e.code === 4902 || (e.data && e.data.originalError && e.data.originalError.code === 4902)) {
+      await window.ethereum.request({
+        method:'wallet_addEthereumChain',
+        params:[{
+          chainId: chain.chainIdHex,
+          chainName: chain.name,
+          nativeCurrency:{name:chain.nativeSymbol,symbol:chain.nativeSymbol,decimals:18},
+          rpcUrls: chain.rpcs,
+          blockExplorerUrls:[chain.explorer]
+        }]
+      });
+    } else { throw e; }
+  }
+  wallet.provider = new ethers.BrowserProvider(window.ethereum);
+  wallet.signer = await wallet.provider.getSigner();
+  wallet.chainId = chain.chainId;
+}
+
+function isOwner() {
+  return wallet.account && wallet.account.toLowerCase() === OWNER_ADDR.toLowerCase();
+}
+
+function setSt(id, msg, kind) {
+  const el = $(id);
+  el.className = 'status show' + (kind ? ' '+kind : '');
+  el.innerHTML = msg;
+}
+
+function decodeUln(hexBytes) {
+  /* 空返回 => 使用 defaults；显示为 default */
+  if (!hexBytes || hexBytes === '0x') return null;
+  try {
+    const [obj] = abi.decode([ULN_TUPLE], hexBytes);
+    return {
+      confirmations: Number(obj.confirmations),
+      requiredDVNCount: Number(obj.requiredDVNCount),
+      optionalDVNCount: Number(obj.optionalDVNCount),
+      optionalDVNThreshold: Number(obj.optionalDVNThreshold),
+      requiredDVNs: obj.requiredDVNs.map(a => a.toLowerCase()),
+      optionalDVNs: obj.optionalDVNs.map(a => a.toLowerCase())
+    };
+  } catch (e) {
+    console.error('decode uln failed', e, hexBytes);
+    return null;
+  }
+}
+
+function encodeUln(confirmations, requiredDVNs, optionalDVNs, optionalThreshold) {
+  const req = [...requiredDVNs].sort((a,b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
+  const opt = [...optionalDVNs].sort((a,b) => a.toLowerCase() < b.toLowerCase() ? -1 : 1);
+  return abi.encode([ULN_TUPLE], [{
+    confirmations: BigInt(confirmations),
+    requiredDVNCount: req.length,
+    optionalDVNCount: opt.length,
+    optionalDVNThreshold: optionalThreshold || 0,
+    requiredDVNs: req,
+    optionalDVNs: opt
+  }]);
+}
+
+/* ========= 读取一个方向 ========= */
+async function readOne(chain, lib, remoteEid) {
+  const p = await readProvider(chain);
+  const ep = new ethers.Contract(chain.endpoint, ENDPOINT_ABI, p);
+  const raw = await ep.getConfig(chain.oapp, lib, remoteEid, CONFIG_TYPE_ULN);
+  return { raw, parsed: decodeUln(raw) };
+}
+
+function fillBox(prefix, parsed, cmp) {
+  const badge = $(prefix + 'Badge');
+  if (!parsed) {
+    $(prefix+'Conf').textContent = 'default (endpoint fallback)';
+    $(prefix+'Dvns').textContent = '—';
+    $(prefix+'Opt').textContent = '—';
+    badge.textContent = 'DEFAULT';
+    badge.className = 'badge warn';
+    return null;
+  }
+  $(prefix+'Conf').textContent = parsed.confirmations;
+  $(prefix+'Dvns').textContent = parsed.requiredDVNs.length
+    ? parsed.requiredDVNs.map(short).join(', ')
+    : '(empty)';
+  $(prefix+'Opt').textContent = parsed.optionalDVNs.length
+    ? parsed.optionalDVNs.map(short).join(', ') + ` (thr ${parsed.optionalDVNThreshold})`
+    : '(empty)';
+  return parsed.confirmations;
+}
+
+async function refreshAll() {
+  $('ethSendBadge').textContent='loading…';
+  $('rhRecvBadge').textContent='loading…';
+  $('rhSendBadge').textContent='loading…';
+  $('ethRecvBadge').textContent='loading…';
+
+  try {
+    const [ethSend, rhRecv, rhSend, ethRecv] = await Promise.all([
+      readOne(ETH, ETH.sendLib, RH.eid),
+      readOne(RH, RH.recvLib, ETH.eid),
+      readOne(RH, RH.sendLib, ETH.eid),
+      readOne(ETH, ETH.recvLib, RH.eid)
+    ]);
+    cfg = { ethSend, rhRecv, rhSend, ethRecv };
+
+    const c1 = fillBox('ethSend', ethSend.parsed);
+    const c2 = fillBox('rhRecv', rhRecv.parsed);
+    const c3 = fillBox('rhSend', rhSend.parsed);
+    const c4 = fillBox('ethRecv', ethRecv.parsed);
+
+    /* 方向 1: ETH SEND (c1) 必须 >= RH RECV (c2) */
+    setDirBadges('ethSend','rhRecv', c1, c2, 'dir1Diag',
+      `方向 1（ETH→RH）：源 SEND=${c1 ?? 'default'} vs 目的 RECV=${c2 ?? 'default'}`);
+
+    /* 方向 2: RH SEND (c3) 必须 >= ETH RECV (c4) */
+    setDirBadges('rhSend','ethRecv', c3, c4, 'dir2Diag',
+      `方向 2（RH→ETH）：源 SEND=${c3 ?? 'default'} vs 目的 RECV=${c4 ?? 'default'}`);
+
+    generateAdvice();
+  } catch (e) {
+    console.error(e);
+    $('advice').innerHTML = '<span style="color:var(--err)">读取链上配置失败：'+(e.message||e)+'</span>';
+  }
+}
+
+function setDirBadges(srcId, dstId, srcConf, dstConf, diagId, diagText) {
+  const srcBadge = $(srcId+'Badge');
+  const dstBadge = $(dstId+'Badge');
+  if (srcConf == null || dstConf == null) {
+    srcBadge.textContent = srcConf==null ? 'DEFAULT' : srcConf;
+    srcBadge.className = 'badge warn';
+    dstBadge.textContent = dstConf==null ? 'DEFAULT' : dstConf;
+    dstBadge.className = 'badge warn';
+    $(diagId).textContent = diagText + ' — 有一侧未显式配置 UlnConfig，使用 endpoint default（可能不是你要的值）。';
+    return;
+  }
+  const ok = srcConf >= dstConf;
+  srcBadge.textContent = 'SEND '+srcConf;
+  srcBadge.className = 'badge ' + (ok?'ok':'err');
+  dstBadge.textContent = 'RECV '+dstConf;
+  dstBadge.className = 'badge ' + (ok?'ok':'err');
+  $(diagId).textContent = diagText + (ok ? ' ✅ 匹配' : ' ❌ 不匹配（源 < 目的），消息会被 DVN 拒绝');
+}
+
+function generateAdvice() {
+  const parts = [];
+  const c1 = cfg.ethSend?.parsed?.confirmations;
+  const c2 = cfg.rhRecv?.parsed?.confirmations;
+  const c3 = cfg.rhSend?.parsed?.confirmations;
+  const c4 = cfg.ethRecv?.parsed?.confirmations;
+
+  if (c1!=null && c2!=null && c1 < c2) {
+    parts.push(`🔴 <b>方向 1 ETH→RH 断了</b>：ETH SEND=${c1} &lt; RH RECV=${c2}。要救回卡住的 <code>0x7571c53f…</code>，最快办法是把 <b>RH RECV 改到 ${c1}</b>（对齐到源）或者把 <b>ETH SEND 改到 ${c2}</b>（对齐到目的，但只影响未来消息，救不了在途的）。推荐先把 RH RECV 改成 ${c1}，救回那笔；然后把两边都对齐到 ${Math.max(c1,c2,20)}。`);
+  } else if (c1!=null && c2!=null) {
+    parts.push(`✅ 方向 1 ETH→RH 匹配（${c1} ≥ ${c2}）。`);
+  }
+  if (c3!=null && c4!=null && c3 < c4) {
+    parts.push(`🔴 <b>方向 2 RH→ETH 断了</b>：RH SEND=${c3} &lt; ETH RECV=${c4}。把 <b>ETH RECV 改到 ${c3}</b> 或把 <b>RH SEND 改到 ${c4}</b>。`);
+  } else if (c3!=null && c4!=null) {
+    parts.push(`✅ 方向 2 RH→ETH 匹配（${c3} ≥ ${c4}）。`);
+  }
+  parts.push('提示：改完后如果 layerzeroscan 上那条卡住的消息没自动重试，你可以在页面上点它的 "Retry Verify" / "Retry Execute"，或者用 owner 钱包在 RH endpoint 上手动 lzReceive。');
+  $('advice').innerHTML = parts.join('<br /><br />');
+}
+
+/* ========= 写入 setConfig ========= */
+async function writeSetConfig(chain, lib, remoteEid, newConf, existing) {
+  await ensureChain(chain);
+  const signer = await wallet.provider.getSigner();
+  const ep = new ethers.Contract(chain.endpoint, ENDPOINT_ABI, signer);
+
+  /* 保留已有 DVN 列表和 optional threshold，只改 confirmations */
+  const reqDvns = existing?.requiredDVNs || [];
+  const optDvns = existing?.optionalDVNs || [];
+  const optThr = existing?.optionalDVNThreshold || 0;
+
+  if (reqDvns.length === 0 && optDvns.length === 0) {
+    throw new Error('当前 UlnConfig 使用 endpoint default，直接改 confirmations 会写成空 DVN 配置。请先用 layerzero cli 或明确 setConfig 一次带 DVN 的完整配置。');
+  }
+
+  const encoded = encodeUln(newConf, reqDvns, optDvns, optThr);
+  const params = [{ eid: remoteEid, configType: CONFIG_TYPE_ULN, config: encoded }];
+  const tx = await ep.setConfig(chain.oapp, lib, params);
+  return tx;
+}
+
+async function handleWrite(prefix, chain, lib, remoteEid, existingRef) {
+  const btn = $(prefix+'Btn');
+  const input = $(prefix+'New');
+  const val = parseInt(input.value);
+  if (!val || val < 1) { setSt(prefix+'Status','请输入 ≥1 的数字','err'); return; }
+  if (!isOwner()) { setSt(prefix+'Status','当前钱包不是 owner，无法发送','err'); return; }
+
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>发送中…';
+  setSt(prefix+'Status','切换网络并签名中…','info');
+  try {
+    const tx = await writeSetConfig(chain, lib, remoteEid, val, existingRef);
+    setSt(prefix+'Status',
+      `Tx 已提交：<a target="_blank" href="${chain.explorer}/tx/${tx.hash}">${tx.hash}</a><br />等待打包…`,'info');
+    await tx.wait();
+    setSt(prefix+'Status',
+      `✅ 已上链：<a target="_blank" href="${chain.explorer}/tx/${tx.hash}">${tx.hash}</a><br />confirmations 已更新为 <b>${val}</b>。正在刷新链上状态…`,'ok');
+    await refreshAll();
+  } catch (e) {
+    console.error(e);
+    setSt(prefix+'Status','失败：'+(e.shortMessage||e.message||e),'err');
+  }
+  btn.disabled = false;
+  btn.textContent = orig;
+}
+
+/* ========= 钱包连接 ========= */
+async function connect() {
+  if (!window.ethereum) {
+    $('ownerBanner').className = 'banner err';
+    $('ownerBanner').textContent = '未检测到钱包，请安装 MetaMask。';
+    return;
+  }
+  try {
+    wallet.provider = new ethers.BrowserProvider(window.ethereum);
+    const accs = await wallet.provider.send('eth_requestAccounts', []);
+    wallet.account = accs[0];
+    wallet.signer = await wallet.provider.getSigner();
+    const n = await wallet.provider.getNetwork();
+    wallet.chainId = Number(n.chainId);
+    $('connectBtn').textContent = short(wallet.account);
+
+    window.ethereum.on('accountsChanged', () => location.reload());
+    window.ethereum.on('chainChanged', () => location.reload());
+
+    if (isOwner()) {
+      $('ownerBanner').className = 'banner ok';
+      $('ownerBanner').innerHTML = '✅ Owner 钱包已连接 (<code>'+wallet.account+'</code>)，可以发送 setConfig。';
+      ['ethSendBtn','rhRecvBtn','rhSendBtn','ethRecvBtn'].forEach(id => $(id).disabled = false);
+    } else {
+      $('ownerBanner').className = 'banner err';
+      $('ownerBanner').innerHTML = '⚠ 当前钱包 <code>'+wallet.account+'</code> 不是 owner。可以查看链上配置，但发送 setConfig 会失败。请切到 owner 钱包 <code>'+OWNER_ADDR+'</code>。';
+    }
+    await refreshAll();
+  } catch (e) {
+    console.error(e);
+    $('ownerBanner').className = 'banner err';
+    $('ownerBanner').textContent = '连接失败：'+(e.message||e);
+  }
+}
+
+/* ========= 事件绑定 ========= */
+$('connectBtn').onclick = connect;
+$('refreshBtn').onclick = refreshAll;
+$('ethSendBtn').onclick = () => handleWrite('ethSend', ETH, ETH.sendLib, RH.eid, cfg.ethSend?.parsed);
+$('rhRecvBtn').onclick = () => handleWrite('rhRecv', RH, RH.recvLib, ETH.eid, cfg.rhRecv?.parsed);
+$('rhSendBtn').onclick = () => handleWrite('rhSend', RH, RH.sendLib, ETH.eid, cfg.rhSend?.parsed);
+$('ethRecvBtn').onclick = () => handleWrite('ethRecv', ETH, ETH.recvLib, RH.eid, cfg.ethRecv?.parsed);
+
+$('ownerAddrShow').textContent = OWNER_ADDR;
+
+/* 页面加载后直接尝试读一次（不需要连接钱包，用 RPC） */
+refreshAll();
+
+</script>
+</body>
+</html>
