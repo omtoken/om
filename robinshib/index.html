@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WoofSwap 管理后台</title>
+<style>
+:root {
+  --bg: #0b0d12;
+  --panel: #14171f;
+  --panel-2: #1a1e28;
+  --border: #262b38;
+  --text: #e6e9f2;
+  --muted: #8892a6;
+  --accent: #ff7a1a;
+  --accent-hover: #ff8f3d;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #eab308;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 24px 20px 80px; }
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
+header h1 { margin: 0; font-size: 22px; }
+header .sub { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.wallet { display: flex; align-items: center; gap: 10px; }
+.badge { padding: 6px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.badge.ok { color: var(--green); border-color: rgba(34,197,94,0.4); }
+.badge.warn { color: var(--yellow); border-color: rgba(234,179,8,0.4); }
+.badge.err { color: var(--red); border-color: rgba(239,68,68,0.4); }
+.btn {
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.btn:hover:not(:disabled) { background: #222735; border-color: #333a4a; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #111; font-weight: 600; }
+.btn.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn.danger { border-color: rgba(239,68,68,0.4); color: var(--red); }
+.btn.danger:hover:not(:disabled) { background: rgba(239,68,68,0.1); }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+.card h2 { margin: 0 0 4px; font-size: 15px; }
+.card .card-sub { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.row.full { grid-template-columns: 1fr; }
+.field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.field input, .field textarea, .field select {
+  width: 100%;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+.field textarea { min-height: 80px; resize: vertical; }
+.field .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.action { display: flex; gap: 8px; margin-top: 4px; }
+.section { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
+.section-title { font-size: 13px; font-weight: 600; color: var(--text); margin: 0 0 12px; }
+.state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
+.state-item { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 13px; }
+.state-item .k { color: var(--muted); }
+.state-item .v { font-family: ui-monospace, "SF Mono", Menlo, monospace; word-break: break-all; text-align: right; }
+.state-item .v.ok { color: var(--green); }
+.state-item .v.no { color: var(--red); }
+.banner { background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.4); color: var(--yellow); padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 13px; }
+.banner.err { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.4); color: var(--red); }
+.hidden { display: none; }
+code { background: var(--panel-2); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+footer { margin-top: 32px; color: var(--muted); font-size: 12px; }
+footer p { margin: 4px 0; }
+.log { max-height: 300px; overflow-y: auto; }
+.log-empty { color: var(--muted); font-size: 13px; text-align: center; padding: 12px 0; }
+.log-entry { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.log-entry:last-child { border-bottom: none; }
+.log-entry .lh { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.log-entry .lt { color: var(--muted); }
+.log-entry .ls.pending { color: var(--yellow); }
+.log-entry .ls.ok { color: var(--green); }
+.log-entry .ls.err { color: var(--red); }
+.log-entry .lb { font-family: ui-monospace, "SF Mono", Menlo, monospace; word-break: break-all; }
+.log-entry a { color: var(--accent); text-decoration: none; }
+.log-entry a:hover { text-decoration: underline; }
+@media (max-width: 640px) {
+  .row { grid-template-columns: 1fr; }
+  .state-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>WoofSwap 管理后台</h1>
+      <p class="sub">Robinhood 主网 · 链 ID 4663</p>
+    </div>
+    <div class="wallet">
+      <span id="netBadge" class="badge">未连接钱包</span>
+      <button id="btnConnect" class="btn primary">连接钱包</button>
+    </div>
+  </header>
+
+  <div id="notOwnerBanner" class="banner hidden"></div>
+
+  <div class="card">
+    <h2>当前状态</h2>
+    <p class="card-sub">实时读取自 Robinhood 主网。<button id="btnRefresh" class="btn" style="padding:4px 10px;font-size:12px;">刷新</button></p>
+    <div class="state-grid">
+      <div class="state-item"><span class="k">发币工厂 管理员</span><span id="s-fowner" class="v">—</span></div>
+      <div class="state-item"><span class="k">手续费分配器 管理员</span><span id="s-downer" class="v">—</span></div>
+      <div class="state-item"><span class="k">全网发币开关</span><span id="s-enabled" class="v">—</span></div>
+      <div class="state-item"><span class="k">默认销毁比例</span><span id="s-burn" class="v">—</span></div>
+      <div class="state-item"><span class="k">平台收款地址</span><span id="s-plat" class="v">—</span></div>
+      <div class="state-item"><span class="k">锁仓合约 收费授权</span><span id="s-auth" class="v">—</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>发币工厂 管理</h2>
+    <p class="card-sub">合约地址：<code>0xBf8Ce8fFeCa0a280309957ff64Bacf99c96C2690</code></p>
+
+    <div class="section-title">全网发币开关</div>
+    <div class="row">
+      <div class="field">
+        <label>是否允许任何人发币</label>
+        <select id="in-enabled">
+          <option value="false">关闭（只有白名单地址才能发币）</option>
+          <option value="true">打开（任何人都能来发币）</option>
+        </select>
+        <div class="hint">关闭状态下，只有加进白名单的地址能发币；打开后所有人都能发。</div>
+      </div>
+      <div class="field" style="align-self:end;">
+        <div class="action"><button id="btn-enabled" class="btn primary owner-only" disabled>保存开关</button></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">发币白名单</div>
+      <div class="row">
+        <div class="field">
+          <label>钱包地址</label>
+          <input id="in-wl-addr" placeholder="0x..." />
+        </div>
+        <div class="field">
+          <label>操作</label>
+          <select id="in-wl-flag">
+            <option value="true">加入白名单</option>
+            <option value="false">移出白名单</option>
+          </select>
+        </div>
+      </div>
+      <div class="action">
+        <button id="btn-wl-check" class="btn">查询这个地址在不在白名单</button>
+        <button id="btn-wl" class="btn primary owner-only" disabled>保存</button>
+      </div>
+      <div class="field" style="margin-top:12px;">
+        <label>批量操作（一行一个地址）</label>
+        <textarea id="in-wl-batch" placeholder="0x...
+0x...
+0x..."></textarea>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>批量操作</label>
+          <select id="in-wl-batch-flag">
+            <option value="true">全部加入白名单</option>
+            <option value="false">全部移出白名单</option>
+          </select>
+        </div>
+        <div class="field" style="align-self:end;">
+          <div class="action"><button id="btn-wl-batch" class="btn primary owner-only" disabled>批量保存</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">销毁比例（只影响以后发的新币，已经发的币按照发币那一刻的比例走）</div>
+      <div class="row">
+        <div class="field">
+          <label>新的销毁比例（0 到 10000，10000 就是 100%）</label>
+          <input id="in-burn" type="number" min="0" max="10000" placeholder="例如：10000 表示 100% 销毁" />
+          <div class="hint">代币交易产生的手续费里，属于项目代币的那部分有多少比例被销毁，剩下的归平台。SHIB 那部分永远 100% 归平台，不销毁。</div>
+        </div>
+        <div class="field" style="align-self:end;">
+          <div class="action"><button id="btn-burn" class="btn primary owner-only" disabled>保存销毁比例</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">取回被打错的币（应急用）</div>
+      <div class="row">
+        <div class="field">
+          <label>被打错的币的合约地址</label>
+          <input id="in-rescue-token" placeholder="0x..." />
+        </div>
+        <div class="field">
+          <label>收币的钱包地址</label>
+          <input id="in-rescue-to" placeholder="0x..." />
+        </div>
+      </div>
+      <div class="hint" style="margin-bottom:8px;">如果有人不小心把币直接打到了工厂合约里，管理员可以用这个功能把币全部转到指定地址。</div>
+      <div class="action"><button id="btn-rescue" class="btn owner-only" disabled>取回全部</button></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">转让管理员权限</div>
+      <div class="row">
+        <div class="field">
+          <label>新管理员的钱包地址</label>
+          <input id="in-fowner" placeholder="0x..." />
+          <div class="hint">危险操作：转让后你就没有任何管理权限了，除非新管理员主动转回来。</div>
+        </div>
+        <div class="field" style="align-self:end;">
+          <div class="action"><button id="btn-fowner" class="btn danger owner-only" disabled>转让 发币工厂 管理员</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>手续费分配器 管理</h2>
+    <p class="card-sub">合约地址：<code>0xAEa15Fca1a14ab8e0dCBc03d657fe522bFAe1cea</code></p>
+
+    <div class="section-title">平台收款地址</div>
+    <div class="row">
+      <div class="field">
+        <label>新的平台收款地址</label>
+        <input id="in-plat" placeholder="0x..." />
+        <div class="hint">所有 SHIB 手续费 100% 打到这里；项目代币手续费里没销毁的那部分也打到这里。</div>
+      </div>
+      <div class="field" style="align-self:end;">
+        <div class="action"><button id="btn-plat" class="btn primary owner-only" disabled>保存平台收款地址</button></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">授权收费合约（一般不用动）</div>
+      <div class="row">
+        <div class="field">
+          <label>合约地址</label>
+          <input id="in-auth-addr" placeholder="0x..." />
+          <div class="hint">锁仓合约已经授权好了。除非你以后再部署新的收费合约，否则不用改这里。</div>
+        </div>
+        <div class="field">
+          <label>操作</label>
+          <select id="in-auth-flag">
+            <option value="true">授权</option>
+            <option value="false">取消授权</option>
+          </select>
+        </div>
+      </div>
+      <div class="action">
+        <button id="btn-auth-check" class="btn">查询这个合约有没有授权</button>
+        <button id="btn-auth" class="btn primary owner-only" disabled>保存</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">转让管理员权限</div>
+      <div class="row">
+        <div class="field">
+          <label>新管理员的钱包地址</label>
+          <input id="in-downer" placeholder="0x..." />
+          <div class="hint">危险操作：转让后你就没有任何管理权限了。</div>
+        </div>
+        <div class="field" style="align-self:end;">
+          <div class="action"><button id="btn-downer" class="btn danger owner-only" disabled>转让 手续费分配器 管理员</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>常用查询和操作</h2>
+    <p class="card-sub">这些功能任何人都能用，不需要管理员权限。</p>
+
+    <div class="section-title">领取手续费</div>
+    <div class="row">
+      <div class="field">
+        <label>LP 编号</label>
+        <input id="in-collect" type="number" placeholder="例如：12" />
+        <div class="hint">任何人都可以点，把这个池子里累积的交易手续费领出来，自动按销毁比例分给销毁地址和平台。</div>
+      </div>
+      <div class="field" style="align-self:end;">
+        <div class="action"><button id="btn-collect" class="btn primary" disabled>领取手续费</button></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">查询某个币的发行信息</div>
+      <div class="row">
+        <div class="field">
+          <label>代币合约地址</label>
+          <input id="in-lookup" placeholder="0x..." />
+        </div>
+        <div class="field" style="align-self:end;">
+          <div class="action"><button id="btn-lookup" class="btn">查询</button></div>
+        </div>
+      </div>
+      <div id="lookup-out" class="state-grid hidden"></div>
+    </div>
+  </div>
+
+  <div id="txLog" class="card">
+    <h2>操作记录</h2>
+    <div id="logBody" class="log"><div class="log-empty">还没有操作记录。</div></div>
+  </div>
+
+  <footer>
+    <p>发币工厂：<code>0xBf8Ce8fFeCa0a280309957ff64Bacf99c96C2690</code></p>
+    <p>手续费分配器：<code>0xAEa15Fca1a14ab8e0dCBc03d657fe522bFAe1cea</code></p>
+    <p>锁仓合约：<code>0xebB6e60E8329eca2e1C0223dfd85cb31d4Df3d64</code></p>
+    <p>建池合约：<code>0xE8DCF8898D621C7F40e182eE5Ce9C8715C4F7894</code></p>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script>
+const CHAIN_ID = 4663;
+const CHAIN_ID_HEX = "0x" + CHAIN_ID.toString(16);
+const RPC = "https://rpc.mainnet.chain.robinhood.com";
+const EXPLORER = "https://robinhoodchain.blockscout.com";
+
+const FACTORY = "0xBf8Ce8fFeCa0a280309957ff64Bacf99c96C2690";
+const FEE_DIST = "0xAEa15Fca1a14ab8e0dCBc03d657fe522bFAe1cea";
+const LOCKER = "0xebB6e60E8329eca2e1C0223dfd85cb31d4Df3d64";
+
+const FACTORY_ABI = [
+  "function owner() view returns (address)",
+  "function launchEnabled() view returns (bool)",
+  "function launchWhitelist(address) view returns (bool)",
+  "function currentBurnBps() view returns (uint16)",
+  "function launchIdByToken(address) view returns (uint256)",
+  "function launchBurnBps(uint256) view returns (uint16)",
+  "function launchTokenId(uint256) view returns (uint256)",
+  "function launchPool(uint256) view returns (address)",
+  "function setLaunchEnabled(bool enabled)",
+  "function setLaunchWhitelist(address account, bool whitelisted)",
+  "function setLaunchWhitelistBatch(address[] accounts, bool whitelisted)",
+  "function setBurnBps(uint16 newBurnBps)",
+  "function withdrawAllToken(address token, address to)",
+  "function transferOwnership(address newOwner)"
+];
+
+const FEE_ABI = [
+  "function owner() view returns (address)",
+  "function platformRecipient() view returns (address)",
+  "function authorizedCollectors(address) view returns (bool)",
+  "function setPlatformRecipient(address newPlatformRecipient)",
+  "function setAuthorizedCollector(address collector, bool authorized)",
+  "function transferOwnership(address newOwner)"
+];
+
+const LOCKER_ABI = [
+  "function collectFees(uint256 tokenId)"
+];
+
+let readProvider, provider, signer, account, factoryR, feeR, factoryW, feeW, lockerW;
+
+const $ = (id) => document.getElementById(id);
+
+function setBadge(text, cls) {
+  const b = $("netBadge");
+  b.textContent = text;
+  b.className = "badge " + (cls || "");
+}
+
+function short(a) { return a ? a.slice(0, 6) + "…" + a.slice(-4) : ""; }
+
+function logTx(label, hash, status, extra) {
+  const body = $("logBody");
+  const empty = body.querySelector(".log-empty");
+  if (empty) empty.remove();
+  const div = document.createElement("div");
+  div.className = "log-entry";
+  div.dataset.hash = hash || "";
+  const url = hash ? `${EXPLORER}/tx/${hash}` : "";
+  div.innerHTML = `
+    <div class="lh">
+      <div><strong>${label}</strong></div>
+      <div class="ls ${status}">${status}</div>
+    </div>
+    <div class="lb">${hash ? `<a href="${url}" target="_blank">${hash}</a>` : "(local)"}</div>
+    ${extra ? `<div class="lt">${extra}</div>` : ""}
+  `;
+  body.prepend(div);
+  return div;
+}
+
+function updateTxStatus(div, status, extra) {
+  const s = div.querySelector(".ls");
+  s.className = "ls " + status;
+  s.textContent = status;
+  if (extra) {
+    let t = div.querySelector(".lt");
+    if (!t) { t = document.createElement("div"); t.className = "lt"; div.appendChild(t); }
+    t.textContent = extra;
+  }
+}
+
+async function initReadOnly() {
+  readProvider = new ethers.JsonRpcProvider(RPC, CHAIN_ID);
+  factoryR = new ethers.Contract(FACTORY, FACTORY_ABI, readProvider);
+  feeR = new ethers.Contract(FEE_DIST, FEE_ABI, readProvider);
+  await refreshState();
+}
+
+async function refreshState() {
+  try {
+    const [fowner, downer, enabled, burn, plat, auth] = await Promise.all([
+      factoryR.owner(),
+      feeR.owner(),
+      factoryR.launchEnabled(),
+      factoryR.currentBurnBps(),
+      feeR.platformRecipient(),
+      feeR.authorizedCollectors(LOCKER),
+    ]);
+    $("s-fowner").textContent = fowner;
+    $("s-downer").textContent = downer;
+    $("s-enabled").textContent = enabled ? "已打开（任何人都能发币）" : "已关闭（只有白名单能发币）";
+    $("s-enabled").className = "v " + (enabled ? "ok" : "no");
+    $("s-burn").textContent = burn.toString() + "（" + (Number(burn) / 100).toFixed(2) + "%）";
+    $("s-plat").textContent = plat;
+    $("s-auth").textContent = auth ? "已授权" : "未授权";
+    $("s-auth").className = "v " + (auth ? "ok" : "no");
+    // Pre-fill selects with current
+    $("in-enabled").value = enabled ? "true" : "false";
+    return { fowner, downer, enabled, burn, plat, auth };
+  } catch (e) {
+    console.error(e);
+    return null;
+  }
+}
+
+async function ensureChain() {
+  if (!window.ethereum) throw new Error("检测不到钱包，请先安装 MetaMask 或类似的钱包插件。");
+  const currentHex = await window.ethereum.request({ method: "eth_chainId" });
+  if (currentHex.toLowerCase() !== CHAIN_ID_HEX.toLowerCase()) {
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: CHAIN_ID_HEX }],
+      });
+    } catch (e) {
+      if (e.code === 4902) {
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [{
+            chainId: CHAIN_ID_HEX,
+            chainName: "Robinhood Mainnet",
+            nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+            rpcUrls: [RPC],
+            blockExplorerUrls: [EXPLORER],
+          }],
+        });
+      } else {
+        throw e;
+      }
+    }
+  }
+}
+
+async function connect() {
+  try {
+    await ensureChain();
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send("eth_requestAccounts", []);
+    account = accounts[0];
+    signer = await provider.getSigner();
+    factoryW = new ethers.Contract(FACTORY, FACTORY_ABI, signer);
+    feeW = new ethers.Contract(FEE_DIST, FEE_ABI, signer);
+    lockerW = new ethers.Contract(LOCKER, LOCKER_ABI, signer);
+    setBadge(short(account), "ok");
+    $("btnConnect").textContent = "断开钱包";
+    await refreshState();
+    await checkOwnership();
+    $("btn-collect").disabled = false;
+
+    window.ethereum.on("accountsChanged", () => window.location.reload());
+    window.ethereum.on("chainChanged", () => window.location.reload());
+  } catch (e) {
+    alert("连接失败：" + (e.message || e));
+    console.error(e);
+  }
+}
+
+async function checkOwnership() {
+  const s = await refreshState();
+  if (!s || !account) return;
+  const isFactoryOwner = s.fowner.toLowerCase() === account.toLowerCase();
+  const isFeeOwner = s.downer.toLowerCase() === account.toLowerCase();
+  const banner = $("notOwnerBanner");
+  if (!isFactoryOwner && !isFeeOwner) {
+    banner.className = "banner err";
+    banner.textContent = `当前连接的钱包 ${short(account)} 不是任何一个合约的管理员，管理功能已锁定，只能查看和使用通用功能。`;
+    banner.classList.remove("hidden");
+  } else if (!isFactoryOwner || !isFeeOwner) {
+    banner.className = "banner";
+    banner.textContent = `当前钱包只是【${isFactoryOwner ? "发币工厂" : "手续费分配器"}】的管理员，另一个合约的管理功能不能用。`;
+    banner.classList.remove("hidden");
+  } else {
+    banner.classList.add("hidden");
+  }
+  document.querySelectorAll(".owner-only").forEach((b) => {
+    const factoryBtns = ["btn-enabled","btn-wl","btn-wl-batch","btn-burn","btn-rescue","btn-fowner"];
+    const feeBtns = ["btn-plat","btn-auth","btn-downer"];
+    if (factoryBtns.includes(b.id)) b.disabled = !isFactoryOwner;
+    else if (feeBtns.includes(b.id)) b.disabled = !isFeeOwner;
+  });
+}
+
+async function sendTx(label, promiseFn) {
+  let entry;
+  try {
+    entry = logTx(label, null, "pending", "等待钱包里确认...");
+    const tx = await promiseFn();
+    entry.dataset.hash = tx.hash;
+    entry.querySelector(".lb").innerHTML = `<a href="${EXPLORER}/tx/${tx.hash}" target="_blank">${tx.hash}</a>`;
+    updateTxStatus(entry, "pending", "已经发送到链上，等待打包...");
+    const rc = await tx.wait();
+    if (rc.status === 1) {
+      updateTxStatus(entry, "ok", `已成功（区块 ${rc.blockNumber}）`);
+      await refreshState();
+    } else {
+      updateTxStatus(entry, "err", "交易失败（被链拒绝）");
+    }
+  } catch (e) {
+    const msg = e.shortMessage || e.reason || e.message || String(e);
+    if (entry) updateTxStatus(entry, "err", msg);
+    else logTx(label, null, "err", msg);
+    console.error(e);
+  }
+}
+
+function requireAddr(v, name) {
+  if (!v || !ethers.isAddress(v)) throw new Error(`${name} 不是有效的钱包地址`);
+  return ethers.getAddress(v);
+}
+
+// Wire up buttons
+$("btnConnect").addEventListener("click", () => {
+  if (account) {
+    account = null; signer = null;
+    setBadge("未连接钱包");
+    $("btnConnect").textContent = "连接钱包";
+    $("notOwnerBanner").classList.add("hidden");
+    document.querySelectorAll(".owner-only").forEach(b => b.disabled = true);
+    $("btn-collect").disabled = true;
+  } else {
+    connect();
+  }
+});
+
+$("btnRefresh").addEventListener("click", async () => {
+  await refreshState();
+  if (account) await checkOwnership();
+});
+
+$("btn-enabled").addEventListener("click", () => {
+  const v = $("in-enabled").value === "true";
+  sendTx(`保存全网发币开关：${v ? "打开" : "关闭"}`, () => factoryW.setLaunchEnabled(v));
+});
+
+$("btn-wl-check").addEventListener("click", async () => {
+  try {
+    const a = requireAddr($("in-wl-addr").value.trim(), "钱包");
+    const r = await factoryR.launchWhitelist(a);
+    logTx(`查询白名单：${short(a)}`, null, r ? "ok" : "err", r ? "在白名单里" : "不在白名单里");
+  } catch (e) { alert(e.message); }
+});
+
+$("btn-wl").addEventListener("click", () => {
+  try {
+    const a = requireAddr($("in-wl-addr").value.trim(), "钱包");
+    const f = $("in-wl-flag").value === "true";
+    sendTx(`${f ? "加入" : "移出"}白名单：${short(a)}`, () => factoryW.setLaunchWhitelist(a, f));
+  } catch (e) { alert(e.message); }
+});
+
+$("btn-wl-batch").addEventListener("click", () => {
+  try {
+    const lines = $("in-wl-batch").value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    if (lines.length === 0) throw new Error("请先粘贴至少一个钱包地址");
+    const addrs = lines.map((l, i) => {
+      if (!ethers.isAddress(l)) throw new Error(`第 ${i + 1} 行不是有效的钱包地址：${l}`);
+      return ethers.getAddress(l);
+    });
+    const f = $("in-wl-batch-flag").value === "true";
+    sendTx(`批量${f ? "加入" : "移出"}白名单（${addrs.length} 个地址）`, () => factoryW.setLaunchWhitelistBatch(addrs, f));
+  } catch (e) { alert(e.message); }
+});
+
+$("btn-burn").addEventListener("click", () => {
+  const n = parseInt($("in-burn").value, 10);
+  if (isNaN(n) || n < 0 || n > 10000) return alert("销毁比例必须在 0 到 10000 之间");
+  sendTx(`保存销毁比例：${n}（${(n/100).toFixed(2)}%）`, () => factoryW.setBurnBps(n));
+});
+
+$("btn-rescue").addEventListener("click", () => {
+  try {
+    const t = requireAddr($("in-rescue-token").value.trim(), "币的合约");
+    const to = requireAddr($("in-rescue-to").value.trim(), "收币");
+    sendTx(`取回被打错的币 ${short(t)} → ${short(to)}`, () => factoryW.withdrawAllToken(t, to));
+  } catch (e) { alert(e.message); }
+});
+
+$("btn-fowner").addEventListener("click", () => {
+  try {
+    const a = requireAddr($("in-fowner").value.trim(), "新管理员");
+    if (!confirm(`确认把【发币工厂】的管理员权限转让给：\n${a}\n\n此操作不可撤销，你会立即失去所有管理权限！`)) return;
+    sendTx(`转让 发币工厂 管理员 → ${short(a)}`, () => factoryW.transferOwnership(a));
+  } catch (e) { alert(e.message); }
+});
+
+$("btn-plat").addEventListener("click", () => {
+  try {
+    const a = requireAddr($("in-plat").value.trim(), "平台收款");
+    sendTx(`保存平台收款地址 → ${short(a)}`, () => feeW.setPlatformRecipient(a));
+  } catch (e) { alert(e.message); }
+});
+
+$("btn-auth-check").addEventListener("click", async () => {
+  try {
+    const a = requireAddr($("in-auth-addr").value.trim(), "合约");
+    const r = await feeR.authorizedCollectors(a);
+    logTx(`查询授权：${short(a)}`, null, r ? "ok" : "err", r ? "已授权" : "未授权");
+  } catch (e) { alert(e.message); }
+});
+
+$("btn-auth").addEventListener("click", () => {
+  try {
+    const a = requireAddr($("in-auth-addr").value.trim(), "合约");
+    const f = $("in-auth-flag").value === "true";
+    sendTx(`${f ? "授权" : "取消授权"}收费合约：${short(a)}`, () => feeW.setAuthorizedCollector(a, f));
+  } catch (e) { alert(e.message); }
+});
+
+$("btn-downer").addEventListener("click", () => {
+  try {
+    const a = requireAddr($("in-downer").value.trim(), "新管理员");
+    if (!confirm(`确认把【手续费分配器】的管理员权限转让给：\n${a}\n\n此操作不可撤销，你会立即失去所有管理权限！`)) return;
+    sendTx(`转让 手续费分配器 管理员 → ${short(a)}`, () => feeW.transferOwnership(a));
+  } catch (e) { alert(e.message); }
+});
+
+$("btn-collect").addEventListener("click", () => {
+  const n = $("in-collect").value.trim();
+  if (!n || isNaN(Number(n))) return alert("请填写 LP 编号（整数）");
+  sendTx(`领取 LP #${n} 的手续费`, () => lockerW.collectFees(n));
+});
+
+$("btn-lookup").addEventListener("click", async () => {
+  try {
+    const a = requireAddr($("in-lookup").value.trim(), "代币");
+    const launchId = await factoryR.launchIdByToken(a);
+    if (launchId.toString() === "0") {
+      alert("查不到，这个币不是通过本工厂发行的");
+      return;
+    }
+    const [tokenId, pool, burn] = await Promise.all([
+      factoryR.launchTokenId(launchId),
+      factoryR.launchPool(launchId),
+      factoryR.launchBurnBps(launchId),
+    ]);
+    const out = $("lookup-out");
+    out.classList.remove("hidden");
+    out.innerHTML = `
+      <div class="state-item"><span class="k">发行编号</span><span class="v">${launchId}</span></div>
+      <div class="state-item"><span class="k">LP 编号</span><span class="v">${tokenId}</span></div>
+      <div class="state-item"><span class="k">交易池地址</span><span class="v">${pool}</span></div>
+      <div class="state-item"><span class="k">锁定的销毁比例</span><span class="v">${burn}（${(Number(burn)/100).toFixed(2)}%）</span></div>
+    `;
+  } catch (e) { alert(e.message); }
+});
+
+initReadOnly();
+</script>
+</body>
+</html>
