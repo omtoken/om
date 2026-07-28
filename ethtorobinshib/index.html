@@ -581,7 +581,7 @@ const OWNER_ADDR = '0xF94f02057E08dE2f2658f69467AdDA79Cb61389a';
 
 const OAPP_CFG_ABI = [
   'function owner() view returns (address)',
-  'function config(uint32,uint8,address) view returns (address,uint64,uint32,bytes)',
+  'function config(uint32,uint8,address) view returns (bytes)',
   'function setConfig(uint32, (address,uint32,bytes)[])',
   'function setEnforcedOptions(uint32,uint16,bytes)'
 ];
@@ -606,17 +606,16 @@ async function readChainConfig(chain, eid, isSend) {
   const endpointAddr = chain === ETH
     ? '0x1a44076050125825900e736c501f859c50fE728c'
     : '0x6F475642a6e85809B1c36Fa62763669b1b48DD5B';
-  const lib = isSend
-    ? (chain === ETH ? '0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1' : '0xC39161c743D0307EB9BCc9FEF03eeb9Dc4802de7')
-    : (chain === ETH ? '0xc02Ab410f0734EFa3F14628780e6e695156024C2' : '0xe1844c5D63a9543023008D332Bd3d2e6f1FE1043');
   const ep = new ethers.Contract(endpointAddr, OAPP_CFG_ABI, await readProvider(chain));
-  const result = await ep.config(eid, isSend ? 1 : 2, chain.adapter);
-  const encoded = Array.isArray(result) ? result[result.length - 1] : result;
-  const decoded = ethers.AbiCoder.defaultAbiCoder().decode([ULN_CONFIG_TYPE], encoded);
+  const configBytes = await ep.config(eid, isSend ? 1 : 2, chain.adapter);
+  if (!configBytes || configBytes === '0x') {
+    return { requiredDVNs: [], optionalDVNs: [], confirmations: 0 };
+  }
+  const decoded = ethers.AbiCoder.defaultAbiCoder().decode([ULN_CONFIG_TYPE], configBytes);
   return {
-    requiredDVNs: Array.from(decoded[0].requiredDVNs || decoded[0][0]),
-    optionalDVNs: Array.from(decoded[0].optionalDVNs || decoded[0][1]),
-    confirmations: Number(decoded[0].confirmations ?? decoded[0][2])
+    requiredDVNs: Array.from(decoded[0][0]),
+    optionalDVNs: Array.from(decoded[0][1]),
+    confirmations: Number(decoded[0][2])
   };
 }
 
@@ -685,7 +684,7 @@ $('updateConfBtn').onclick = async () => {
     );
     setOwnerStatus('<span class="spinner"></span>Sending setConfig tx…');
     const tx = await adapter.setConfig(state.to.eid, [
-      { lib: sendLib, configType: 2, config: newUln }
+      { lib: sendLib, configType: 1, config: newUln }
     ]);
     setOwnerStatus('Tx submitted: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a>');
     await tx.wait();
