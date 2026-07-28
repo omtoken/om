@@ -579,23 +579,25 @@ $('actionBtn').onclick = async () => {
 /* ── Owner Panel ─────────────────────────────────────────────── */
 const OWNER_ADDR = '0xF94f02057E08dE2f2658f69467AdDA79Cb61389a';
 
-/* Known config from deployment docs — used as display + fallback */
+/* Known config from LayerZero Scan (authoritative on-chain data) */
+/* All addresses lowercase to avoid ethers v6 checksum issues */
 const KNOWN_CONFIG = {
   /* ETH Adapter → RH OFT */
   '1-30416': {
     send: {
       confirmations: 15,
+      /* DVN addresses from layerzeroscan.com on-chain data */
       requiredDVNs: [
-        '0x589dEDbD617e0CBc477135ec4c2a0F0C64F6f1e0',
-        '0xa59BA433aC34D2927232918Ef5B2eaAfcF130BA5'
+        '0x589dedbd617e0cbcb916a9223f4d1300c294236b',
+        '0xa59ba433ac34d2927232918ef5b2eaafcf130ba5'
       ],
       optionalDVNs: []
     },
     recv: {
       confirmations: 20,
       requiredDVNs: [
-        '0x589dEDbD617e0CBc477135ec4c2a0F0C64F6f1e0',
-        '0xa59BA433aC34D2927232918Ef5B2eaAfcF130BA5'
+        '0x589dedbd617e0cbcb916a9223f4d1300c294236b',
+        '0xa59ba433ac34d2927232918ef5b2eaafcf130ba5'
       ],
       optionalDVNs: []
     }
@@ -605,16 +607,16 @@ const KNOWN_CONFIG = {
     send: {
       confirmations: 20,
       requiredDVNs: [
-        '0xd01Ae6905d48315F7BE10c7330Aecf8360EF5b12',
-        '0x0fFe02Df012299A370d5DD69298A5826EACAFDF8'
+        '0x0ffe02df012299a370d5dd69298a5826eacafdf8',
+        '0xd01ae6905d48315f7be10c7330aecf8360ef5b12'
       ],
       optionalDVNs: []
     },
     recv: {
       confirmations: 15,
       requiredDVNs: [
-        '0xd01Ae6905d48315F7BE10c7330Aecf8360EF5b12',
-        '0x0fFe02Df012299A370d5DD69298A5826EACAFDF8'
+        '0x0ffe02df012299a370d5dd69298a5826eacafdf8',
+        '0xd01ae6905d48315f7be10c7330aecf8360ef5b12'
       ],
       optionalDVNs: []
     }
@@ -622,8 +624,8 @@ const KNOWN_CONFIG = {
 };
 
 const SEND_LIB = {
-  1: '0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1',
-  4663: '0xC39161c743D0307EB9BCc9FEF03eeb9Dc4802de7'
+  1: '0xbb2ea70c9e858123480642cf96acbcce1372dce1',
+  4663: '0xc39161c743d0307eb9bcc9fef03eeb9dc4802de7'
 };
 const ULN_CONFIG_TYPE = 'tuple(address[] requiredDVNs, address[] optionalDVNs, uint16 confirmations)';
 const OAPP_SET_ABI = [
