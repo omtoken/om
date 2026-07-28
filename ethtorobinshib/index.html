@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SHIB Bridge · Ethereum ↔ Robinhood Chain</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #131824;
+    --panel-2: #1a2030;
+    --border: #262d3d;
+    --text: #e6e9f2;
+    --muted: #8a93a8;
+    --accent: #ffa409;
+    --accent-2: #ff6b00;
+    --ok: #4ade80;
+    --err: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: radial-gradient(1200px 800px at 20% -10%, #1c1030 0%, transparent 60%),
+                radial-gradient(900px 700px at 100% 100%, #0a1a2e 0%, transparent 55%),
+                var(--bg);
+    color: var(--text);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  header {
+    width: 100%; max-width: 960px; padding: 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 20px; }
+  .brand .logo {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 900; color: #000;
+  }
+  .btn {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #000; border: none; border-radius: 10px;
+    padding: 10px 16px; font-weight: 600; cursor: pointer;
+    font-size: 14px; transition: transform .1s, filter .1s;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.4); }
+  .btn-ghost {
+    background: transparent; color: var(--text);
+    border: 1px solid var(--border);
+  }
+  main {
+    width: 100%; max-width: 520px; padding: 0 20px 40px;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 20px; padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .row {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+  }
+  .chain-box {
+    flex: 1; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px;
+  }
+  .chain-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .chain-name { font-weight: 700; margin-top: 4px; font-size: 15px; }
+  .chain-eid { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .swap-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .2s;
+  }
+  .swap-btn:hover { transform: rotate(180deg); background: var(--panel); }
+  .field {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px; margin-bottom: 12px;
+  }
+  .field-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; display: flex; justify-content: space-between; }
+  .field input {
+    width: 100%; background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 20px; font-weight: 600;
+    font-family: inherit;
+  }
+  .field input.small { font-size: 14px; font-weight: 400; }
+  .info {
+    background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px; font-size: 13px;
+    color: var(--muted); margin-bottom: 12px;
+  }
+  .info .kv { display: flex; justify-content: space-between; padding: 4px 0; }
+  .info .kv b { color: var(--text); font-weight: 500; }
+  .btn-primary {
+    width: 100%; padding: 14px; font-size: 15px; border-radius: 12px;
+    margin-top: 8px;
+  }
+  .status {
+    margin-top: 14px; padding: 12px; border-radius: 10px;
+    font-size: 13px; word-break: break-all;
+    background: var(--panel-2); border: 1px solid var(--border);
+    display: none;
+  }
+  .status.show { display: block; }
+  .status.ok { border-color: rgba(74, 222, 128, 0.4); color: var(--ok); }
+  .status.err { border-color: rgba(239, 68, 68, 0.4); color: var(--err); }
+  .status a { color: var(--accent); }
+  .footer {
+    margin-top: 24px; text-align: center; color: var(--muted); font-size: 12px;
+  }
+  .footer a { color: var(--muted); }
+  .disclaimer {
+    margin-top: 12px; padding: 10px; font-size: 12px;
+    border-radius: 8px; background: rgba(255, 164, 9, 0.08);
+    border: 1px solid rgba(255, 164, 9, 0.3); color: #ffd58a;
+  }
+  .badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 4px;
+    background: var(--border); color: var(--muted);
+    margin-left: 6px; text-transform: uppercase;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid rgba(255,255,255,0.2); border-top-color: var(--text);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    margin-right: 6px; vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">S</div>
+    <div>SHIB Bridge</div>
+  </div>
+  <button id="connectBtn" class="btn">Connect Wallet</button>
+</header>
+
+<main>
+  <div class="card">
+    <h1>Cross-chain SHIB</h1>
+    <div class="sub">Ethereum ↔ Robinhood Chain · powered by LayerZero V2</div>
+
+    <div class="row">
+      <div class="chain-box">
+        <div class="chain-label">From</div>
+        <div class="chain-name" id="fromName">Ethereum</div>
+        <div class="chain-eid" id="fromEid">EID 30101 · Chain 1</div>
+      </div>
+      <button class="swap-btn" id="swapBtn" title="Swap direction">⇅</button>
+      <div class="chain-box">
+        <div class="chain-label">To</div>
+        <div class="chain-name" id="toName">Robinhood Chain</div>
+        <div class="chain-eid" id="toEid">EID 30416 · Chain 4663</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">
+        <span>Amount (SHIB)</span>
+        <span id="balanceLabel">Balance: —</span>
+      </div>
+      <input id="amountInput" type="text" placeholder="0.0" inputmode="decimal" />
+    </div>
+
+    <div class="field">
+      <div class="field-label"><span>Recipient</span><span class="badge">on destination</span></div>
+      <input id="recipientInput" class="small" type="text" placeholder="0x…" />
+    </div>
+
+    <div class="info">
+      <div class="kv"><span>Native fee</span><b id="feeLabel">—</b></div>
+      <div class="kv"><span>LayerZero gas</span><b>200,000 (enforced)</b></div>
+      <div class="kv"><span>You will receive</span><b id="receiveLabel">—</b></div>
+    </div>
+
+    <button class="btn btn-primary" id="actionBtn" disabled>Connect wallet first</button>
+
+    <div id="status" class="status"></div>
+
+    <div class="disclaimer">
+      ⚠ Unofficial wrapped SHIB on Robinhood Chain. Not endorsed by the Shiba Inu core team.
+      Verify contract addresses before use.
+    </div>
+  </div>
+
+  <div class="footer">
+    ETH Adapter: <a target="_blank" href="https://etherscan.io/address/0x3ad552cecc1d93db32292adae8bf9f008f8c101f">0x3ad5…101f</a>
+    · RH OFT: <a target="_blank" href="https://robinhoodchain.blockscout.com/address/0x788121cc5ff2fba0d0d3c63b3dd0d21e6abc0951">0x7881…0951</a>
+    <br />Track messages on <a target="_blank" href="https://layerzeroscan.com">layerzeroscan.com</a>
+  </div>
+</main>
+
+<script>
+/* Chain / contract config */
+const ETH = {
+  name: 'Ethereum',
+  chainId: 1,
+  chainIdHex: '0x1',
+  eid: 30101,
+  rpc: 'https://cloudflare-eth.com',
+  explorer: 'https://etherscan.io',
+  nativeSymbol: 'ETH',
+  adapter: '0x3ad552cecc1d93db32292adae8bf9f008f8c101f',
+  shib: '0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE',
+  isAdapter: true // requires approve on inner token
+};
+const RH = {
+  name: 'Robinhood Chain',
+  chainId: 4663,
+  chainIdHex: '0x1237',
+  eid: 30416,
+  rpc: 'https://rpc.mainnet.chain.robinhood.com',
+  explorer: 'https://robinhoodchain.blockscout.com',
+  nativeSymbol: 'RBH',
+  adapter: '0x788121cc5ff2fba0d0d3c63b3dd0d21e6abc0951',
+  shib: '0x788121cc5ff2fba0d0d3c63b3dd0d21e6abc0951', // OFT is its own token
+  isAdapter: false
+};
+
+/* ABIs */
+const ERC20_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function decimals() view returns (uint8)',
+  'function allowance(address,address) view returns (uint256)',
+  'function approve(address,uint256) returns (bool)'
+];
+const OFT_ABI = [
+  'function quoteSend((uint32 dstEid,bytes32 to,uint256 amountLD,uint256 minAmountLD,bytes extraOptions,bytes composeMsg,bytes oftCmd) sendParam, bool payInLzToken) view returns ((uint256 nativeFee,uint256 lzTokenFee))',
+  'function send((uint32 dstEid,bytes32 to,uint256 amountLD,uint256 minAmountLD,bytes extraOptions,bytes composeMsg,bytes oftCmd) sendParam, (uint256 nativeFee,uint256 lzTokenFee) fee, address refundAddress) payable returns ((bytes32 guid,uint64 nonce,(uint256 nativeFee,uint256 lzTokenFee) fee), (uint256 amountSentLD,uint256 amountReceivedLD))'
+];
+
+let state = {
+  provider: null,   // ethers BrowserProvider
+  signer: null,
+  account: null,
+  from: ETH,
+  to: RH,
+  quote: null,
+  amountWei: 0n,
+  needsApprove: false,
+  currentAllowance: 0n,
+  balance: 0n,
+};
+
+const $ = id => document.getElementById(id);
+
+function setStatus(msg, kind) {
+  const el = $('status');
+  el.className = 'status show' + (kind ? ' ' + kind : '');
+  el.innerHTML = msg;
+}
+function clearStatus() { $('status').className = 'status'; }
+
+function updateChainLabels() {
+  $('fromName').textContent = state.from.name;
+  $('fromEid').textContent = `EID ${state.from.eid} · Chain ${state.from.chainId}`;
+  $('toName').textContent = state.to.name;
+  $('toEid').textContent = `EID ${state.to.eid} · Chain ${state.to.chainId}`;
+}
+
+$('swapBtn').onclick = async () => {
+  [state.from, state.to] = [state.to, state.from];
+  updateChainLabels();
+  clearStatus();
+  await refreshBalance();
+  await maybeQuote();
+};
+
+async function connect() {
+  if (!window.ethereum) {
+    setStatus('No wallet detected. Install MetaMask.', 'err');
+    return;
+  }
+  try {
+    state.provider = new ethers.BrowserProvider(window.ethereum);
+    const accs = await state.provider.send('eth_requestAccounts', []);
+    state.account = accs[0];
+    state.signer = await state.provider.getSigner();
+    $('connectBtn').textContent = state.account.slice(0, 6) + '…' + state.account.slice(-4);
+    $('recipientInput').value = state.account;
+    window.ethereum.on('accountsChanged', () => location.reload());
+    window.ethereum.on('chainChanged', () => location.reload());
+    await refreshBalance();
+    await maybeQuote();
+  } catch (e) {
+    setStatus('Connect failed: ' + (e.message || e), 'err');
+  }
+}
+$('connectBtn').onclick = connect;
+
+async function ensureChain(chain) {
+  const net = await state.provider.getNetwork();
+  if (Number(net.chainId) === chain.chainId) return;
+  try {
+    await window.ethereum.request({
+      method: 'wallet_switchEthereumChain',
+      params: [{ chainId: chain.chainIdHex }]
+    });
+  } catch (e) {
+    if (e.code === 4902 || (e.data && e.data.originalError && e.data.originalError.code === 4902)) {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [{
+          chainId: chain.chainIdHex,
+          chainName: chain.name,
+          nativeCurrency: { name: chain.nativeSymbol, symbol: chain.nativeSymbol, decimals: 18 },
+          rpcUrls: [chain.rpc],
+          blockExplorerUrls: [chain.explorer]
+        }]
+      });
+    } else {
+      throw e;
+    }
+  }
+  state.provider = new ethers.BrowserProvider(window.ethereum);
+  state.signer = await state.provider.getSigner();
+}
+
+/* Read-only providers so we can read balances even when wallet is on the other chain */
+function readProvider(chain) {
+  return new ethers.JsonRpcProvider(chain.rpc);
+}
+
+async function refreshBalance() {
+  if (!state.account) return;
+  try {
+    const p = readProvider(state.from);
+    const token = new ethers.Contract(state.from.shib, ERC20_ABI, p);
+    state.balance = await token.balanceOf(state.account);
+    $('balanceLabel').textContent = 'Balance: ' + ethers.formatUnits(state.balance, 18) + ' SHIB';
+  } catch (e) {
+    $('balanceLabel').textContent = 'Balance: n/a';
+  }
+}
+
+function toBytes32(addr) {
+  return '0x' + '00'.repeat(12) + addr.replace(/^0x/, '').toLowerCase();
+}
+
+function parseAmount() {
+  const s = $('amountInput').value.trim();
+  if (!s) return 0n;
+  try { return ethers.parseUnits(s, 18); } catch { return 0n; }
+}
+
+function buildSendParam(amount, recipient) {
+  return {
+    dstEid: state.to.eid,
+    to: toBytes32(recipient),
+    amountLD: amount,
+    minAmountLD: amount - (amount % (10n ** 12n)), // trim dust for min
+    extraOptions: '0x',
+    composeMsg: '0x',
+    oftCmd: '0x'
+  };
+}
+
+let quoteTimer = null;
+$('amountInput').addEventListener('input', () => {
+  clearTimeout(quoteTimer);
+  quoteTimer = setTimeout(maybeQuote, 400);
+});
+$('recipientInput').addEventListener('input', () => {
+  clearTimeout(quoteTimer);
+  quoteTimer = setTimeout(maybeQuote, 400);
+});
+
+async function maybeQuote() {
+  const amt = parseAmount();
+  const recip = $('recipientInput').value.trim();
+  state.amountWei = amt;
+  if (amt === 0n || !ethers.isAddress(recip)) {
+    $('feeLabel').textContent = '—';
+    $('receiveLabel').textContent = '—';
+    updateActionButton();
+    return;
+  }
+  try {
+    const p = readProvider(state.from);
+    const oft = new ethers.Contract(state.from.adapter, OFT_ABI, p);
+    const param = buildSendParam(amt, recip);
+    const fee = await oft.quoteSend(param, false);
+    state.quote = fee;
+    $('feeLabel').textContent = ethers.formatEther(fee.nativeFee) + ' ' + state.from.nativeSymbol;
+    const min = amt - (amt % (10n ** 12n));
+    $('receiveLabel').textContent = ethers.formatUnits(min, 18) + ' SHIB';
+
+    /* Check allowance if adapter side */
+    if (state.from.isAdapter && state.account) {
+      const shibC = new ethers.Contract(state.from.shib, ERC20_ABI, p);
+      state.currentAllowance = await shibC.allowance(state.account, state.from.adapter);
+      state.needsApprove = state.currentAllowance < amt;
+    } else {
+      state.needsApprove = false;
+    }
+    updateActionButton();
+  } catch (e) {
+    $('feeLabel').textContent = 'quote failed';
+    $('receiveLabel').textContent = '—';
+    state.quote = null;
+    updateActionButton();
+    console.error(e);
+  }
+}
+
+function updateActionButton() {
+  const btn = $('actionBtn');
+  if (!state.account) { btn.disabled = true; btn.textContent = 'Connect wallet first'; return; }
+  if (state.amountWei === 0n) { btn.disabled = true; btn.textContent = 'Enter amount'; return; }
+  if (state.amountWei > state.balance) { btn.disabled = true; btn.textContent = 'Insufficient SHIB'; return; }
+  if (!state.quote) { btn.disabled = true; btn.textContent = 'Waiting for quote…'; return; }
+  if (state.needsApprove) { btn.disabled = false; btn.textContent = 'Approve SHIB'; return; }
+  btn.disabled = false;
+  btn.textContent = 'Bridge to ' + state.to.name;
+}
+
+$('actionBtn').onclick = async () => {
+  if (!state.account) return;
+  const btn = $('actionBtn');
+  const origText = btn.textContent;
+  btn.disabled = true;
+  clearStatus();
+  try {
+    await ensureChain(state.from);
+    const signer = await state.provider.getSigner();
+
+    if (state.needsApprove) {
+      btn.innerHTML = '<span class="spinner"></span>Approving…';
+      const shibC = new ethers.Contract(state.from.shib, ERC20_ABI, signer);
+      const tx = await shibC.approve(state.from.adapter, ethers.MaxUint256);
+      setStatus('Approve tx submitted: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a>');
+      await tx.wait();
+      setStatus('Approved. Fetching quote…', 'ok');
+      await maybeQuote();
+      btn.disabled = false;
+      btn.textContent = 'Bridge to ' + state.to.name;
+      return;
+    }
+
+    /* Send */
+    btn.innerHTML = '<span class="spinner"></span>Sending…';
+    const recip = $('recipientInput').value.trim();
+    const param = buildSendParam(state.amountWei, recip);
+    const oft = new ethers.Contract(state.from.adapter, OFT_ABI, signer);
+    const tx = await oft.send(param, state.quote, state.account, { value: state.quote.nativeFee });
+    setStatus('Send tx submitted: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a><br />Track cross-chain progress on <a target="_blank" href="https://layerzeroscan.com/tx/' + tx.hash + '">layerzeroscan.com</a>');
+    await tx.wait();
+    setStatus('Sent on source chain. Wait ~1-3 minutes for delivery.<br />Source tx: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a><br />Track: <a target="_blank" href="https://layerzeroscan.com/tx/' + tx.hash + '">layerzeroscan.com</a>', 'ok');
+    await refreshBalance();
+    btn.disabled = false;
+    btn.textContent = origText;
+  } catch (e) {
+    console.error(e);
+    setStatus('Failed: ' + (e.shortMessage || e.message || e), 'err');
+    btn.disabled = false;
+    btn.textContent = origText;
+  }
+};
+
+updateChainLabels();
+</script>
+</body>
+</html>
