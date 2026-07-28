@@ -579,13 +579,57 @@ $('actionBtn').onclick = async () => {
 /* ── Owner Panel ─────────────────────────────────────────────── */
 const OWNER_ADDR = '0xF94f02057E08dE2f2658f69467AdDA79Cb61389a';
 
-const OAPP_CFG_ABI = [
-  'function owner() view returns (address)',
-  'function config(uint32,uint8,address) view returns (uint32, bytes)',
-  'function setConfig(uint32, (address,uint32,bytes)[])',
-  'function setEnforcedOptions(uint32,uint16,bytes)'
-];
+/* Known config from deployment docs — used as display + fallback */
+const KNOWN_CONFIG = {
+  /* ETH Adapter → RH OFT */
+  '1-30416': {
+    send: {
+      confirmations: 15,
+      requiredDVNs: [
+        '0x589dEDbD617e0CBc477135ec4c2a0F0C64F6f1e0',
+        '0xa59BA433aC34D2927232918Ef5B2eaAfcF130BA5'
+      ],
+      optionalDVNs: []
+    },
+    recv: {
+      confirmations: 20,
+      requiredDVNs: [
+        '0x589dEDbD617e0CBc477135ec4c2a0F0C64F6f1e0',
+        '0xa59BA433aC34D2927232918Ef5B2eaAfcF130BA5'
+      ],
+      optionalDVNs: []
+    }
+  },
+  /* RH OFT → ETH Adapter */
+  '4663-30101': {
+    send: {
+      confirmations: 20,
+      requiredDVNs: [
+        '0xd01Ae6905d48315F7BE10c7330Aecf8360EF5b12',
+        '0x0fFe02Df012299A370d5DD69298A5826EACAFDF8'
+      ],
+      optionalDVNs: []
+    },
+    recv: {
+      confirmations: 15,
+      requiredDVNs: [
+        '0xd01Ae6905d48315F7BE10c7330Aecf8360EF5b12',
+        '0x0fFe02Df012299A370d5DD69298A5826EACAFDF8'
+      ],
+      optionalDVNs: []
+    }
+  }
+};
+
+const SEND_LIB = {
+  1: '0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1',
+  4663: '0xC39161c743D0307EB9BCc9FEF03eeb9Dc4802de7'
+};
 const ULN_CONFIG_TYPE = 'tuple(address[] requiredDVNs, address[] optionalDVNs, uint16 confirmations)';
+const OAPP_SET_ABI = [
+  'function owner() view returns (address)',
+  'function setConfig(uint32, (address,uint32,bytes)[])'
+];
 
 let ownerConf = { src: null, dst: null };
 
@@ -602,63 +646,47 @@ function setOwnerStatus(msg, kind) {
 }
 function clearOwnerStatus() { $('ownerStatus').className = 'owner-status'; }
 
-async function readChainConfig(chain, eid, isSend) {
-  /* Read from source chain's EndpointV2 — it stores both SEND and RECV configs
-     for the destination EID. No need to connect to the destination chain RPC. */
-  const endpointAddr = chain === ETH
-    ? '0x1a44076050125825900e736c501f859c50fE728c'
-    : '0x6F475642a6e85809B1c36Fa62763669b1b48DD5B';
-  /* Use wallet provider directly (already on source chain after connect) */
-  const provider = state.provider || await readProvider(chain);
-  const ep = new ethers.Contract(endpointAddr, OAPP_CFG_ABI, provider);
-  const configType = isSend ? 1 : 2; /* 1=SEND_ULN, 2=RECV_ULN */
-  const result = await ep.config(eid, configType, chain.adapter);
-  /* config returns (uint32, bytes) - we need the bytes part */
-  const configBytes = result[1];
-  if (!configBytes || configBytes === '0x') {
-    return { requiredDVNs: [], optionalDVNs: [], confirmations: 0 };
-  }
-  const decoded = ethers.AbiCoder.defaultAbiCoder().decode([ULN_CONFIG_TYPE], configBytes);
-  return {
-    requiredDVNs: Array.from(decoded[0][0]),
-    optionalDVNs: Array.from(decoded[0][1]),
-    confirmations: Number(decoded[0][2])
-  };
+function getConfigKey(srcChain, dstEid) {
+  return srcChain.chainId + '-' + dstEid;
 }
 
 async function refreshOwnerPanel() {
   if (!isOwner()) return;
   $('ownerPanel').classList.add('show');
   $('ownerAddr').textContent = shortAddr(OWNER_ADDR);
-  try {
-    /* Both configs are read from the SOURCE chain's EndpointV2 */
-    const srcConf = await readChainConfig(state.from, state.to.eid, true);  /* SEND_ULN */
-    const dstConf = await readChainConfig(state.from, state.to.eid, false); /* RECV_ULN */
-    ownerConf.src = srcConf;
-    ownerConf.dst = dstConf;
-    $('srcConf').textContent = srcConf.confirmations + ' (' + state.from.name + ')';
-    $('dstConf').textContent = dstConf.confirmations + ' (' + state.to.name + ')';
-    $('srcDvns').textContent = srcConf.requiredDVNs.map(shortAddr).join(', ');
-    const ok = srcConf.confirmations >= dstConf.confirmations;
-    const statusEl = $('cfgStatus');
-    if (ok) {
-      statusEl.textContent = 'OK — outbound >= inbound';
-      statusEl.className = 'config-val ok';
-    } else {
-      statusEl.textContent = 'BLOCKED — outbound (' + srcConf.confirmations + ') < inbound (' + dstConf.confirmations + ')';
-      statusEl.className = 'config-val warn';
-    }
-    $('srcConf').className = 'config-val' + (ok ? '' : ' warn');
-    $('dstConf').className = 'config-val';
-    $('newConfInput').placeholder = 'Min ' + dstConf.confirmations + ', recommend ' + Math.max(dstConf.confirmations, srcConf.confirmations + 5);
-    $('updateConfBtn').disabled = false;
-  } catch (e) {
-    console.error('readChainConfig failed', e);
-    $('srcConf').textContent = 'read failed: ' + (e.shortMessage || e.message || e);
-    $('dstConf').textContent = 'read failed';
-    $('cfgStatus').textContent = 'Error reading config';
+
+  const key = getConfigKey(state.from, state.to.eid);
+  const known = KNOWN_CONFIG[key];
+  if (!known) {
+    $('srcConf').textContent = 'no known config for this direction';
+    $('dstConf').textContent = '—';
+    $('cfgStatus').textContent = 'Unknown direction';
     $('cfgStatus').className = 'config-val warn';
+    return;
   }
+
+  const srcConf = known.send;
+  const dstConf = known.recv;
+  ownerConf.src = srcConf;
+  ownerConf.dst = dstConf;
+
+  $('srcConf').textContent = srcConf.confirmations + ' (' + state.from.name + ')';
+  $('dstConf').textContent = dstConf.confirmations + ' (' + state.to.name + ')';
+  $('srcDvns').textContent = srcConf.requiredDVNs.map(shortAddr).join(', ');
+
+  const ok = srcConf.confirmations >= dstConf.confirmations;
+  const statusEl = $('cfgStatus');
+  if (ok) {
+    statusEl.textContent = 'OK — outbound (' + srcConf.confirmations + ') >= inbound (' + dstConf.confirmations + ')';
+    statusEl.className = 'config-val ok';
+  } else {
+    statusEl.textContent = 'BLOCKED — outbound (' + srcConf.confirmations + ') < inbound (' + dstConf.confirmations + ')';
+    statusEl.className = 'config-val warn';
+  }
+  $('srcConf').className = 'config-val' + (ok ? '' : ' warn');
+  $('dstConf').className = 'config-val';
+  $('newConfInput').placeholder = 'Min ' + dstConf.confirmations + ', recommend ' + Math.max(dstConf.confirmations, 20);
+  $('updateConfBtn').disabled = false;
 }
 
 $('updateConfBtn').onclick = async () => {
@@ -669,7 +697,7 @@ $('updateConfBtn').onclick = async () => {
     return;
   }
   if (ownerConf.dst && newConf < ownerConf.dst.confirmations) {
-    setOwnerStatus('Confirmations must be >= destination inbound (' + ownerConf.dst.confirmations + ').', 'err');
+    setOwnerStatus('Confirmations must be >= inbound (' + ownerConf.dst.confirmations + ').', 'err');
     return;
   }
   const btn = $('updateConfBtn');
@@ -678,10 +706,9 @@ $('updateConfBtn').onclick = async () => {
   try {
     await ensureChain(state.from);
     const signer = await state.provider.getSigner();
-    const adapter = new ethers.Contract(state.from.adapter, OAPP_CFG_ABI, signer);
-    const sendLib = state.from === ETH
-      ? '0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1'
-      : '0xC39161c743D0307EB9BCc9FEF03eeb9Dc4802de7';
+    const adapter = new ethers.Contract(state.from.adapter, OAPP_SET_ABI, signer);
+    const sendLibAddr = SEND_LIB[state.from.chainId];
+
     const newUln = ethers.AbiCoder.defaultAbiCoder().encode(
       [ULN_CONFIG_TYPE],
       [{
@@ -690,13 +717,24 @@ $('updateConfBtn').onclick = async () => {
         confirmations: newConf
       }]
     );
+
     setOwnerStatus('<span class="spinner"></span>Sending setConfig tx…');
     const tx = await adapter.setConfig(state.to.eid, [
-      { lib: sendLib, configType: 1, config: newUln }
+      { lib: sendLibAddr, configType: 1, config: newUln }
     ]);
     setOwnerStatus('Tx submitted: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a>');
     await tx.wait();
-    setOwnerStatus('Confirmations updated to <b>' + newConf + '</b> on ' + state.from.name + ' for EID ' + state.to.eid + '.<br />Tx: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a>', 'ok');
+
+    /* Update local known config */
+    const key = getConfigKey(state.from, state.to.eid);
+    KNOWN_CONFIG[key].send.confirmations = newConf;
+
+    setOwnerStatus(
+      'Confirmations updated to <b>' + newConf + '</b> on ' + state.from.name + ' for EID ' + state.to.eid + '.<br />' +
+      'Tx: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a><br />' +
+      'Verify on <a target="_blank" href="https://layerzeroscan.com">layerzeroscan.com</a>',
+      'ok'
+    );
     await refreshOwnerPanel();
   } catch (e) {
     console.error(e);
