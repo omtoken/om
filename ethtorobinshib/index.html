@@ -126,6 +126,53 @@
     background: var(--border); color: var(--muted);
     margin-left: 6px; text-transform: uppercase;
   }
+  .owner-panel {
+    margin-top: 16px; background: #1a1020; border: 1px solid #3d265a;
+    border-radius: 16px; padding: 18px; display: none;
+  }
+  .owner-panel.show { display: block; }
+  .owner-header {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 14px; color: #c084fc; margin-bottom: 12px;
+  }
+  .owner-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 4px;
+    background: rgba(192,132,252,0.15); color: #c084fc;
+    text-transform: uppercase; font-weight: 600;
+  }
+  .config-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; font-size: 13px; border-bottom: 1px solid #2d1f45;
+  }
+  .config-row:last-child { border-bottom: none; }
+  .config-val { font-weight: 600; color: var(--text); }
+  .config-val.warn { color: var(--err); }
+  .config-val.ok { color: var(--ok); }
+  .owner-input-row {
+    display: flex; gap: 8px; align-items: center; margin-top: 12px;
+  }
+  .owner-input-row input {
+    flex: 1; background: var(--panel-2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px; color: var(--text);
+    font-size: 14px; outline: none; font-family: inherit;
+  }
+  .owner-input-row input:focus { border-color: #c084fc; }
+  .btn-owner {
+    background: linear-gradient(135deg, #c084fc, #7c3aed);
+    color: #fff; border: none; border-radius: 8px;
+    padding: 8px 14px; font-weight: 600; cursor: pointer; font-size: 13px;
+    white-space: nowrap;
+  }
+  .btn-owner:disabled { opacity: .5; cursor: not-allowed; }
+  .owner-status {
+    margin-top: 10px; padding: 10px; border-radius: 8px; font-size: 12px;
+    background: var(--panel-2); border: 1px solid var(--border);
+    display: none; word-break: break-all;
+  }
+  .owner-status.show { display: block; }
+  .owner-status.ok { border-color: rgba(74,222,128,0.4); color: var(--ok); }
+  .owner-status.err { border-color: rgba(239,68,68,0.4); color: var(--err); }
+  .owner-status a { color: var(--accent); }
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
     display: inline-block; width: 12px; height: 12px;
@@ -190,6 +237,39 @@
       ⚠ Unofficial wrapped SHIB on Robinhood Chain. Not endorsed by the Shiba Inu core team.
       Verify contract addresses before use.
     </div>
+  </div>
+
+  <!-- Owner-only config panel (visible only to contract owner) -->
+  <div id="ownerPanel" class="owner-panel">
+    <div class="owner-header">
+      <span>⚙ Owner Config Panel</span>
+      <span class="owner-badge">Owner only</span>
+    </div>
+    <div class="config-row">
+      <span>Owner</span>
+      <span class="config-val" id="ownerAddr">—</span>
+    </div>
+    <div class="config-row">
+      <span>Source chain confirmations (outbound)</span>
+      <span class="config-val" id="srcConf">—</span>
+    </div>
+    <div class="config-row">
+      <span>Destination chain confirmations (inbound)</span>
+      <span class="config-val" id="dstConf">—</span>
+    </div>
+    <div class="config-row">
+      <span>Required DVNs (source)</span>
+      <span class="config-val" id="srcDvns">—</span>
+    </div>
+    <div class="config-row">
+      <span>Status</span>
+      <span class="config-val" id="cfgStatus">—</span>
+    </div>
+    <div class="owner-input-row">
+      <input id="newConfInput" type="number" min="1" placeholder="New confirmations value" />
+      <button id="updateConfBtn" class="btn-owner" disabled>Update</button>
+    </div>
+    <div id="ownerStatus" class="owner-status"></div>
   </div>
 
   <div class="footer">
@@ -280,6 +360,7 @@ $('swapBtn').onclick = async () => {
   clearStatus();
   await refreshBalance();
   await maybeQuote();
+  if (isOwner()) await refreshOwnerPanel();
 };
 
 async function connect() {
@@ -298,6 +379,7 @@ async function connect() {
     window.ethereum.on('chainChanged', () => location.reload());
     await refreshBalance();
     await maybeQuote();
+    if (isOwner()) await refreshOwnerPanel();
   } catch (e) {
     setStatus('Connect failed: ' + (e.message || e), 'err');
   }
@@ -492,6 +574,128 @@ $('actionBtn').onclick = async () => {
     btn.disabled = false;
     btn.textContent = origText;
   }
+};
+
+/* ── Owner Panel ─────────────────────────────────────────────── */
+const OWNER_ADDR = '0xF94f02057E08dE2f2658f69467AdDA79Cb61389a';
+
+const OAPP_CFG_ABI = [
+  'function owner() view returns (address)',
+  'function config(uint32,uint8,address) view returns (address,uint64,uint32,bytes)',
+  'function setConfig(uint32, (address,uint32,bytes)[])',
+  'function setEnforcedOptions(uint32,uint16,bytes)'
+];
+const ULN_CONFIG_TYPE = 'tuple(address[] requiredDVNs, address[] optionalDVNs, uint16 confirmations)';
+
+let ownerConf = { src: null, dst: null };
+
+function shortAddr(a) { return a.slice(0, 6) + '…' + a.slice(-4); }
+
+function isOwner() {
+  return state.account && state.account.toLowerCase() === OWNER_ADDR.toLowerCase();
+}
+
+function setOwnerStatus(msg, kind) {
+  const el = $('ownerStatus');
+  el.className = 'owner-status show' + (kind ? ' ' + kind : '');
+  el.innerHTML = msg;
+}
+function clearOwnerStatus() { $('ownerStatus').className = 'owner-status'; }
+
+async function readChainConfig(chain, eid, isSend) {
+  const endpointAddr = chain === ETH
+    ? '0x1a44076050125825900e736c501f859c50fE728c'
+    : '0x6F475642a6e85809B1c36Fa62763669b1b48DD5B';
+  const lib = isSend
+    ? (chain === ETH ? '0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1' : '0xC39161c743D0307EB9BCc9FEF03eeb9Dc4802de7')
+    : (chain === ETH ? '0xc02Ab410f0734EFa3F14628780e6e695156024C2' : '0xe1844c5D63a9543023008D332Bd3d2e6f1FE1043');
+  const ep = new ethers.Contract(endpointAddr, OAPP_CFG_ABI, await readProvider(chain));
+  const result = await ep.config(eid, isSend ? 1 : 2, chain.adapter);
+  const encoded = Array.isArray(result) ? result[result.length - 1] : result;
+  const decoded = ethers.AbiCoder.defaultAbiCoder().decode([ULN_CONFIG_TYPE], encoded);
+  return {
+    requiredDVNs: Array.from(decoded[0].requiredDVNs || decoded[0][0]),
+    optionalDVNs: Array.from(decoded[0].optionalDVNs || decoded[0][1]),
+    confirmations: Number(decoded[0].confirmations ?? decoded[0][2])
+  };
+}
+
+async function refreshOwnerPanel() {
+  if (!isOwner()) return;
+  $('ownerPanel').classList.add('show');
+  $('ownerAddr').textContent = shortAddr(OWNER_ADDR);
+  try {
+    const srcConf = await readChainConfig(state.from, state.to.eid, true);
+    const dstConf = await readChainConfig(state.to, state.from.eid, false);
+    ownerConf.src = srcConf;
+    ownerConf.dst = dstConf;
+    $('srcConf').textContent = srcConf.confirmations + ' (' + state.from.name + ')';
+    $('dstConf').textContent = dstConf.confirmations + ' (' + state.to.name + ')';
+    $('srcDvns').textContent = srcConf.requiredDVNs.map(shortAddr).join(', ');
+    const ok = srcConf.confirmations >= dstConf.confirmations;
+    const statusEl = $('cfgStatus');
+    if (ok) {
+      statusEl.textContent = 'OK — outbound >= inbound';
+      statusEl.className = 'config-val ok';
+    } else {
+      statusEl.textContent = 'BLOCKED — outbound (' + srcConf.confirmations + ') < inbound (' + dstConf.confirmations + ')';
+      statusEl.className = 'config-val warn';
+    }
+    $('srcConf').className = 'config-val' + (ok ? '' : ' warn');
+    $('dstConf').className = 'config-val';
+    $('newConfInput').placeholder = 'Min ' + dstConf.confirmations + ', recommend ' + Math.max(dstConf.confirmations, srcConf.confirmations + 5);
+    $('updateConfBtn').disabled = false;
+  } catch (e) {
+    console.error('readChainConfig failed', e);
+    $('srcConf').textContent = 'read failed';
+    $('dstConf').textContent = 'read failed';
+    $('cfgStatus').textContent = 'Error reading config';
+    $('cfgStatus').className = 'config-val warn';
+  }
+}
+
+$('updateConfBtn').onclick = async () => {
+  if (!isOwner()) return;
+  const newConf = parseInt($('newConfInput').value);
+  if (!newConf || newConf < 1) {
+    setOwnerStatus('Enter a valid confirmations number.', 'err');
+    return;
+  }
+  if (ownerConf.dst && newConf < ownerConf.dst.confirmations) {
+    setOwnerStatus('Confirmations must be >= destination inbound (' + ownerConf.dst.confirmations + ').', 'err');
+    return;
+  }
+  const btn = $('updateConfBtn');
+  btn.disabled = true;
+  clearOwnerStatus();
+  try {
+    await ensureChain(state.from);
+    const signer = await state.provider.getSigner();
+    const adapter = new ethers.Contract(state.from.adapter, OAPP_CFG_ABI, signer);
+    const sendLib = state.from === ETH
+      ? '0xbB2Ea70C9E858123480642Cf96acbcCE1372dCe1'
+      : '0xC39161c743D0307EB9BCc9FEF03eeb9Dc4802de7';
+    const newUln = ethers.AbiCoder.defaultAbiCoder().encode(
+      [ULN_CONFIG_TYPE],
+      [{
+        requiredDVNs: ownerConf.src.requiredDVNs,
+        optionalDVNs: ownerConf.src.optionalDVNs,
+        confirmations: newConf
+      }]
+    );
+    setOwnerStatus('<span class="spinner"></span>Sending setConfig tx…');
+    const tx = await adapter.setConfig(state.to.eid, [
+      { lib: sendLib, configType: 2, config: newUln }
+    ]);
+    setOwnerStatus('Tx submitted: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a>');
+    await tx.wait();
+    setOwnerStatus('Confirmations updated to <b>' + newConf + '</b> on ' + state.from.name + ' for EID ' + state.to.eid + '.<br />Tx: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a>', 'ok');
+    await refreshOwnerPanel();
+  } catch (e) {
+    console.error(e);
+    setOwnerStatus('Failed: ' + (e.shortMessage || e.message || e), 'err');
+  }
+  btn.disabled = false;
 };
 
 updateChainLabels();
