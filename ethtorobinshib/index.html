@@ -478,7 +478,8 @@ $('actionBtn').onclick = async () => {
     const recip = $('recipientInput').value.trim();
     const param = buildSendParam(state.amountWei, recip);
     const oft = new ethers.Contract(state.from.adapter, OFT_ABI, signer);
-    const tx = await oft.send(param, state.quote, state.account, { value: state.quote.nativeFee });
+    const feeObj = { nativeFee: state.quote.nativeFee, lzTokenFee: state.quote.lzTokenFee };
+    const tx = await oft.send(param, feeObj, state.account, { value: feeObj.nativeFee });
     setStatus('Send tx submitted: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a><br />Track cross-chain progress on <a target="_blank" href="https://layerzeroscan.com/tx/' + tx.hash + '">layerzeroscan.com</a>');
     await tx.wait();
     setStatus('Sent on source chain. Wait ~1-3 minutes for delivery.<br />Source tx: <a target="_blank" href="' + state.from.explorer + '/tx/' + tx.hash + '">' + tx.hash + '</a><br />Track: <a target="_blank" href="https://layerzeroscan.com/tx/' + tx.hash + '">layerzeroscan.com</a>', 'ok');
@@ -495,5 +496,6 @@ $('actionBtn').onclick = async () => {
 
 updateChainLabels();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1}' crossorigin="anonymous"></script>
 </body>
 </html>
