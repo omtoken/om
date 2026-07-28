@@ -206,7 +206,12 @@ const ETH = {
   chainId: 1,
   chainIdHex: '0x1',
   eid: 30101,
-  rpc: 'https://cloudflare-eth.com',
+  rpcs: [
+    'https://eth.llamarpc.com',
+    'https://cloudflare-eth.com',
+    'https://ethereum-rpc.publicnode.com',
+    'https://rpc.ankr.com/eth'
+  ],
   explorer: 'https://etherscan.io',
   nativeSymbol: 'ETH',
   adapter: '0x3ad552cecc1d93db32292adae8bf9f008f8c101f',
@@ -218,7 +223,9 @@ const RH = {
   chainId: 4663,
   chainIdHex: '0x1237',
   eid: 30416,
-  rpc: 'https://rpc.mainnet.chain.robinhood.com',
+  rpcs: [
+    'https://rpc.mainnet.chain.robinhood.com'
+  ],
   explorer: 'https://robinhoodchain.blockscout.com',
   nativeSymbol: 'RBH',
   adapter: '0x788121cc5ff2fba0d0d3c63b3dd0d21e6abc0951',
@@ -313,7 +320,7 @@ async function ensureChain(chain) {
           chainId: chain.chainIdHex,
           chainName: chain.name,
           nativeCurrency: { name: chain.nativeSymbol, symbol: chain.nativeSymbol, decimals: 18 },
-          rpcUrls: [chain.rpc],
+          rpcUrls: chain.rpcs,
           blockExplorerUrls: [chain.explorer]
         }]
       });
@@ -325,20 +332,40 @@ async function ensureChain(chain) {
   state.signer = await state.provider.getSigner();
 }
 
-/* Read-only providers so we can read balances even when wallet is on the other chain */
-function readProvider(chain) {
-  return new ethers.JsonRpcProvider(chain.rpc);
+/* Read providers with CORS-safe fallback.
+   Priority: wallet provider (if on same chain) -> try each public JSON-RPC in order. */
+async function readProvider(chain) {
+  if (state.provider) {
+    try {
+      const net = await state.provider.getNetwork();
+      if (Number(net.chainId) === chain.chainId) return state.provider;
+    } catch {}
+  }
+  let lastErr;
+  for (const url of chain.rpcs) {
+    try {
+      const p = new ethers.JsonRpcProvider(url, { chainId: chain.chainId, name: chain.name });
+      /* quick ping */
+      await p.getBlockNumber();
+      return p;
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr || new Error('no rpc reachable for ' + chain.name);
 }
 
 async function refreshBalance() {
   if (!state.account) return;
+  $('balanceLabel').textContent = 'Balance: loading…';
   try {
-    const p = readProvider(state.from);
+    const p = await readProvider(state.from);
     const token = new ethers.Contract(state.from.shib, ERC20_ABI, p);
     state.balance = await token.balanceOf(state.account);
     $('balanceLabel').textContent = 'Balance: ' + ethers.formatUnits(state.balance, 18) + ' SHIB';
   } catch (e) {
-    $('balanceLabel').textContent = 'Balance: n/a';
+    console.error('balance read failed', e);
+    state.balance = 0n;
+    const hint = (state.provider ? '' : ' — connect wallet first');
+    $('balanceLabel').textContent = 'Balance: n/a (switch to ' + state.from.name + hint + ')';
   }
 }
 
@@ -385,7 +412,7 @@ async function maybeQuote() {
     return;
   }
   try {
-    const p = readProvider(state.from);
+    const p = await readProvider(state.from);
     const oft = new ethers.Contract(state.from.adapter, OFT_ABI, p);
     const param = buildSendParam(amt, recip);
     const fee = await oft.quoteSend(param, false);
