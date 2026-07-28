@@ -581,7 +581,7 @@ const OWNER_ADDR = '0xF94f02057E08dE2f2658f69467AdDA79Cb61389a';
 
 const OAPP_CFG_ABI = [
   'function owner() view returns (address)',
-  'function config(uint32,uint8,address) view returns (bytes)',
+  'function config(uint32,uint8,address) view returns (uint32, bytes)',
   'function setConfig(uint32, (address,uint32,bytes)[])',
   'function setEnforcedOptions(uint32,uint16,bytes)'
 ];
@@ -612,7 +612,9 @@ async function readChainConfig(chain, eid, isSend) {
   const provider = state.provider || await readProvider(chain);
   const ep = new ethers.Contract(endpointAddr, OAPP_CFG_ABI, provider);
   const configType = isSend ? 1 : 2; /* 1=SEND_ULN, 2=RECV_ULN */
-  const configBytes = await ep.config(eid, configType, chain.adapter);
+  const result = await ep.config(eid, configType, chain.adapter);
+  /* config returns (uint32, bytes) - we need the bytes part */
+  const configBytes = result[1];
   if (!configBytes || configBytes === '0x') {
     return { requiredDVNs: [], optionalDVNs: [], confirmations: 0 };
   }
