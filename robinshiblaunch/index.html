@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WoofSwap · 罗宾柴犬发币</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#141820; --panel2:#1b2029; --line:#262d38;
+    --text:#e6ebf2; --sub:#8a94a3; --brand:#00c805; --brand2:#00e070;
+    --danger:#ff5b5b; --warn:#f0b90b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Segoe UI,Helvetica,Arial,sans-serif;}
+  .wrap{max-width:820px;margin:0 auto;padding:24px 16px 80px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:20px;letter-spacing:.5px}
+  .brand .dot{width:12px;height:12px;border-radius:50%;background:var(--brand);box-shadow:0 0 12px var(--brand)}
+  .btn{border:0;background:var(--brand);color:#001a04;font-weight:700;padding:10px 16px;border-radius:10px;cursor:pointer;transition:.15s}
+  .btn:hover{background:var(--brand2)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+  .btn.warn{background:var(--warn);color:#1a1300}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:16px}
+  .card h2{margin:0 0 6px 0;font-size:16px}
+  .card p.sub{margin:0 0 14px 0;color:var(--sub);font-size:13px;line-height:1.6}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:640px){.grid{grid-template-columns:1fr}}
+  label{display:block;font-size:13px;color:var(--sub);margin-bottom:6px}
+  input,textarea,select{
+    width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    padding:11px 12px;border-radius:10px;font-size:14px;outline:none;transition:.15s;
+    font-family:inherit;
+  }
+  input:focus,textarea:focus{border-color:var(--brand)}
+  .row-inline{display:flex;gap:8px;align-items:center}
+  .row-inline input{flex:1}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--panel2);color:var(--sub);font-size:12px;border:1px solid var(--line)}
+  .badge.ok{color:var(--brand);border-color:rgba(0,200,5,.4)}
+  .badge.warn{color:var(--warn);border-color:rgba(240,185,11,.4)}
+  .kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .kv:last-child{border-bottom:0}
+  .kv .k{color:var(--sub)}
+  .kv .v{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;word-break:break-all;text-align:right;max-width:60%}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  .log{background:#07090c;border:1px solid var(--line);border-radius:10px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;color:#b6c0cf;white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto}
+  .footer{color:var(--sub);font-size:12px;text-align:center;margin-top:20px;line-height:1.7}
+  .footer a{color:var(--sub);text-decoration:underline}
+  .hint{font-size:12px;color:var(--sub);margin-top:6px}
+  .divider{height:1px;background:var(--line);margin:14px 0}
+  .status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#777;margin-right:6px}
+  .status-dot.on{background:var(--brand);box-shadow:0 0 8px var(--brand)}
+  .tag{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 6px;font-size:12px;color:var(--sub);margin-left:6px}
+  .warning-banner{background:rgba(240,185,11,.08);border:1px solid rgba(240,185,11,.35);color:#f0d67a;padding:12px 14px;border-radius:12px;font-size:13px;line-height:1.7;margin-bottom:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand"><span class="dot"></span> WoofSwap · 罗宾柴犬发币</div>
+    <button class="btn" id="btnConnect">连接钱包</button>
+  </header>
+
+  <div class="warning-banner">
+    ⚠️ 风险提示：加密资产波动巨大且不可逆。本页面仅为与已部署合约交互的界面工具，代币的成败与创建者行为无关本页面。请自行评估风险，DYOR。
+  </div>
+
+  <div class="card">
+    <h2>网络与账户</h2>
+    <p class="sub">本工具仅在 Robinhood 主网（Chain ID 4663）上运行。连接钱包后如网络不对，可点击切换。</p>
+    <div class="kv"><span class="k">状态</span><span class="v"><span class="status-dot" id="dotConn"></span><span id="txtConn">未连接</span></span></div>
+    <div class="kv"><span class="k">钱包地址</span><span class="v mono" id="txtAddr">-</span></div>
+    <div class="kv"><span class="k">当前链</span><span class="v mono" id="txtChain">-</span></div>
+    <div class="kv"><span class="k">ETH 余额</span><span class="v mono" id="txtEth">-</span></div>
+    <div class="kv"><span class="k">SHIB 余额</span><span class="v mono" id="txtShib">-</span></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn ghost" id="btnSwitch">切换到 Robinhood 主网</button>
+      <button class="btn ghost" id="btnRefresh">刷新余额</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>发币 <span class="tag">createAndLaunch</span></h2>
+    <p class="sub">
+      规则（合约硬编码，不可改）：总供应 <b>10 亿</b> 枚，18 位小数。<br>
+      发币人拿 <b>1%（1,000 万）</b> — 直接进你的钱包（这就是 dev 份额）。<br>
+      剩下 <b>99%（9.9 亿）</b> 全部注入 Uniswap V3 池，LP NFT <b>永久锁死</b> 无法撤走。<br>
+      交易对为 你的代币 / SHIB。
+    </p>
+
+    <div class="grid">
+      <div>
+        <label>代币名称 <span class="badge">name</span></label>
+        <input id="fName" placeholder="例如：Robin Shiba" maxlength="64" />
+      </div>
+      <div>
+        <label>代币符号 <span class="badge">symbol</span></label>
+        <input id="fSymbol" placeholder="例如：RSHIB" maxlength="16" />
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <label>Salt（CREATE2 盐值，任意非零 32 字节；不填将随机生成）</label>
+      <div class="row-inline">
+        <input id="fSalt" placeholder="0x…（留空则自动生成）" class="mono" />
+        <button class="btn ghost" id="btnRandSalt">随机</button>
+      </div>
+      <div class="hint">salt 决定新代币的合约地址（CREATE2）。同一 (name, symbol, salt) 已被用过时会失败，换一个 salt 即可。</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <label>Dev 份额（发币人首笔买入，以 SHIB 计；填 0 表示不首买）</label>
+      <div class="row-inline">
+        <input id="fDevBuy" placeholder="0" class="mono" />
+        <button class="btn ghost" id="btnMaxShib">最大</button>
+      </div>
+      <div class="hint">发币人已默认拿 1%。此处的 dev buy 是发币成功后立即用你钱包里的 SHIB 通过 Uniswap V3 池买入新代币，买到的代币也进你的钱包。此为额外买入，不改变 1% 的初始份额。</div>
+    </div>
+
+    <div style="margin-top:12px">
+      <label>Dev 买入最少到手（minTokensOut，滑点保护；不 dev buy 时必须为 0）</label>
+      <input id="fMinOut" placeholder="0" class="mono" />
+      <div class="hint">若 dev 份额 &gt; 0，可填入你能接受的最少代币数量（18 位精度整数）作为滑点保护；不确定就填 0（无保护，最激进）。</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="btnPreview">预测代币地址</button>
+      <button class="btn warn" id="btnApprove">授权 SHIB</button>
+      <button class="btn" id="btnLaunch">🚀 一键发币</button>
+    </div>
+
+    <div class="hint" id="predictHint" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h2>发币状态检查</h2>
+    <div class="kv"><span class="k">launchEnabled（公开发币开关）</span><span class="v" id="txtLaunchEnabled">-</span></div>
+    <div class="kv"><span class="k">当前地址是否白名单</span><span class="v" id="txtWhitelist">-</span></div>
+    <div class="kv"><span class="k">当前 burnBps（新币锁定值）</span><span class="v" id="txtBurnBps">-</span></div>
+    <div class="kv"><span class="k">已发币总数</span><span class="v" id="txtTotalLaunches">-</span></div>
+  </div>
+
+  <div class="card">
+    <h2>日志</h2>
+    <div class="log" id="log">等待操作…</div>
+  </div>
+
+  <div class="card">
+    <h2>合约地址（Robinhood 主网 · Chain ID 4663）</h2>
+    <div class="kv"><span class="k">TokenFactory</span><span class="v mono">0xBf8Ce8fFeCa0a280309957ff64Bacf99c96C2690</span></div>
+    <div class="kv"><span class="k">LiquidityLauncherV3</span><span class="v mono">0xE8DCF8898D621C7F40e182eE5Ce9C8715C4F7894</span></div>
+    <div class="kv"><span class="k">LiquidityLocker</span><span class="v mono">0xebB6e60E8329eca2e1C0223dfd85cb31d4Df3d64</span></div>
+    <div class="kv"><span class="k">FeeDistributor</span><span class="v mono">0xAEa15Fca1a14ab8e0dCBc03d657fe522bFAe1cea</span></div>
+    <div class="kv"><span class="k">SHIB</span><span class="v mono">0x788121CC5fF2fBa0D0d3C63B3dD0d21E6Abc0951</span></div>
+    <div class="kv"><span class="k">Uniswap V3 SwapRouter</span><span class="v mono">0xCaf681a66D020601342297493863E78C959E5cb2</span></div>
+    <div class="kv"><span class="k">RPC</span><span class="v mono">https://rpc.mainnet.chain.robinhood.com</span></div>
+    <div class="kv"><span class="k">区块浏览器</span><span class="v mono">https://robinhoodchain.blockscout.com</span></div>
+  </div>
+
+  <div class="footer">
+    页面为纯前端交互界面，不托管任何资产，不代表任何投资建议。<br>
+    合约来源于用户提供的部署材料。使用即代表你已理解相关风险。
+  </div>
+</div>
+
+<script>
+/* ---------- 常量 ---------- */
+const CHAIN_ID = 4663;
+const CHAIN_HEX = "0x" + CHAIN_ID.toString(16);
+const RPC = "https://rpc.mainnet.chain.robinhood.com";
+const EXPLORER = "https://robinhoodchain.blockscout.com";
+const ADDR = {
+  factory: "0xBf8Ce8fFeCa0a280309957ff64Bacf99c96C2690",
+  launcher: "0xE8DCF8898D621C7F40e182eE5Ce9C8715C4F7894",
+  locker:  "0xebB6e60E8329eca2e1C0223dfd85cb31d4Df3d64",
+  fee:     "0xAEa15Fca1a14ab8e0dCBc03d657fe522bFAe1cea",
+  shib:    "0x788121CC5fF2fBa0D0d3C63B3dD0d21E6Abc0951",
+  router:  "0xCaf681a66D020601342297493863E78C959E5cb2",
+};
+
+const FACTORY_ABI = [
+  "function createAndLaunch(string name, string symbol, bytes32 salt, uint256 devBuyShibAmount, uint256 minTokensOut) external returns (address,uint256,uint256,address)",
+  "function predictTokenAddress(string name, string symbol, bytes32 salt) external view returns (address)",
+  "function launchEnabled() view returns (bool)",
+  "function launchWhitelist(address) view returns (bool)",
+  "function currentBurnBps() view returns (uint16)",
+  "function totalLaunches() view returns (uint256)",
+  "event TokenLaunched(uint256 indexed launchId, address indexed token, address indexed creator, bytes32 deploySalt, uint256 creatorAllocation, uint256 liquidityAllocation, uint256 tokenId, address pool, uint16 burnBps)"
+];
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function decimals() view returns (uint8)",
+  "function symbol() view returns (string)",
+  "function allowance(address,address) view returns (uint256)",
+  "function approve(address,uint256) returns (bool)"
+];
+
+/* ---------- 状态 ---------- */
+let provider, signer, account;
+
+/* ---------- 工具 ---------- */
+const $ = (id)=>document.getElementById(id);
+function log(msg){
+  const t = new Date().toLocaleTimeString();
+  $("log").textContent = `[${t}] ${msg}\n` + $("log").textContent;
+}
+function short(a){ return a? a.slice(0,6)+"…"+a.slice(-4): "-"; }
+function toBN(v){ try{ return ethers.BigNumber.from(v||"0"); }catch{ return ethers.BigNumber.from(0);} }
+function fmtUnits(v, d=18){ try{ return Number(ethers.utils.formatUnits(v,d)).toLocaleString(undefined,{maximumFractionDigits:6}); }catch{ return "-"; } }
+
+/* ---------- 钱包连接 ---------- */
+async function connect(){
+  if (!window.ethereum){ alert("未检测到浏览器钱包，请安装 MetaMask / OKX / TokenPocket 等"); return; }
+  try{
+    await window.ethereum.request({ method:"eth_requestAccounts" });
+    provider = new ethers.providers.Web3Provider(window.ethereum, "any");
+    signer = provider.getSigner();
+    account = await signer.getAddress();
+    $("btnConnect").textContent = short(account);
+    $("dotConn").classList.add("on");
+    $("txtConn").textContent = "已连接";
+    $("txtAddr").textContent = account;
+    window.ethereum.on("chainChanged", ()=>location.reload());
+    window.ethereum.on("accountsChanged", ()=>location.reload());
+    await refreshAll();
+  }catch(e){ log("连接失败："+ (e.message||e)); }
+}
+
+async function switchChain(){
+  if (!window.ethereum){ return; }
+  try{
+    await window.ethereum.request({
+      method:"wallet_switchEthereumChain",
+      params:[{ chainId: CHAIN_HEX }]
+    });
+  }catch(e){
+    if (e.code === 4902 || (e.data && e.data.originalError && e.data.originalError.code === 4902)){
+      try{
+        await window.ethereum.request({
+          method:"wallet_addEthereumChain",
+          params:[{
+            chainId: CHAIN_HEX,
+            chainName: "Robinhood Mainnet",
+            nativeCurrency:{ name:"ETH", symbol:"ETH", decimals:18 },
+            rpcUrls:[RPC],
+            blockExplorerUrls:[EXPLORER]
+          }]
+        });
+      }catch(e2){ log("添加网络失败："+(e2.message||e2)); }
+    } else {
+      log("切换网络失败："+(e.message||e));
+    }
+  }
+}
+
+/* ---------- 刷新链上状态 ---------- */
+async function refreshAll(){
+  if (!provider){ return; }
+  try{
+    const net = await provider.getNetwork();
+    $("txtChain").innerHTML = `${net.chainId} ${net.chainId===CHAIN_ID? '<span class="badge ok">Robinhood ✓</span>':'<span class="badge warn">网络不匹配</span>'}`;
+    const bal = await provider.getBalance(account);
+    $("txtEth").textContent = fmtUnits(bal) + " ETH";
+
+    if (net.chainId !== CHAIN_ID){
+      $("txtShib").textContent = "（请切换到 Robinhood 主网）";
+      $("txtLaunchEnabled").textContent = "-";
+      $("txtWhitelist").textContent = "-";
+      $("txtBurnBps").textContent = "-";
+      $("txtTotalLaunches").textContent = "-";
+      return;
+    }
+    const shib = new ethers.Contract(ADDR.shib, ERC20_ABI, provider);
+    const [shibBal, shibDec] = await Promise.all([ shib.balanceOf(account), shib.decimals().catch(()=>18) ]);
+    $("txtShib").textContent = fmtUnits(shibBal, shibDec) + " SHIB";
+
+    const f = new ethers.Contract(ADDR.factory, FACTORY_ABI, provider);
+    const [enabled, wl, burnBps, total] = await Promise.all([
+      f.launchEnabled(), f.launchWhitelist(account), f.currentBurnBps(), f.totalLaunches()
+    ]);
+    $("txtLaunchEnabled").innerHTML = enabled? '<span class="badge ok">开启</span>':'<span class="badge warn">关闭</span>';
+    $("txtWhitelist").innerHTML = wl? '<span class="badge ok">在白名单</span>':'<span class="badge warn">未在白名单</span>';
+    if (!enabled && !wl){
+      $("txtWhitelist").innerHTML += ' <span class="hint">（当前无法发币，需白名单或等待开放）</span>';
+    }
+    $("txtBurnBps").textContent = `${burnBps} (${(burnBps/100).toFixed(2)}%)`;
+    $("txtTotalLaunches").textContent = total.toString();
+  }catch(e){ log("刷新失败："+(e.message||e)); }
+}
+
+/* ---------- salt ---------- */
+function randSalt(){
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  arr[31] = arr[31] || 1;
+  return "0x" + Array.from(arr).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+function ensureSalt(){
+  let s = $("fSalt").value.trim();
+  if (!s){ s = randSalt(); $("fSalt").value = s; }
+  if (!/^0x[0-9a-fA-F]{64}$/.test(s)){ throw new Error("salt 必须是 0x 开头的 32 字节 (64 位十六进制)"); }
+  if (/^0x0+$/.test(s)){ throw new Error("salt 不能为 0"); }
+  return s;
+}
+
+/* ---------- 预测地址 ---------- */
+async function preview(){
+  try{
+    if (!provider){ await connect(); if (!provider) return; }
+    const name = $("fName").value.trim();
+    const symbol = $("fSymbol").value.trim();
+    if (!name || !symbol){ throw new Error("请填写名称与符号"); }
+    const salt = ensureSalt();
+    const f = new ethers.Contract(ADDR.factory, FACTORY_ABI, provider);
+    const addr = await f.predictTokenAddress(name, symbol, salt);
+    $("predictHint").innerHTML = `预测代币地址：<span class="mono">${addr}</span> · <a href="${EXPLORER}/address/${addr}" target="_blank" style="color:var(--brand)">查看</a>`;
+    log("预测地址：" + addr);
+  }catch(e){ log("预测失败："+(e.message||e)); }
+}
+
+/* ---------- 授权 SHIB ---------- */
+async function approveShib(){
+  try{
+    if (!signer){ await connect(); if (!signer) return; }
+    const amtStr = $("fDevBuy").value.trim() || "0";
+    const amt = ethers.utils.parseUnits(amtStr, 18);
+    if (amt.isZero()){ log("dev 份额为 0，无需授权"); return; }
+    const shib = new ethers.Contract(ADDR.shib, ERC20_ABI, signer);
+    log(`授权 SHIB → factory，金额 ${amtStr}`);
+    const tx = await shib.approve(ADDR.factory, amt);
+    log("授权交易已发送：" + tx.hash);
+    await tx.wait();
+    log("授权成功 ✅");
+  }catch(e){ log("授权失败："+(e.message||e)); }
+}
+
+async function maxShib(){
+  try{
+    if (!provider || !account){ await connect(); if (!provider) return; }
+    const shib = new ethers.Contract(ADDR.shib, ERC20_ABI, provider);
+    const bal = await shib.balanceOf(account);
+    $("fDevBuy").value = ethers.utils.formatUnits(bal, 18);
+  }catch(e){ log("读取 SHIB 余额失败："+(e.message||e)); }
+}
+
+/* ---------- 发币 ---------- */
+async function launch(){
+  try{
+    if (!signer){ await connect(); if (!signer) return; }
+    const net = await provider.getNetwork();
+    if (net.chainId !== CHAIN_ID){ throw new Error("请先切换到 Robinhood 主网（Chain ID 4663）"); }
+    const name = $("fName").value.trim();
+    const symbol = $("fSymbol").value.trim();
+    if (!name || !symbol){ throw new Error("请填写名称与符号"); }
+    const salt = ensureSalt();
+    const devBuyStr = ($("fDevBuy").value.trim() || "0");
+    const devBuy = ethers.utils.parseUnits(devBuyStr, 18);
+    const minOutStr = ($("fMinOut").value.trim() || "0");
+    const minOut = ethers.BigNumber.from(minOutStr);
+    if (devBuy.isZero() && !minOut.isZero()){ throw new Error("未开启 dev buy 时，minTokensOut 必须为 0"); }
+
+    if (!devBuy.isZero()){
+      const shib = new ethers.Contract(ADDR.shib, ERC20_ABI, signer);
+      const allowance = await shib.allowance(account, ADDR.factory);
+      if (allowance.lt(devBuy)){
+        log("授权额度不足，先发起授权…");
+        const tx0 = await shib.approve(ADDR.factory, devBuy);
+        log("授权交易：" + tx0.hash);
+        await tx0.wait();
+        log("授权成功 ✅");
+      }
+    }
+
+    const f = new ethers.Contract(ADDR.factory, FACTORY_ABI, signer);
+    log(`发币中… name=${name} symbol=${symbol} devBuy=${devBuyStr} SHIB`);
+    const tx = await f.createAndLaunch(name, symbol, salt, devBuy, minOut);
+    log("发币交易已发送：" + tx.hash);
+    log("等待上链确认…");
+    const rc = await tx.wait();
+    log("上链成功 ✅ 区块 " + rc.blockNumber);
+
+    // 解析事件
+    let tokenAddr = null, launchId = null, pool = null;
+    try{
+      const iface = new ethers.utils.Interface(FACTORY_ABI);
+      for (const lg of rc.logs){
+        try{
+          const parsed = iface.parseLog(lg);
+          if (parsed.name === "TokenLaunched"){
+            tokenAddr = parsed.args.token;
+            launchId = parsed.args.launchId.toString();
+            pool = parsed.args.pool;
+            break;
+          }
+        }catch(_){}
+      }
+    }catch(_){}
+    if (tokenAddr){
+      log(`🎉 新代币：${tokenAddr}\n池子：${pool}\nlaunchId=${launchId}`);
+      $("predictHint").innerHTML = `新代币：<span class="mono">${tokenAddr}</span> · <a href="${EXPLORER}/address/${tokenAddr}" target="_blank" style="color:var(--brand)">Blockscout</a>`;
+    }
+    await refreshAll();
+  }catch(e){
+    const msg = e?.error?.message || e?.data?.message || e?.reason || e?.message || String(e);
+    log("发币失败：" + msg);
+  }
+}
+
+/* ---------- 绑定 ---------- */
+$("btnConnect").onclick = connect;
+$("btnSwitch").onclick = switchChain;
+$("btnRefresh").onclick = refreshAll;
+$("btnRandSalt").onclick = ()=> $("fSalt").value = randSalt();
+$("btnPreview").onclick = preview;
+$("btnApprove").onclick = approveShib;
+$("btnMaxShib").onclick = maxShib;
+$("btnLaunch").onclick = launch;
+
+// 自动尝试静默连接
+if (window.ethereum && window.ethereum.selectedAddress){
+  connect();
+}
+</script>
+</body>
+</html>
