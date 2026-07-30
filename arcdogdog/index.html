@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>DIA / AROS — Buy & Sell on ARC</title>
+<title>AROS — Buy & Sell on ARC</title>
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
 <style>
   :root {
@@ -13,8 +13,8 @@
     --border: #262c3d;
     --text: #e6e8ee;
     --muted: #8a92a6;
-    --accent: #f5b544;
-    --accent2: #ff8a3d;
+    --accent: #5aa9ff;
+    --accent2: #7c5cff;
     --green: #3ecf8e;
     --red: #ff5c7a;
     --blue: #5aa9ff;
@@ -25,8 +25,7 @@
   .container { max-width: 720px; margin: 0 auto; padding: 24px 16px 80px; }
   header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
   .logo { display: flex; align-items: center; gap: 12px; }
-  .logo-badge { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #1a1200; transition: background .2s; }
-  .logo-badge.aros { background: linear-gradient(135deg, #5aa9ff, #7c5cff); color: #071022; }
+  .logo-badge { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #071022; }
   .logo-title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
   .logo-sub { font-size: 12px; color: var(--muted); }
   button {
@@ -34,7 +33,7 @@
     cursor: pointer;
     border: none;
     background: var(--accent);
-    color: #1a1200;
+    color: #071022;
     font-weight: 700;
     padding: 10px 16px;
     border-radius: 10px;
@@ -52,34 +51,11 @@
   .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; font-size: 13px; }
   .info-grid .k { color: var(--muted); }
   .info-grid .v { word-break: break-all; font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  .balances { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+  .balances { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
   .bal-card { background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
   .bal-card .label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
   .bal-card .val { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
   .bal-card .sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
-
-  /* Token selector as buttons (no dropdown) */
-  .token-picker { display: flex; gap: 10px; margin-bottom: 16px; }
-  .token-btn {
-    flex: 1;
-    padding: 14px 12px;
-    border-radius: 14px;
-    background: var(--panel2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-weight: 700;
-    cursor: pointer;
-    display: flex; align-items: center; gap: 12px;
-    transition: transform .05s, border-color .15s, background .15s;
-  }
-  .token-btn .dot { width: 32px; height: 32px; border-radius: 10px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; }
-  .token-btn .dot.dia { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #1a1200; }
-  .token-btn .dot.aros { background: linear-gradient(135deg, #5aa9ff, #7c5cff); color: #071022; }
-  .token-btn .meta { text-align: left; }
-  .token-btn .meta .n { font-size: 14px; }
-  .token-btn .meta .s { font-size: 11px; color: var(--muted); font-weight: 500; }
-  .token-btn.active { background: var(--panel); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(245,181,68,.12); }
-  .token-btn.active.aros { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(90,169,255,.15); }
 
   .tabs { display: flex; background: var(--panel2); border-radius: 12px; padding: 4px; margin-bottom: 16px; }
   .tab { flex: 1; text-align: center; padding: 10px; border-radius: 8px; cursor: pointer; color: var(--muted); font-weight: 600; font-size: 14px; user-select: none; transition: color .15s, background .15s; }
@@ -120,7 +96,7 @@
   .footer { margin-top: 24px; text-align: center; font-size: 11px; color: var(--muted); line-height: 1.6; }
   .footer a { color: var(--accent); text-decoration: none; }
   code.addr { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
-  .disc { background: rgba(245, 181, 68, .08); border: 1px solid rgba(245, 181, 68, .3); color: #f6c15a; font-size: 12px; padding: 10px 12px; border-radius: 10px; margin-bottom: 16px; line-height: 1.5; }
+  .disc { background: rgba(90, 169, 255, .08); border: 1px solid rgba(90, 169, 255, .3); color: #a9cfff; font-size: 12px; padding: 10px 12px; border-radius: 10px; margin-bottom: 16px; line-height: 1.5; }
   @media (max-width: 560px) {
     .info-grid { grid-template-columns: 1fr; }
     .balances { grid-template-columns: 1fr 1fr; }
@@ -132,10 +108,10 @@
 <div class="container">
   <header>
     <div class="logo">
-      <div class="logo-badge" id="hdrBadge">D</div>
+      <div class="logo-badge">A</div>
       <div>
-        <div class="logo-title" id="hdrTitle">Dog in Arc</div>
-        <div class="logo-sub" id="hdrSub">DIA · Uniswap V3 on ARC Mainnet</div>
+        <div class="logo-title">Aros</div>
+        <div class="logo-sub">AROS · Uniswap V3 on ARC Mainnet</div>
       </div>
     </div>
     <button id="btnConnect" class="ghost">连接钱包</button>
@@ -145,18 +121,6 @@
     交易在 ARC Mainnet (chainId 5042) 上执行，使用 <b>USDC</b>（ERC20，0x3600…0000）作为报价资产。首次买入或卖出前会自动请求授权。
   </div>
 
-  <!-- Token picker (button-based, no dropdown) -->
-  <div class="token-picker">
-    <div class="token-btn active" id="pickDia" onclick="selectToken('DIA')">
-      <div class="dot dia">D</div>
-      <div class="meta"><div class="n">Dog in Arc</div><div class="s">DIA</div></div>
-    </div>
-    <div class="token-btn" id="pickAros" onclick="selectToken('AROS')">
-      <div class="dot aros">A</div>
-      <div class="meta"><div class="n">Aros</div><div class="s">AROS</div></div>
-    </div>
-  </div>
-
   <div class="panel">
     <div style="font-size:13px; color: var(--muted); margin-bottom:12px;">资产余额</div>
     <div class="balances">
@@ -164,11 +128,6 @@
         <div class="label">USDC (ERC20)</div>
         <div class="val" id="balUsdc">—</div>
         <div class="sub">用于买币</div>
-      </div>
-      <div class="bal-card">
-        <div class="label">DIA</div>
-        <div class="val" id="balDia">—</div>
-        <div class="sub">Dog in Arc</div>
       </div>
       <div class="bal-card">
         <div class="label">AROS</div>
@@ -185,8 +144,8 @@
 
   <div class="panel">
     <div class="tabs">
-      <div class="tab active buy" id="tabBuy" onclick="switchTab('buy')">买入 <span id="tabBuySym">DIA</span></div>
-      <div class="tab sell" id="tabSell" onclick="switchTab('sell')">卖出 <span id="tabSellSym">DIA</span></div>
+      <div class="tab active buy" id="tabBuy" onclick="switchTab('buy')">买入 AROS</div>
+      <div class="tab sell" id="tabSell" onclick="switchTab('sell')">卖出 AROS</div>
     </div>
 
     <div id="paneBuy">
@@ -207,7 +166,7 @@
         <label>预计收到（含滑点保护）</label>
         <div class="input-wrap">
           <input id="buyOut" type="text" placeholder="—" readonly />
-          <div class="suffix" id="buySuffix">DIA</div>
+          <div class="suffix">AROS</div>
         </div>
       </div>
       <div class="row-mini"><span>滑点容忍</span><strong>5%</strong></div>
@@ -217,10 +176,10 @@
 
     <div id="paneSell" style="display:none;">
       <div class="field">
-        <label>付出（<span id="sellInSym">DIA</span>）</label>
+        <label>付出（AROS）</label>
         <div class="input-wrap">
           <input id="sellIn" type="text" inputmode="decimal" placeholder="0.0" />
-          <div class="suffix" id="sellSuffix">DIA</div>
+          <div class="suffix">AROS</div>
         </div>
         <div class="quick">
           <button onclick="setSellPct(25)">25%</button>
@@ -247,21 +206,19 @@
   <div class="panel">
     <div style="font-size:13px; color: var(--muted); margin-bottom:12px;">合约信息</div>
     <div class="info-grid">
-      <div class="k">DIA (Dog in Arc)</div><div class="v">0x2A5C8d6e271Cce3F54d79e14e15601AE1a8c89d7</div>
-      <div class="k">DIA 池</div><div class="v">0x5DE5F460A10E44B36E2091aAE0E5cE426190Dc59</div>
-      <div class="k">AROS (Aros)</div><div class="v">0x436A358ed8B0EC8CDdf4E19feF37a54873cA43ab</div>
-      <div class="k">AROS 池</div><div class="v">0x15d988Fc0EB2b77FEa5b68056eDdF7fE2dC21bb0</div>
-      <div class="k">TradingRouter</div><div class="v">0xdF2845DC33F704125EAA304f1C079ABB9c494e27</div>
+      <div class="k">AROS (Aros)</div><div class="v">0xB3c9d95b5aeBa9fd9ef8b14096bAf9eAF490A8CC</div>
+      <div class="k">AROS 池</div><div class="v">0x919bb3fe8D1945647CC50bc5Cb4295631C5d85D3</div>
+      <div class="k">TradingRouter</div><div class="v">0x023cD0F7141591b78F53E688ee9c1A543A4774d7</div>
       <div class="k">USDC (ERC20)</div><div class="v">0x3600000000000000000000000000000000000000</div>
       <div class="k">Chain</div><div class="v">ARC Mainnet (5042)</div>
     </div>
   </div>
 
   <div class="footer">
-    <a id="linkToken" href="#" target="_blank">当前代币</a>
-    · <a id="linkPool" href="#" target="_blank">池 (Blockscout)</a>
+    <a id="linkToken" href="https://arc-mainnet.cloud.blockscout.com/token/0xB3c9d95b5aeBa9fd9ef8b14096bAf9eAF490A8CC" target="_blank">AROS on Blockscout</a>
+    · <a id="linkPool" href="https://arc-mainnet.cloud.blockscout.com/address/0x919bb3fe8D1945647CC50bc5Cb4295631C5d85D3" target="_blank">池 (Blockscout)</a>
     · LP NFT 已永久锁仓。<br />
-    价格区间：1 USDC ≈ 194,734 tokens (起点) → 1 token ≈ 9.97 USDC (上限)。
+    价格区间：1 USDC ≈ 194,028 AROS (起点) → 1 AROS ≈ 9.97 USDC (上限)。
   </div>
 </div>
 
@@ -272,32 +229,18 @@ const RPC_URL = 'https://rpc.blockdaemon.mainnet.arc.io';
 const EXPLORER = 'https://arc-mainnet.cloud.blockscout.com';
 
 const USDC = '0x3600000000000000000000000000000000000000';
-const TRADING_ROUTER = '0xdF2845DC33F704125EAA304f1C079ABB9c494e27';
+const TRADING_ROUTER = '0x023cD0F7141591b78F53E688ee9c1A543A4774d7';
 const QUOTER_V2 = '0x7dfd4f31be6814d2906bde155c3e1b146eac1468';
 const FEE = 10000;
 const SLIPPAGE_BPS = 500; // 5%
 
-const TOKENS = {
-  DIA: {
-    symbol: 'DIA',
-    name: 'Dog in Arc',
-    address: '0x2A5C8d6e271Cce3F54d79e14e15601AE1a8c89d7',
-    pool: '0x5DE5F460A10E44B36E2091aAE0E5cE426190Dc59',
-    decimals: 18,
-    letter: 'D',
-    balId: 'balDia'
-  },
-  AROS: {
-    symbol: 'AROS',
-    name: 'Aros',
-    address: '0x436A358ed8B0EC8CDdf4E19feF37a54873cA43ab',
-    pool: '0x15d988Fc0EB2b77FEa5b68056eDdF7fE2dC21bb0',
-    decimals: 18,
-    letter: 'A',
-    balId: 'balAros'
-  }
+const AROS = {
+  symbol: 'AROS',
+  name: 'Aros',
+  address: '0xB3c9d95b5aeBa9fd9ef8b14096bAf9eAF490A8CC',
+  pool: '0x919bb3fe8D1945647CC50bc5Cb4295631C5d85D3',
+  decimals: 18
 };
-let CURRENT = 'DIA';
 
 const ERC20_ABI = [
   'function decimals() view returns (uint8)',
@@ -328,35 +271,6 @@ function fmt(n, dec=4) {
   if (num === 0) return '0';
   if (num < 0.0001) return num.toExponential(2);
   return num.toLocaleString(undefined, { maximumFractionDigits: dec });
-}
-
-function selectToken(sym) {
-  CURRENT = sym;
-  const t = TOKENS[sym];
-  // header
-  $('hdrBadge').textContent = t.letter;
-  $('hdrBadge').className = 'logo-badge' + (sym === 'AROS' ? ' aros' : '');
-  $('hdrTitle').textContent = t.name;
-  $('hdrSub').textContent = t.symbol + ' · Uniswap V3 on ARC Mainnet';
-  // token picker
-  $('pickDia').classList.toggle('active', sym === 'DIA');
-  $('pickAros').classList.toggle('active', sym === 'AROS');
-  $('pickAros').classList.toggle('aros', sym === 'AROS');
-  // tabs labels
-  $('tabBuySym').textContent = t.symbol;
-  $('tabSellSym').textContent = t.symbol;
-  $('buySuffix').textContent = t.symbol;
-  $('sellSuffix').textContent = t.symbol;
-  $('sellInSym').textContent = t.symbol;
-  // clear quotes/inputs
-  $('buyIn').value=''; $('buyOut').value='';
-  $('sellIn').value=''; $('sellOut').value='';
-  window._buyQuote = null; window._sellQuote = null;
-  // footer links
-  $('linkToken').textContent = t.symbol + ' on Blockscout';
-  $('linkToken').href = EXPLORER + '/token/' + t.address;
-  $('linkPool').href = EXPLORER + '/address/' + t.pool;
-  setStatus('');
 }
 
 async function ensureChain() {
@@ -401,19 +315,16 @@ async function refreshBalances() {
   if (!userAddress) return;
   try {
     const usdc = new ethers.Contract(USDC, ERC20_ABI, readProvider);
-    const dia  = new ethers.Contract(TOKENS.DIA.address, ERC20_ABI, readProvider);
-    const aros = new ethers.Contract(TOKENS.AROS.address, ERC20_ABI, readProvider);
-    const [bu, bd, ba, bn] = await Promise.all([
+    const aros = new ethers.Contract(AROS.address, ERC20_ABI, readProvider);
+    const [bu, ba, bn] = await Promise.all([
       usdc.balanceOf(userAddress),
-      dia.balanceOf(userAddress),
       aros.balanceOf(userAddress),
       readProvider.getBalance(userAddress)
     ]);
     $('balUsdc').textContent   = fmt(ethers.formatUnits(bu, 6), 4);
-    $('balDia').textContent    = fmt(ethers.formatUnits(bd, 18), 2);
     $('balAros').textContent   = fmt(ethers.formatUnits(ba, 18), 2);
     $('balNative').textContent = fmt(ethers.formatEther(bn), 4);
-    window._bal = { usdc: bu, DIA: bd, AROS: ba, native: bn };
+    window._bal = { usdc: bu, aros: ba, native: bn };
   } catch (e) {
     console.error(e);
   }
@@ -434,7 +345,7 @@ function setBuyPct(p) {
 }
 function setSellPct(p) {
   if (!window._bal) return;
-  const raw = window._bal[CURRENT] * BigInt(p) / 100n;
+  const raw = window._bal.aros * BigInt(p) / 100n;
   $('sellIn').value = ethers.formatUnits(raw, 18);
   quoteSell();
 }
@@ -443,15 +354,14 @@ async function quoteBuy() {
   const val = $('buyIn').value;
   if (!val || Number(val) <= 0) { $('buyOut').value=''; return; }
   try {
-    const t = TOKENS[CURRENT];
     const amtIn = ethers.parseUnits(val, 6);
     const quoter = new ethers.Contract(QUOTER_V2, QUOTER_ABI, readProvider);
-    const params = { tokenIn: USDC, tokenOut: t.address, amountIn: amtIn, fee: FEE, sqrtPriceLimitX96: 0n };
+    const params = { tokenIn: USDC, tokenOut: AROS.address, amountIn: amtIn, fee: FEE, sqrtPriceLimitX96: 0n };
     const out = await quoter.quoteExactInputSingle.staticCall(params);
     const amountOut = out[0];
     const minOut = amountOut * (10000n - BigInt(SLIPPAGE_BPS)) / 10000n;
     $('buyOut').value = fmt(ethers.formatUnits(minOut, 18), 4);
-    window._buyQuote = { token: t.address, amountIn: amtIn, expectedOut: amountOut, minOut };
+    window._buyQuote = { token: AROS.address, amountIn: amtIn, expectedOut: amountOut, minOut };
   } catch (e) {
     $('buyOut').value = 'quote failed';
     console.error(e);
@@ -462,15 +372,14 @@ async function quoteSell() {
   const val = $('sellIn').value;
   if (!val || Number(val) <= 0) { $('sellOut').value=''; return; }
   try {
-    const t = TOKENS[CURRENT];
     const amtIn = ethers.parseUnits(val, 18);
     const quoter = new ethers.Contract(QUOTER_V2, QUOTER_ABI, readProvider);
-    const params = { tokenIn: t.address, tokenOut: USDC, amountIn: amtIn, fee: FEE, sqrtPriceLimitX96: 0n };
+    const params = { tokenIn: AROS.address, tokenOut: USDC, amountIn: amtIn, fee: FEE, sqrtPriceLimitX96: 0n };
     const out = await quoter.quoteExactInputSingle.staticCall(params);
     const amountOut = out[0];
     const minOut = amountOut * (10000n - BigInt(SLIPPAGE_BPS)) / 10000n;
     $('sellOut').value = fmt(ethers.formatUnits(minOut, 6), 4);
-    window._sellQuote = { token: t.address, amountIn: amtIn, expectedOut: amountOut, minOut };
+    window._sellQuote = { token: AROS.address, amountIn: amtIn, expectedOut: amountOut, minOut };
   } catch (e) {
     $('sellOut').value = 'quote failed';
     console.error(e);
@@ -496,12 +405,12 @@ async function doBuy() {
     const q = window._buyQuote;
     if (!q) { setStatus('报价失败，无法交易', 'error'); return; }
     await ensureAllowance(USDC, 'USDC', q.amountIn);
-    setStatus('提交买入 ' + CURRENT + '...');
+    setStatus('提交买入 AROS...');
     const router = new ethers.Contract(TRADING_ROUTER, TRADING_ROUTER_ABI, signer);
     const tx = await router.buyExactUsdc(q.token, q.amountIn, q.minOut);
     setStatus('已发送: <a href="'+EXPLORER+'/tx/'+tx.hash+'" target=_blank>'+tx.hash.slice(0,14)+'...</a>');
     const r = await tx.wait();
-    setStatus('✓ 买入 ' + CURRENT + ' 成功，区块 '+r.blockNumber+' <a href="'+EXPLORER+'/tx/'+tx.hash+'" target=_blank>查看</a>', 'ok');
+    setStatus('✓ 买入 AROS 成功，区块 '+r.blockNumber+' <a href="'+EXPLORER+'/tx/'+tx.hash+'" target=_blank>查看</a>', 'ok');
     await refreshBalances();
     $('buyIn').value=''; $('buyOut').value='';
   } catch (e) {
@@ -512,18 +421,18 @@ async function doBuy() {
 async function doSell() {
   if (!signer) { await connect(); if (!signer) return; }
   const val = $('sellIn').value;
-  if (!val || Number(val) <= 0) { setStatus('请输入 ' + CURRENT + ' 数量', 'error'); return; }
+  if (!val || Number(val) <= 0) { setStatus('请输入 AROS 数量', 'error'); return; }
   try {
     await quoteSell();
     const q = window._sellQuote;
     if (!q) { setStatus('报价失败，无法交易', 'error'); return; }
-    await ensureAllowance(q.token, CURRENT, q.amountIn);
-    setStatus('提交卖出 ' + CURRENT + '...');
+    await ensureAllowance(q.token, 'AROS', q.amountIn);
+    setStatus('提交卖出 AROS...');
     const router = new ethers.Contract(TRADING_ROUTER, TRADING_ROUTER_ABI, signer);
     const tx = await router.sellExactTokens(q.token, q.amountIn, q.minOut);
     setStatus('已发送: <a href="'+EXPLORER+'/tx/'+tx.hash+'" target=_blank>'+tx.hash.slice(0,14)+'...</a>');
     const r = await tx.wait();
-    setStatus('✓ 卖出 ' + CURRENT + ' 成功，区块 '+r.blockNumber+' <a href="'+EXPLORER+'/tx/'+tx.hash+'" target=_blank>查看</a>', 'ok');
+    setStatus('✓ 卖出 AROS 成功，区块 '+r.blockNumber+' <a href="'+EXPLORER+'/tx/'+tx.hash+'" target=_blank>查看</a>', 'ok');
     await refreshBalances();
     $('sellIn').value=''; $('sellOut').value='';
   } catch (e) {
@@ -541,9 +450,6 @@ if (window.ethereum) {
   window.ethereum.on && window.ethereum.on('accountsChanged', () => location.reload());
   window.ethereum.on && window.ethereum.on('chainChanged', () => location.reload());
 }
-
-// init
-selectToken('DIA');
 </script>
 </body>
 </html>
