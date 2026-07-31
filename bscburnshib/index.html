@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>平台管理面板 — PancakeSwap V3</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #0c0d12;
+  --surface:   #14161e;
+  --card:      #1a1d2a;
+  --border:    #2a2e42;
+  --border-hi: #3e4466;
+  --text:      #e4e6f0;
+  --dim:       #7d839e;
+  --yellow:    #f0b90b;
+  --yellow-dim:#a97e07;
+  --green:     #0ecb81;
+  --red:       #f6465d;
+  --blue:      #1e88e5;
+  --purple:    #b388ff;
+  --radius:    10px;
+  --font-sans: 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 600px 400px at 10% 20%, rgba(240,185,11,0.06) 0%, transparent 100%),
+    radial-gradient(ellipse 500px 300px at 90% 80%, rgba(30,136,229,0.05) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+
+/* ─── Layout ─── */
+.wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 24px 60px; }
+
+/* ─── Header ─── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.header h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--yellow);
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header h1 .dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  display: inline-block;
+}
+.header h1 .dot.off { background: var(--red); box-shadow: 0 0 8px var(--red); }
+.header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.chain-badge {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--dim);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+.addr-badge {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--green);
+  background: rgba(14,203,129,0.08);
+  border: 1px solid rgba(14,203,129,0.25);
+  border-radius: 6px;
+  padding: 4px 10px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.owner-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--yellow);
+  background: rgba(240,185,11,0.1);
+  border: 1px solid rgba(240,185,11,0.3);
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+.owner-badge.no { color: var(--red); background: rgba(246,70,93,0.1); border-color: rgba(246,70,93,0.3); }
+
+/* ─── Button ─── */
+.btn {
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-yellow {
+  background: var(--yellow);
+  color: #000;
+  box-shadow: 0 0 0 0 rgba(240,185,11,0.4);
+}
+.btn-yellow:hover:not(:disabled) {
+  background: #ffc72c;
+  box-shadow: 0 0 20px rgba(240,185,11,0.35);
+}
+.btn-ghost {
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover:not(:disabled) { border-color: var(--border-hi); background: #1f2236; }
+.btn-danger {
+  background: rgba(246,70,93,0.15);
+  color: var(--red);
+  border: 1px solid rgba(246,70,93,0.3);
+}
+.btn-danger:hover:not(:disabled) { background: rgba(246,70,93,0.25); }
+
+/* ─── Tabs ─── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 28px;
+  overflow-x: auto;
+}
+.tab-btn {
+  flex: 1;
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--dim);
+  background: transparent;
+  border: none;
+  border-radius: 7px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--text); background: var(--card); }
+.tab-btn.active { color: var(--yellow); background: var(--card); box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+.tab-panel { display: none; animation: fadeIn 0.25s ease; }
+.tab-panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── Cards ─── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title .tag {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--yellow);
+  border-radius: 4px;
+  padding: 2px 6px;
+  letter-spacing: 0.04em;
+}
+.card-title .tag.blue { background: var(--blue); color: #fff; }
+.card-title .tag.red { background: var(--red); color: #fff; }
+.card-desc { font-size: 0.82rem; color: var(--dim); margin-bottom: 16px; line-height: 1.5; }
+
+/* ─── Form ─── */
+.form-row { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 14px; flex-wrap: wrap; }
+.field { flex: 1; min-width: 180px; }
+.field label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--dim);
+  margin-bottom: 5px;
+  letter-spacing: 0.02em;
+}
+.field input, .field select {
+  width: 100%;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.field input:focus, .field select:focus { border-color: var(--yellow); }
+.field input::placeholder { color: var(--border-hi); }
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--dim);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.hint.warn { color: var(--red); }
+
+/* ─── Status Row ─── */
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.status-kv {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+.status-kv .k { color: var(--dim); }
+.status-kv .v { font-family: var(--font-mono); color: var(--text); }
+.status-kv .v.yellow { color: var(--yellow); }
+.status-kv .v.green { color: var(--green); }
+
+/* ─── Table ─── */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin-top: 12px;
+}
+.tbl th {
+  text-align: left;
+  color: var(--dim);
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.tbl td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(42,46,66,0.5);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text);
+  word-break: break-all;
+}
+.tbl tr:hover td { background: rgba(240,185,11,0.03); }
+
+/* ─── Log ─── */
+.log-box {
+  background: #0a0b0f;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  max-height: 240px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: var(--dim);
+  margin-top: 12px;
+}
+.log-box .log-ok  { color: var(--green); }
+.log-box .log-err { color: var(--red); }
+.log-box .log-warn{ color: var(--yellow); }
+.log-box .log-info{ color: var(--blue); }
+
+/* ─── Divider ─── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+/* ─── Config section ─── */
+.config-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 28px;
+}
+.config-section h2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Spinner ─── */
+.spinner {
+  width: 14px; height: 14px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Responsive ─── */
+@media (max-width: 600px) {
+  html { font-size: 13px; }
+  .wrap { padding: 0 12px 40px; }
+  .card { padding: 18px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="header">
+    <h1><span class="dot off" id="statusDot"></span>平台管理面板 <span style="color:var(--dim);font-size:0.82rem;font-weight:400">PancakeSwap V3 · BSC</span></h1>
+    <div class="header-right">
+      <span class="chain-badge" id="chainBadge">未连接</span>
+      <span class="addr-badge" id="addrBadge" style="display:none"></span>
+      <span class="owner-badge no" id="ownerBadge" style="display:none">非 Owner</span>
+      <button class="btn btn-yellow" id="connectBtn" onclick="connectWallet()">连接钱包</button>
+    </div>
+  </div>
+
+  <!-- 已部署合约地址 -->
+  <div class="config-section">
+    <h2>⚙ 已部署合约 <span style="font-size:0.7rem;background:var(--green);color:#000;padding:2px 7px;border-radius:4px;margin-left:4px">BSC 主网</span></h2>
+    <table class="tbl" style="margin-top:0">
+      <tr><td style="color:var(--dim);white-space:nowrap">TokenFactory</td><td><a href="https://bscscan.com/address/0xB5A49fA866667cd03fd55cEd9258F251F95E38F9" target="_blank" style="color:var(--blue);text-decoration:none">0xB5A49fA866667cd03fd55cEd9258F251F95E38F9</a></td></tr>
+      <tr><td style="color:var(--dim);white-space:nowrap">FeeDistributor</td><td><a href="https://bscscan.com/address/0x7125A96b4d519206FD093dd39AB8f3eE50F0CA69" target="_blank" style="color:var(--blue);text-decoration:none">0x7125A96b4d519206FD093dd39AB8f3eE50F0CA69</a></td></tr>
+      <tr><td style="color:var(--dim);white-space:nowrap">LiquidityLocker</td><td><a href="https://bscscan.com/address/0x6a2F9160BB89709519A16d9bC2D126C04Cf31feD" target="_blank" style="color:var(--blue);text-decoration:none">0x6a2F9160BB89709519A16d9bC2D126C04Cf31feD</a></td></tr>
+      <tr><td style="color:var(--dim);white-space:nowrap">Launcher V3</td><td><a href="https://bscscan.com/address/0xBA157E72ce007823CCd156392dFc409990C79ABf" target="_blank" style="color:var(--blue);text-decoration:none">0xBA157E72ce007823CCd156392dFc409990C79ABf</a></td></tr>
+      <tr><td style="color:var(--dim);white-space:nowrap">SHIB (BSC)</td><td><a href="https://bscscan.com/address/0x2859e4544C4bB03966803b044A93563Bd2D0DD4D" target="_blank" style="color:var(--dim);text-decoration:none">0x2859e4544C4bB03966803b044A93563Bd2D0DD4D</a></td></tr>
+      <tr><td style="color:var(--dim);white-space:nowrap">当前 Owner</td><td><a href="https://bscscan.com/address/0xF94f02057E08dE2f2658f69467AdDA79Cb61389a" target="_blank" style="color:var(--yellow);text-decoration:none">0xF94f02057E08dE2f2658f69467AdDA79Cb61389a</a></td></tr>
+    </table>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="factory">TokenFactory 管理</button>
+    <button class="tab-btn" data-tab="distributor">FeeDistributor 管理</button>
+    <button class="tab-btn" data-tab="query">链上数据查询</button>
+  </div>
+
+  <!-- Tab 1: TokenFactory -->
+  <div class="tab-panel active" id="tab-factory">
+
+    <div class="card">
+      <div class="card-title">设置销毁比例 <span class="tag">onlyOwner</span></div>
+      <div class="card-desc">修改 TokenFactory 的 <code>currentBurnBps</code>，仅对未来新发行的代币生效。历史代币的销毁比例已在 FeeDistributor 内锁定，不受影响。</div>
+      <div class="form-row">
+        <div class="field">
+          <label>销毁比例 (bps，范围 0–10000)</label>
+          <input id="factoryBurnBps" type="number" min="0" max="10000" placeholder="例: 7000 = 70% 销毁">
+          <div class="hint">分母 10000。7000 = 70% 销毁 / 30% 平台；6000 = 60% / 40%，以此类推。</div>
+        </div>
+        <button class="btn btn-yellow" onclick="factorySetBurnBps()">确认修改</button>
+      </div>
+      <div class="status-row" id="factoryBurnStatus"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">提取滞留代币 <span class="tag red">rescue</span></div>
+      <div class="card-desc">将 TokenFactory 合约内意外滞留的任意 ERC-20 代币转出。正常流程结束后 Factory 内应无余额，此功能仅作紧急救援用途。</div>
+      <div class="form-row">
+        <div class="field">
+          <label>代币地址 (token)</label>
+          <input id="rescueToken" placeholder="0x...">
+        </div>
+        <div class="field">
+          <label>接收地址 (recipient)</label>
+          <input id="rescueRecipient" placeholder="0x...">
+        </div>
+        <button class="btn btn-danger" onclick="factoryWithdraw()">提取全部</button>
+      </div>
+      <div class="status-row" id="factoryRescueStatus"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">转让所有权 <span class="tag red">危险</span></div>
+      <div class="card-desc">将 TokenFactory 的 owner 权限转让给另一个地址。转让后当前钱包将失去所有 owner 权限。</div>
+      <div class="form-row">
+        <div class="field">
+          <label>新 Owner 地址</label>
+          <input id="factoryNewOwner" placeholder="0x...">
+        </div>
+        <button class="btn btn-danger" onclick="factoryTransferOwner()">转让</button>
+      </div>
+      <div class="status-row" id="factoryOwnerStatus"></div>
+    </div>
+
+  </div>
+
+  <!-- Tab 2: FeeDistributor -->
+  <div class="tab-panel" id="tab-distributor">
+
+    <div class="card">
+      <div class="card-title">修改平台收款地址 <span class="tag">onlyOwner</span></div>
+      <div class="card-desc">修改 FeeDistributor 的 <code>platformRecipient</code>，所有未来收取的手续费中平台份额（默认 30%）将打入新地址。销毁地址不受影响（写死为 constant）。</div>
+      <div class="form-row">
+        <div class="field">
+          <label>新平台收款地址</label>
+          <input id="distNewRecipient" placeholder="0x...">
+        </div>
+        <button class="btn btn-yellow" onclick="distSetRecipient()">确认修改</button>
+      </div>
+      <div class="status-row" id="distRecipientStatus"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">授权 / 取消 Collector <span class="tag">onlyOwner</span></div>
+      <div class="card-desc">授权或取消某个地址作为 authorizedCollector。正常只需授权 LiquidityLocker 地址。未授权则 Locker 无法注册 tokenId 和分账，发币流程会失败。</div>
+      <div class="form-row">
+        <div class="field">
+          <label>Collector 地址</label>
+          <input id="distCollector" placeholder="0x... (通常是 LiquidityLocker 地址)">
+        </div>
+        <div class="field" style="min-width:120px;max-width:140px">
+          <label>操作</label>
+          <select id="distCollectorAction">
+            <option value="true">授权 (true)</option>
+            <option value="false">取消 (false)</option>
+          </select>
+        </div>
+        <button class="btn btn-yellow" onclick="distSetCollector()">执行</button>
+      </div>
+      <div class="status-row" id="distCollectorStatus"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">转让所有权 <span class="tag red">危险</span></div>
+      <div class="card-desc">将 FeeDistributor 的 owner 权限转让给另一个地址。</div>
+      <div class="form-row">
+        <div class="field">
+          <label>新 Owner 地址</label>
+          <input id="distNewOwner" placeholder="0x...">
+        </div>
+        <button class="btn btn-danger" onclick="distTransferOwner()">转让</button>
+      </div>
+      <div class="status-row" id="distOwnerStatus"></div>
+    </div>
+
+  </div>
+
+  <!-- Tab 3: Query -->
+  <div class="tab-panel" id="tab-query">
+
+    <div class="card">
+      <div class="card-title"><span class="tag blue">只读</span> TokenFactory 状态</div>
+      <button class="btn btn-ghost" onclick="queryFactoryState()" style="margin-bottom:14px">读取全部状态</button>
+      <div id="factoryStateResult"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="tag blue">只读</span> FeeDistributor 状态</div>
+      <button class="btn btn-ghost" onclick="queryDistState()" style="margin-bottom:14px">读取全部状态</button>
+      <div id="distStateResult"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="tag blue">只读</span> 按 LaunchId 查询发行记录</div>
+      <div class="form-row">
+        <div class="field" style="max-width:200px">
+          <label>LaunchId</label>
+          <input id="queryLaunchId" type="number" min="1" placeholder="例: 1">
+        </div>
+        <button class="btn btn-ghost" onclick="queryLaunchById()">查询</button>
+      </div>
+      <div id="launchQueryResult"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="tag blue">只读</span> 查询指定 tokenId 销毁比例</div>
+      <div class="form-row">
+        <div class="field" style="max-width:200px">
+          <label>LP TokenId</label>
+          <input id="queryTokenId" type="number" min="1" placeholder="例: 1">
+        </div>
+        <button class="btn btn-ghost" onclick="queryBurnBps()">查询</button>
+      </div>
+      <div id="burnBpsQueryResult"></div>
+    </div>
+
+  </div>
+
+  <!-- Log -->
+  <div style="margin-top:28px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:0.85rem;font-weight:700;color:var(--dim)">操作日志</span>
+      <button class="btn btn-ghost" style="padding:5px 12px;font-size:0.78rem" onclick="clearLog()">清空</button>
+    </div>
+    <div class="log-box" id="logBox"><span style="color:var(--dim)">等待操作...</span></div>
+  </div>
+
+</div>
+<script>
+// ─── BSC 配置 ───
+const BSC_CHAIN_ID     = '0x38';          // 56
+const BSC_CHAIN_ID_NUM = 56;
+const BSC_RPC          = 'https://bsc-dataseed.binance.org/';
+const BSC_EXPLORER     = 'https://bscscan.com';
+
+// ─── ABIs ───
+const FACTORY_ABI = [
+  'function owner() view returns (address)',
+  'function currentBurnBps() view returns (uint16)',
+  'function nextLaunchId() view returns (uint256)',
+  'function setBurnBps(uint16 newBurnBps)',
+  'function transferOwnership(address newOwner)',
+  'function withdrawAllToken(address token, address recipient) returns (uint256)',
+  'function launchToken(uint256) view returns (address)',
+  'function launchCreator(uint256) view returns (address)',
+  'function launchPool(uint256) view returns (address)',
+  'function launchTokenId(uint256) view returns (uint256)',
+  'function launchTimestamp(uint256) view returns (uint256)',
+  'function launchBurnBps(uint256) view returns (uint16)',
+  'function totalLaunches() view returns (uint256)',
+  'event BurnBpsUpdated(uint16 previousBurnBps, uint16 newBurnBps)',
+  'event TokenWithdrawn(address indexed token, address indexed recipient, uint256 amount)',
+  'event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)',
+];
+
+const DIST_ABI = [
+  'function owner() view returns (address)',
+  'function platformRecipient() view returns (address)',
+  'function burnBpsByTokenId(uint256) view returns (uint16)',
+  'function burnBpsRegistered(uint256) view returns (bool)',
+  'function authorizedCollectors(address) view returns (bool)',
+  'function setPlatformRecipient(address newPlatformRecipient)',
+  'function setAuthorizedCollector(address collector, bool authorized)',
+  'function transferOwnership(address newOwner)',
+  'event PlatformRecipientUpdated(address indexed previousRecipient, address indexed newRecipient)',
+  'event CollectorAuthorizationUpdated(address indexed collector, bool authorized)',
+  'event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)',
+];
+
+// ─── 硬编码合约地址 ───
+const ADDRS = {
+  factory:    '0xB5A49fA866667cd03fd55cEd9258F251F95E38F9',
+  distributor:'0x7125A96b4d519206FD093dd39AB8f3eE50F0CA69',
+  locker:     '0x6a2F9160BB89709519A16d9bC2D126C04Cf31feD',
+  launcher:   '0xBA157E72ce007823CCd156392dFc409990C79ABf',
+  shib:       '0x2859e4544C4bB03966803b044A93563Bd2D0DD4D',
+  posManager: '0x46A15B0b27311cedF172AB29E4f4766fbE7F4364',
+  swapRouter: '0x1b81D678ffb9C0263b24A97847620C99d213eB14',
+  dead:       '0xdEAD000000000000000042069420694206942069',
+  owner:      '0xF94f02057E08dE2f2658f69467AdDA79Cb61389a',
+};
+
+// ─── 全局状态 ───
+let provider = null;
+let signer   = null;
+let account  = null;
+let factoryContract  = null;
+let distContract     = null;
+
+// ─── 工具函数 ───
+const $ = id => document.getElementById(id);
+function shortAddr(a) { return a ? a.slice(0,6) + '...' + a.slice(-4) : ''; }
+function bscScanAddr(a) { return `<a href="${BSC_EXPLORER}/address/${a}" target="_blank" style="color:var(--blue);text-decoration:none">${shortAddr(a)}</a>`; }
+function bscScanTx(h) { return `<a href="${BSC_EXPLORER}/tx/${h}" target="_blank" style="color:var(--blue);text-decoration:none">${shortAddr(h)}</a>`; }
+
+// ─── 日志 ───
+function log(msg, cls = '') {
+  const box = $('logBox');
+  if (box.querySelector('span')) box.innerHTML = '';
+  const line = document.createElement('div');
+  const ts = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  line.innerHTML = `<span style="color:var(--border-hi)">[${ts}]</span> <span class="${cls}">${msg}</span>`;
+  box.prepend(line);
+}
+function clearLog() { $('logBox').innerHTML = '<span style="color:var(--dim)">日志已清空</span>'; }
+
+// ─── 合约实例初始化 ───
+function initContracts() {
+  const signerOrProvider = signer || provider;
+  if (!signerOrProvider) return;
+  factoryContract = new ethers.Contract(ADDRS.factory, FACTORY_ABI, signerOrProvider);
+  distContract    = new ethers.Contract(ADDRS.distributor, DIST_ABI, signerOrProvider);
+  log(`合约实例已初始化: Factory ✓  Distributor ✓`, 'log-info');
+}
+
+// ─── 钱包连接 ───
+async function connectWallet() {
+  if (!window.ethereum) {
+    log('未检测到 MetaMask 或其他钱包插件，请先安装 MetaMask', 'log-err');
+    return;
+  }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_requestAccounts', []);
+    signer  = await provider.getSigner();
+    account = await signer.getAddress();
+
+    // 切换到 BSC
+    try {
+      await provider.send('wallet_switchEthereumChain', [{ chainId: BSC_CHAIN_ID }]);
+    } catch (switchErr) {
+      if (switchErr.code === 4902) {
+        await provider.send('wallet_addEthereumChain', [{
+          chainId: BSC_CHAIN_ID,
+          chainName: 'BNB Smart Chain',
+          nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+          rpcUrls: ['https://bsc-dataseed.binance.org/'],
+          blockExplorerUrls: ['https://bscscan.com'],
+        }]);
+      } else { throw switchErr; }
+    }
+
+    const network = await provider.getNetwork();
+    const isBSC = Number(network.chainId) === BSC_CHAIN_ID_NUM;
+
+    $('statusDot').className = isBSC ? 'dot' : 'dot off';
+    $('chainBadge').textContent = isBSC ? 'BSC 主网 (56)' : `Chain ${network.chainId}`;
+    $('chainBadge').style.color = isBSC ? 'var(--green)' : 'var(--red)';
+    $('addrBadge').textContent = shortAddr(account);
+    $('addrBadge').style.display = 'inline-block';
+    $('connectBtn').textContent = '已连接';
+    $('connectBtn').disabled = true;
+
+    log(`钱包已连接: ${account}`, 'log-ok');
+
+    initContracts();
+    await refreshOwnerStatus();
+
+    // 监听账户和链变化
+    window.ethereum.on('accountsChanged', accs => {
+      log(`账户已切换: ${accs[0]}`, 'log-warn');
+      location.reload();
+    });
+    window.ethereum.on('chainChanged', () => location.reload());
+
+  } catch (err) {
+    log(`连接失败: ${err.message || err}`, 'log-err');
+  }
+}
+
+// ─── Owner 状态检测 ───
+async function refreshOwnerStatus() {
+  const badge = $('ownerBadge');
+  let isOwner = false;
+
+  if (factoryContract) {
+    try {
+      const fOwner = await factoryContract.owner();
+      if (fOwner.toLowerCase() === account.toLowerCase()) isOwner = true;
+      log(`TokenFactory owner: ${bscScanAddr(fOwner)}`, 'log-info');
+    } catch(e) { log(`读取 Factory owner 失败: ${e.reason || e.message}`, 'log-err'); }
+  }
+  if (distContract) {
+    try {
+      const dOwner = await distContract.owner();
+      if (dOwner.toLowerCase() === account.toLowerCase()) isOwner = true;
+      log(`FeeDistributor owner: ${bscScanAddr(dOwner)}`, 'log-info');
+    } catch(e) { log(`读取 Distributor owner 失败: ${e.reason || e.message}`, 'log-err'); }
+  }
+
+  badge.textContent = isOwner ? '✓ Owner' : '非 Owner';
+  badge.className   = isOwner ? 'owner-badge' : 'owner-badge no';
+  badge.style.display = 'inline-block';
+}
+
+// ─── Tx 执行封装 ───
+async function sendTx(contract, method, ...args) {
+  log(`发送交易: ${method}(${args.map(a => typeof a === 'string' ? shortAddr(a) : a).join(', ')})...`, 'log-info');
+  const tx = await contract[method](...args);
+  log(`交易已提交: ${bscScanTx(tx.hash)}  等待确认...`, 'log-warn');
+  const receipt = await tx.wait();
+  log(`交易已确认! Gas 消耗: ${receipt.gasUsed.toString()}  Block: ${receipt.blockNumber}`, 'log-ok');
+  return receipt;
+}
+
+// ══════════════════════════════════════════
+//  TokenFactory 操作
+// ══════════════════════════════════════════
+
+async function factorySetBurnBps() {
+  if (!signer) { log('请先连接钱包', 'log-err'); return; }
+  const val = parseInt($('factoryBurnBps').value);
+  if (isNaN(val) || val < 0 || val > 10000) { log('burnBps 必须在 0–10000 之间', 'log-err'); return; }
+  try {
+    const oldBps = await factoryContract.currentBurnBps();
+    await sendTx(factoryContract, 'setBurnBps', val);
+    $('factoryBurnStatus').innerHTML = `<span class="status-kv"><span class="k">已修改:</span><span class="v yellow">${oldBps} → ${val} bps (${(oldBps/100).toFixed(1)}% → ${(val/100).toFixed(1)}%)</span></span>`;
+    log(`销毁比例已修改: ${oldBps} → ${val}`, 'log-ok');
+  } catch(e) { log(`setBurnBps 失败: ${e.reason || e.message}`, 'log-err'); }
+}
+
+async function factoryWithdraw() {
+  if (!signer) { log('请先连接钱包', 'log-err'); return; }
+  const token     = $('rescueToken').value.trim();
+  const recipient = $('rescueRecipient').value.trim();
+  if (!ethers.isAddress(token))     { log('代币地址无效', 'log-err'); return; }
+  if (!ethers.isAddress(recipient)) { log('接收地址无效', 'log-err'); return; }
+  try {
+    const receipt = await sendTx(factoryContract, 'withdrawAllToken', token, recipient);
+    const iface = new ethers.Interface(FACTORY_ABI);
+    for (const l of receipt.logs) {
+      try {
+        const parsed = iface.parseLog({ topics: [...l.topics], data: l.data });
+        if (parsed && parsed.name === 'TokenWithdrawn') {
+          const { token: t, recipient: r, amount } = parsed.args;
+          $('factoryRescueStatus').innerHTML = `<span class="status-kv"><span class="k">提取数量:</span><span class="v green">${ethers.formatUnits(amount, 18)}</span></span>`;
+        }
+      } catch(_){}
+    }
+    log('滞留代币提取成功', 'log-ok');
+  } catch(e) { log(`withdrawAllToken 失败: ${e.reason || e.message}`, 'log-err'); }
+}
+
+async function factoryTransferOwner() {
+  if (!signer) { log('请先连接钱包', 'log-err'); return; }
+  const newOwner = $('factoryNewOwner').value.trim();
+  if (!ethers.isAddress(newOwner)) { log('地址无效', 'log-err'); return; }
+  if (!confirm(`确定将 TokenFactory 所有权转让给 ${newOwner}？\n转让后你将失去所有 owner 权限！`)) return;
+  try {
+    await sendTx(factoryContract, 'transferOwnership', newOwner);
+    $('factoryOwnerStatus').innerHTML = `<span class="status-kv"><span class="k">已转让给:</span><span class="v yellow">${bscScanAddr(newOwner)}</span></span>`;
+    log('TokenFactory 所有权已转让', 'log-ok');
+    await refreshOwnerStatus();
+  } catch(e) { log(`transferOwnership 失败: ${e.reason || e.message}`, 'log-err'); }
+}
+
+// ══════════════════════════════════════════
+//  FeeDistributor 操作
+// ══════════════════════════════════════════
+
+async function distSetRecipient() {
+  if (!signer) { log('请先连接钱包', 'log-err'); return; }
+  const addr = $('distNewRecipient').value.trim();
+  if (!ethers.isAddress(addr)) { log('地址无效', 'log-err'); return; }
+  try {
+    const old = await distContract.platformRecipient();
+    await sendTx(distContract, 'setPlatformRecipient', addr);
+    $('distRecipientStatus').innerHTML = `<span class="status-kv"><span class="k">已修改:</span><span class="v yellow">${shortAddr(old)} → ${bscScanAddr(addr)}</span></span>`;
+    log('平台收款地址已修改', 'log-ok');
+  } catch(e) { log(`setPlatformRecipient 失败: ${e.reason || e.message}`, 'log-err'); }
+}
+
+async function distSetCollector() {
+  if (!signer) { log('请先连接钱包', 'log-err'); return; }
+  const addr   = $('distCollector').value.trim();
+  const action = $('distCollectorAction').value === 'true';
+  if (!ethers.isAddress(addr)) { log('地址无效', 'log-err'); return; }
+  try {
+    await sendTx(distContract, 'setAuthorizedCollector', addr, action);
+    const label = action ? '已授权' : '已取消授权';
+    $('distCollectorStatus').innerHTML = `<span class="status-kv"><span class="k">${label}:</span><span class="v yellow">${bscScanAddr(addr)}</span></span>`;
+    log(`Collector ${label}: ${addr}`, action ? 'log-ok' : 'log-warn');
+  } catch(e) { log(`setAuthorizedCollector 失败: ${e.reason || e.message}`, 'log-err'); }
+}
+
+async function distTransferOwner() {
+  if (!signer) { log('请先连接钱包', 'log-err'); return; }
+  const newOwner = $('distNewOwner').value.trim();
+  if (!ethers.isAddress(newOwner)) { log('地址无效', 'log-err'); return; }
+  if (!confirm(`确定将 FeeDistributor 所有权转让给 ${newOwner}？\n转让后你将失去所有 owner 权限！`)) return;
+  try {
+    await sendTx(distContract, 'transferOwnership', newOwner);
+    $('distOwnerStatus').innerHTML = `<span class="status-kv"><span class="k">已转让给:</span><span class="v yellow">${bscScanAddr(newOwner)}</span></span>`;
+    log('FeeDistributor 所有权已转让', 'log-ok');
+    await refreshOwnerStatus();
+  } catch(e) { log(`transferOwnership 失败: ${e.reason || e.message}`, 'log-err'); }
+}
+
+// ══════════════════════════════════════════
+//  查询功能
+// ══════════════════════════════════════════
+
+async function queryFactoryState() {
+  const c = getReadFactory();
+  if (!c) { $('factoryStateResult').innerHTML = '<div class="hint warn">请连接钱包或稍后重试</div>'; return; }
+  try {
+    const [owner, burnBps, total, nextId] = await Promise.all([
+      c.owner(),
+      c.currentBurnBps(),
+      c.totalLaunches(),
+      c.nextLaunchId(),
+    ]);
+    $('factoryStateResult').innerHTML = `
+      <div class="status-row" style="gap:20px;flex-wrap:wrap">
+        <span class="status-kv"><span class="k">Owner:</span><span class="v">${bscScanAddr(owner)}</span></span>
+        <span class="status-kv"><span class="k">当前 burnBps:</span><span class="v yellow">${burnBps} (${(burnBps/100).toFixed(1)}%)</span></span>
+        <span class="status-kv"><span class="k">已发行:</span><span class="v green">${total}</span></span>
+        <span class="status-kv"><span class="k">nextLaunchId:</span><span class="v">${nextId}</span></span>
+      </div>`;
+    log('Factory 状态查询完成', 'log-ok');
+  } catch(e) { $('factoryStateResult').innerHTML = `<div class="hint warn">查询失败: ${e.message}</div>`; }
+}
+
+async function queryDistState() {
+  const c = getReadDist();
+  if (!c) { $('distStateResult').innerHTML = '<div class="hint warn">请连接钱包或稍后重试</div>'; return; }
+  try {
+    const [owner, recipient] = await Promise.all([
+      c.owner(),
+      c.platformRecipient(),
+    ]);
+    $('distStateResult').innerHTML = `
+      <div class="status-row" style="gap:20px;flex-wrap:wrap">
+        <span class="status-kv"><span class="k">Owner:</span><span class="v">${bscScanAddr(owner)}</span></span>
+        <span class="status-kv"><span class="k">平台收款地址:</span><span class="v yellow">${bscScanAddr(recipient)}</span></span>
+        <span class="status-kv"><span class="k">销毁地址:</span><span class="v" style="color:var(--red)">${bscScanAddr('0xdEAD000000000000000042069420694206942069')}</span></span>
+      </div>`;
+    log('FeeDistributor 状态查询完成', 'log-ok');
+  } catch(e) { $('distStateResult').innerHTML = `<div class="hint warn">查询失败: ${e.message}</div>`; }
+}
+
+async function queryLaunchById() {
+  const c = getReadFactory();
+  if (!c) { $('launchQueryResult').innerHTML = '<div class="hint warn">请连接钱包或稍后重试</div>'; return; }
+  const id = parseInt($('queryLaunchId').value);
+  if (isNaN(id) || id < 1) { $('launchQueryResult').innerHTML = '<div class="hint warn">请输入有效的 LaunchId</div>'; return; }
+  try {
+    const [token, creator, pool, tokenId, timestamp, burnBps] = await Promise.all([
+      c.launchToken(id),
+      c.launchCreator(id),
+      c.launchPool(id),
+      c.launchTokenId(id),
+      c.launchTimestamp(id),
+      c.launchBurnBps(id),
+    ]);
+    const zeroAddr = '0x0000000000000000000000000000000000000000';
+    if (token === zeroAddr) {
+      $('launchQueryResult').innerHTML = '<div class="hint warn">该 LaunchId 不存在</div>';
+      return;
+    }
+    const date = new Date(Number(timestamp) * 1000).toLocaleString('zh-CN');
+    $('launchQueryResult').innerHTML = `
+      <table class="tbl">
+        <tr><td style="color:var(--dim)">LaunchId</td><td>${id}</td></tr>
+        <tr><td style="color:var(--dim)">代币地址</td><td>${bscScanAddr(token)}</td></tr>
+        <tr><td style="color:var(--dim)">创建者</td><td>${bscScanAddr(creator)}</td></tr>
+        <tr><td style="color:var(--dim)">池子地址</td><td>${bscScanAddr(pool)}</td></tr>
+        <tr><td style="color:var(--dim)">LP TokenId</td><td>${tokenId.toString()}</td></tr>
+        <tr><td style="color:var(--dim)">销毁比例</td><td style="color:var(--yellow)">${burnBps} (${(burnBps/100).toFixed(1)}%)</td></tr>
+        <tr><td style="color:var(--dim)">创建时间</td><td>${date}</td></tr>
+      </table>`;
+    log(`Launch #${id} 查询完成`, 'log-ok');
+  } catch(e) { $('launchQueryResult').innerHTML = `<div class="hint warn">查询失败: ${e.message}</div>`; }
+}
+
+async function queryBurnBps() {
+  const c = getReadDist();
+  if (!c) { $('burnBpsQueryResult').innerHTML = '<div class="hint warn">请连接钱包或稍后重试</div>'; return; }
+  const tokenId = parseInt($('queryTokenId').value);
+  if (isNaN(tokenId) || tokenId < 1) { $('burnBpsQueryResult').innerHTML = '<div class="hint warn">请输入有效的 TokenId</div>'; return; }
+  try {
+    const [registered, bps] = await Promise.all([
+      c.burnBpsRegistered(tokenId),
+      c.burnBpsByTokenId(tokenId),
+    ]);
+    if (!registered) {
+      $('burnBpsQueryResult').innerHTML = '<div class="hint warn">该 tokenId 尚未注册销毁比例</div>';
+    } else {
+      const platform = 10000 - bps;
+      $('burnBpsQueryResult').innerHTML = `
+        <div class="status-row" style="gap:20px">
+          <span class="status-kv"><span class="k">已注册:</span><span class="v green">是</span></span>
+          <span class="status-kv"><span class="k">销毁比例:</span><span class="v yellow">${bps} (${(bps/100).toFixed(1)}%)</span></span>
+          <span class="status-kv"><span class="k">平台比例:</span><span class="v">${platform} (${(platform/100).toFixed(1)}%)</span></span>
+        </div>`;
+    }
+    log(`TokenId #${tokenId} burnBps 查询完成`, 'log-ok');
+  } catch(e) { $('burnBpsQueryResult').innerHTML = `<div class="hint warn">查询失败: ${e.message}</div>`; }
+}
+
+// ─── 只读 provider（无需钱包连接也可查询链上数据）───
+let roProvider = null;
+let roFactory = null;
+let roDist    = null;
+
+function initReadOnly() {
+  roProvider = new ethers.JsonRpcProvider(BSC_RPC);
+  roFactory  = new ethers.Contract(ADDRS.factory, FACTORY_ABI, roProvider);
+  roDist     = new ethers.Contract(ADDRS.distributor, DIST_ABI, roProvider);
+}
+
+function getReadFactory() { return factoryContract || roFactory; }
+function getReadDist()    { return distContract    || roDist;    }
+
+// ─── 初始化 ───
+initReadOnly();
+log('面板已加载，合约地址已硬编码，请连接 Owner 钱包', 'log-info');
+
+// ─── Tab 切换 ───
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    $('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
