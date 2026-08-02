@@ -406,16 +406,12 @@ const ABI_TREASURY = [
   'function proposeWithdraw(address to, uint256 amount)',
   'function executeWithdraw()',
   'function cancelWithdraw()',
-  'function pendingWithdrawTo() view returns (address)',
-  'function pendingWithdrawAmount() view returns (uint256)',
-  'function pendingWithdrawUnlockAt() view returns (uint256)',
+  'function pendingWithdraw() view returns (address target, uint256 amount, address token, uint256 readyAt, bool exists)',
   'function proposeRescueERC20(address token, address to, uint256 amount)',
   'function executeRescueERC20()',
   'function cancelRescue()',
-  'function pendingRescueToken() view returns (address)',
-  'function pendingRescueTo() view returns (address)',
-  'function pendingRescueAmount() view returns (uint256)',
-  'function pendingRescueUnlockAt() view returns (uint256)',
+  'function pendingRescue() view returns (address target, uint256 amount, address token, uint256 readyAt, bool exists)',
+  'function cancelOwnershipTransfer()',
 ];
 
 const ABI_ERC20 = [
@@ -551,32 +547,28 @@ function updateOwnerBadge(fOwner, fPending, tOwner, tPending){
 async function refreshPendings(){
   const t = new ethers.Contract(CFG.treasury, ABI_TREASURY, provider);
   try {
-    const [wTo, wAmt, wUn] = await Promise.all([
-      t.pendingWithdrawTo(), t.pendingWithdrawAmount(), t.pendingWithdrawUnlockAt()
-    ]);
+    const p = await t.pendingWithdraw();
     const wEl = elId('pendingWithdraw');
-    if (wAmt && !wAmt.isZero()){
-      const unlockMs = Number(wUn) * 1000;
+    if (p && p.exists){
+      const unlockMs = Number(p.readyAt) * 1000;
       const remain = unlockMs - Date.now();
-      wEl.textContent = `⏳ 待执行 BNB 提取：→ ${wTo}，${fmt(wAmt)} BNB，${remain>0?`剩 ${msFmt(remain)} 可执行`:'已到期，可执行'}`;
+      wEl.textContent = `⏳ 待执行 BNB 提取：→ ${p.target}，${fmt(p.amount)} BNB，${remain>0?`剩 ${msFmt(remain)} 可执行`:'已到期，可执行'}`;
     } else {
       wEl.textContent = '（当前无 BNB 待执行提取）';
     }
   } catch {}
   try {
-    const [tk, to, amt, un] = await Promise.all([
-      t.pendingRescueToken(), t.pendingRescueTo(), t.pendingRescueAmount(), t.pendingRescueUnlockAt()
-    ]);
+    const p = await t.pendingRescue();
     const el = elId('pendingRescue');
-    if (amt && !amt.isZero()){
-      const unlockMs = Number(un) * 1000;
+    if (p && p.exists){
+      const unlockMs = Number(p.readyAt) * 1000;
       const remain = unlockMs - Date.now();
       let sym = 'TOKEN', dec = 18;
       try {
-        const erc = new ethers.Contract(tk, ABI_ERC20, provider);
+        const erc = new ethers.Contract(p.token, ABI_ERC20, provider);
         [sym, dec] = await Promise.all([erc.symbol().catch(()=>'TOKEN'), erc.decimals().catch(()=>18)]);
       } catch {}
-      el.textContent = `⏳ 待执行 ERC20 提取：${sym}（${tk}）→ ${to}，${fmt(amt, dec)} ${sym}，${remain>0?`剩 ${msFmt(remain)} 可执行`:'已到期，可执行'}`;
+      el.textContent = `⏳ 待执行 ERC20 提取：${sym}（${p.token}）→ ${p.target}，${fmt(p.amount, dec)} ${sym}，${remain>0?`剩 ${msFmt(remain)} 可执行`:'已到期，可执行'}`;
     } else {
       el.textContent = '（当前无 ERC20 待执行提取）';
     }
