@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Woof Owner 管理面板 · BSC</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --panel: #131a2b;
+    --panel-2: #1a2238;
+    --border: #263149;
+    --text: #e6eaf3;
+    --muted: #8b95af;
+    --primary: #ffb020;
+    --primary-2: #f39406;
+    --danger: #ff5b5b;
+    --ok: #29d391;
+    --warn: #ffb020;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  a { color: var(--primary); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 20px 80px; }
+  header.top {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding-bottom: 18px; border-bottom: 1px solid var(--border); margin-bottom: 20px;
+  }
+  header.top h1 { margin: 0; font-size: 20px; }
+  header.top .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .conn { display: flex; align-items: center; gap: 10px; }
+  .btn {
+    background: var(--primary); color: #111; border: none; padding: 10px 16px; font-weight: 700;
+    border-radius: 10px; cursor: pointer; font-size: 14px;
+  }
+  .btn:hover { background: var(--primary-2); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); font-weight: 500; }
+  .btn.ghost:hover { background: var(--panel-2); }
+  .btn.danger { background: var(--danger); color: #fff; }
+  .btn.ok { background: var(--ok); color: #052; }
+  .badge {
+    display: inline-block; padding: 3px 8px; border-radius: 6px; font-size: 12px;
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--muted);
+  }
+  .badge.you { color: var(--ok); border-color: rgba(41,211,145,.4); background: rgba(41,211,145,.08); }
+  .badge.warn { color: var(--warn); border-color: rgba(255,176,32,.4); background: rgba(255,176,32,.08); }
+  .badge.err  { color: var(--danger); border-color: rgba(255,91,91,.4); background: rgba(255,91,91,.08); }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px; margin-bottom: 16px;
+  }
+  .card h2 { margin: 0 0 6px; font-size: 16px; }
+  .card p.hint { margin: 0 0 14px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+  .kv-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; margin-top: 8px;
+  }
+  .kv { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,.06); font-size: 13.5px; }
+  .kv em { font-style: normal; color: var(--muted); }
+  .kv b { font-weight: 600; word-break: break-all; text-align: right; max-width: 60%; }
+
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; margin: 10px 0; }
+  .row.col-2 { grid-template-columns: 1fr 1fr auto; }
+  .row.col-3 { grid-template-columns: 1fr 1fr 1fr auto; }
+  label small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+  input[type=text], input[type=number] {
+    width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    padding: 10px 12px; border-radius: 10px; font-size: 14px; font-family: ui-monospace, monospace;
+  }
+  input:focus { outline: none; border-color: var(--primary); }
+
+  .section-nav {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px;
+  }
+  .section-nav a {
+    padding: 6px 10px; border-radius: 8px; background: var(--panel-2);
+    border: 1px solid var(--border); color: var(--text); font-size: 12.5px; text-decoration: none;
+  }
+  .section-nav a:hover { background: #223057; }
+
+  .status {
+    margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+    background: var(--panel-2); border: 1px solid var(--border); font-size: 13px;
+    word-break: break-all; white-space: pre-wrap;
+  }
+  .status.ok { border-color: rgba(41,211,145,.4); }
+  .status.err { border-color: rgba(255,91,91,.4); color: #ffb0b0; }
+  .status a { color: var(--primary); }
+
+  .hr { height: 1px; background: var(--border); margin: 14px 0; }
+
+  .cta-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+
+  .callout {
+    border-left: 3px solid var(--primary); padding: 10px 12px; background: rgba(255,176,32,.06);
+    border-radius: 8px; font-size: 13px; color: #ffe0aa; margin-bottom: 12px; line-height: 1.55;
+  }
+  .callout.err { border-left-color: var(--danger); background: rgba(255,91,91,.06); color: #ffb8b8; }
+  .callout.ok { border-left-color: var(--ok); background: rgba(41,211,145,.06); color: #b3ffdb; }
+
+  .mono { font-family: ui-monospace, monospace; font-size: 12.5px; word-break: break-all; }
+
+  .switch-btn {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
+  }
+  .switch-btn.on { background: rgba(41,211,145,.15); border-color: rgba(41,211,145,.4); color: #b3ffdb; }
+  .switch-btn.off { background: rgba(255,91,91,.1); border-color: rgba(255,91,91,.4); color: #ffb8b8; }
+
+  @media (max-width: 720px) {
+    .kv-grid { grid-template-columns: 1fr; }
+    .row, .row.col-2, .row.col-3 { grid-template-columns: 1fr; }
+    header.top { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div>
+    <h1>Woof 合约 · Owner 管理面板</h1>
+    <div class="sub">BSC 主网（Chain ID 56）· 用大白话给 Owner 用的合约管理工具</div>
+  </div>
+  <div class="conn">
+    <span id="netBadge" class="badge">未连接</span>
+    <span id="addrBadge" class="badge">—</span>
+    <span id="ownerBadge" class="badge">身份未知</span>
+    <button id="btnConnect" class="btn">连接钱包</button>
+  </div>
+</header>
+
+<nav class="section-nav">
+  <a href="#overview">① 概览</a>
+  <a href="#accept">② 接管所有权</a>
+  <a href="#factory-tax">③ 平台税率</a>
+  <a href="#factory-fee">④ 创建费</a>
+  <a href="#factory-div">⑤ 分红参数</a>
+  <a href="#factory-owner">⑥ Factory 转让</a>
+  <a href="#calltoken">⑦ 管某个已发的币</a>
+  <a href="#treasury">⑧ 金库出金（BNB）</a>
+  <a href="#treasury-shib">⑨ 金库出 SHIB / ERC20</a>
+  <a href="#treasury-owner">⑩ Treasury 转让</a>
+</nav>
+
+<div class="callout">
+  <b>使用说明</b><br />
+  1) 点右上角"连接钱包"，把钱包切到 BSC 主网。<br />
+  2) 面板会自动读取合约当前状态，并标记你是不是 owner。<br />
+  3) 每个操作都用大白话告诉你"这是干什么的"，点按钮就会弹出钱包让你签名发交易。<br />
+  4) 所有大额出金都有 <b>24 小时时间锁</b>：先"发起"，等 24h 后再"执行"。中间可以"取消"。
+</div>
+
+<!-- ── ① 概览 ────────────────────────────────────── -->
+<section class="card" id="overview">
+  <h2>① 概览 · 当前合约状态</h2>
+  <p class="hint">这里显示 4 个核心合约的地址和主要参数。所有数据都是从链上实时读取，不是本地缓存。</p>
+
+  <div class="kv-grid">
+    <div class="kv"><em>Factory 地址</em><b class="mono"><a id="linkFactory" target="_blank" href="#"></a></b></div>
+    <div class="kv"><em>Treasury 地址</em><b class="mono"><a id="linkTreasury" target="_blank" href="#"></a></b></div>
+    <div class="kv"><em>TokenDeployer 地址</em><b class="mono"><a id="linkDeployer" target="_blank" href="#"></a></b></div>
+    <div class="kv"><em>FactoryValidator 地址</em><b class="mono"><a id="linkValidator" target="_blank" href="#"></a></b></div>
+  </div>
+
+  <div class="hr"></div>
+  <h3 style="margin:0 0 8px;font-size:14px;">Factory 参数</h3>
+  <div class="kv-grid">
+    <div class="kv"><em>创建费（发一个新币要付的 SHIB）</em><b id="vCreationFee">—</b></div>
+    <div class="kv"><em>平台税率（每笔买卖平台先切走多少）</em><b id="vPlatformTax">—</b></div>
+    <div class="kv"><em>分红派发 gas 上限（单次卖币时）</em><b id="vDivGas">—</b></div>
+    <div class="kv"><em>单笔卖币最多派发几个持币者</em><b id="vDivMax">—</b></div>
+    <div class="kv"><em>自动到账的最低分红门槛</em><b id="vMinAuto">—</b></div>
+    <div class="kv"><em>Factory 当前 owner</em><b id="vFOwner" class="mono">—</b></div>
+    <div class="kv"><em>Factory 待接管地址</em><b id="vFPending" class="mono">—</b></div>
+  </div>
+
+  <div class="hr"></div>
+  <h3 style="margin:0 0 8px;font-size:14px;">Treasury 参数</h3>
+  <div class="kv-grid">
+    <div class="kv"><em>BNB 免时锁额度上限</em><b id="vInstantLimit">—</b></div>
+    <div class="kv"><em>Treasury 当前 BNB 余额</em><b id="vTBnb">—</b></div>
+    <div class="kv"><em>Treasury 当前 SHIB 余额</em><b id="vTShib">—</b></div>
+    <div class="kv"><em>Treasury 当前 owner</em><b id="vTOwner" class="mono">—</b></div>
+    <div class="kv"><em>Treasury 待接管地址</em><b id="vTPending" class="mono">—</b></div>
+  </div>
+
+  <div class="cta-row">
+    <button id="btnRefreshAll" class="btn ghost">刷新所有数据</button>
+  </div>
+</section>
+
+<!-- ── ② 接管所有权 ─────────────────────────────── -->
+<section class="card" id="accept">
+  <h2>② 接管所有权（新 owner 第一次要做的事）</h2>
+  <p class="hint">
+    合约用的是"两步转让"：老 owner 已经把所有权转到新地址，但新地址必须自己来点一下"接管"才生效。<br />
+    这一步 <b>0xf94f...389a</b>（也就是新 owner）需要用钱包分别在 Factory 和 Treasury 上点两次"接管"。
+  </p>
+  <div class="callout">
+    对照你现在的钱包地址与"待接管地址"是否一致。如果一致，按钮就可以点。点完之后 owner 就正式换成你了。
+  </div>
+  <div class="cta-row">
+    <button id="btnAcceptFactory" class="btn">接管 Factory 所有权</button>
+    <button id="btnAcceptTreasury" class="btn">接管 Treasury 所有权</button>
+  </div>
+  <div id="statusAccept" class="status" style="display:none"></div>
+</section>
+
+<!-- ── ③ 平台税率 ─────────────────────────────── -->
+<section class="card" id="factory-tax">
+  <h2>③ 修改"平台税率"（未来新发的币生效）</h2>
+  <p class="hint">
+    每笔买卖的税里，平台先切走多少（比如 20% 就是税的 20% 归平台）。<br />
+    <b>注意</b>：改了以后只对之后新创建的币生效，已经发过的币还是老比例。上限 20%（2000 bps）。
+  </p>
+  <div class="row">
+    <label><small>新平台税率（单位：万分之，比如 2000 = 20%）</small>
+      <input id="inPlatformTax" type="number" min="0" max="2000" step="1" placeholder="例：2000" />
+    </label>
+    <button id="btnSetPlatformTax" class="btn">保存</button>
+  </div>
+  <div id="statusPTax" class="status" style="display:none"></div>
+</section>
+
+<!-- ── ④ 创建费 ─────────────────────────────── -->
+<section class="card" id="factory-fee">
+  <h2>④ 修改"发币创建费"</h2>
+  <p class="hint">
+    用户想通过平台发一个新代币，需要一次性支付多少 SHIB 给平台。当前 0，代表免费。<br />
+    <b>上限</b>：5 亿 SHIB（合约硬编码，超过会 revert）。
+  </p>
+  <div class="row">
+    <label><small>新创建费（单位：SHIB，会自动乘 10^18）</small>
+      <input id="inCreationFee" type="text" placeholder="例：100000000 表示 1 亿 SHIB" />
+    </label>
+    <button id="btnSetCreationFee" class="btn">保存</button>
+  </div>
+  <div id="statusFee" class="status" style="display:none"></div>
+</section>
+
+<!-- ── ⑤ 分红参数 ─────────────────────────────── -->
+<section class="card" id="factory-div">
+  <h2>⑤ 修改"全局分红参数"（三个一起改）</h2>
+  <p class="hint">
+    这三个参数控制"每笔卖币时会顺便派发分红给几个持币者、每人最少多少才自动到账"。<br />
+    · <b>Gas 上限</b>：每次派发消耗的 gas 上限，默认 500,000<br />
+    · <b>最多派发几人</b>：每次卖单最多派发几个人，默认 10<br />
+    · <b>最低自动到账门槛</b>：单个人可领 &lt; 这个数不会自动派，可以自己去手动 claim，默认 100 万 SHIB
+  </p>
+  <div class="row col-3">
+    <label><small>Gas 上限（数字）</small><input id="inDivGas" type="number" min="100000" placeholder="500000" /></label>
+    <label><small>最多派发几人（数字，上限 50）</small><input id="inDivMax" type="number" min="1" max="50" placeholder="10" /></label>
+    <label><small>最低自动到账门槛（SHIB，自动 ×10^18）</small><input id="inMinAuto" type="text" placeholder="1000000" /></label>
+    <button id="btnSetDiv" class="btn">保存</button>
+  </div>
+  <div id="statusDiv" class="status" style="display:none"></div>
+</section>
+
+<!-- ── ⑥ Factory owner 转让 ─────────────────────── -->
+<section class="card" id="factory-owner">
+  <h2>⑥ 把 Factory 所有权转给别人</h2>
+  <p class="hint">
+    两步走：<br />
+    1. 你先点"发起转让"，把 pendingOwner 设成新地址<br />
+    2. 新地址自己上来点"接管"（在上面第 ②）<br />
+    发起后你的 owner 权还没丢，可以随时用同一个按钮再指向其他地址。
+  </p>
+  <div class="row">
+    <label><small>新 owner 地址</small><input id="inNewFactoryOwner" type="text" placeholder="0x…" /></label>
+    <button id="btnTransferFactory" class="btn">发起转让</button>
+  </div>
+  <div id="statusFOwner" class="status" style="display:none"></div>
+</section>
+
+<!-- ── ⑦ callToken ─────────────────────────────── -->
+<section class="card" id="calltoken">
+  <h2>⑦ 通过 Factory 管一个已发的币</h2>
+  <p class="hint">
+    Factory 是所有已发币的"总管"，你不能改它们的税率（合约禁止），但可以调它们的分红参数、swap 阈值、熔断复位等。<br />
+    这里需要你先在下面构造好 calldata（16 进制），再一起提交。<br />
+    <b>安全提示</b>：这里可以调用被管理代币里的任意函数，请务必核对 calldata 后再签。
+  </p>
+  <div class="row col-2">
+    <label><small>目标代币地址</small><input id="inCTToken" type="text" placeholder="0x…" /></label>
+    <label><small>calldata（0x 开头 16 进制）</small><input id="inCTData" type="text" placeholder="0x…" /></label>
+    <button id="btnCallToken" class="btn">执行</button>
+  </div>
+  <div id="statusCT" class="status" style="display:none"></div>
+</section>
+
+<!-- ── ⑧ Treasury BNB ─────────────────────────── -->
+<section class="card" id="treasury">
+  <h2>⑧ 从金库提 BNB</h2>
+  <p class="hint">
+    金库里的 BNB 有两种提法：<br />
+    · <b>小额直提</b>：金额 ≤ instantLimit（当前上面显示的额度）时，直接一步走<br />
+    · <b>大额时间锁</b>：金额超过 instantLimit 时，先发起 → 等 24 小时 → 执行<br />
+    发起后中间可以取消。
+  </p>
+  <div class="row col-2">
+    <label><small>收款地址</small><input id="inWithdrawTo" type="text" placeholder="0x…" /></label>
+    <label><small>金额（BNB）</small><input id="inWithdrawAmt" type="text" placeholder="例：0.5" /></label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button id="btnWithdrawNow" class="btn">小额直提</button>
+    </div>
+  </div>
+
+  <div class="hr"></div>
+
+  <h3 style="margin:0 0 8px;font-size:14px;">大额 BNB 提取（走 24h 时间锁）</h3>
+  <div class="cta-row">
+    <button id="btnProposeWithdraw" class="btn">① 发起大额提取</button>
+    <button id="btnExecuteWithdraw" class="btn ok">② 执行（24h 后）</button>
+    <button id="btnCancelWithdraw" class="btn ghost">取消发起</button>
+  </div>
+  <div id="pendingWithdraw" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
+
+  <div class="hr"></div>
+  <h3 style="margin:0 0 8px;font-size:14px;">修改 BNB 免时锁额度</h3>
+  <div class="row">
+    <label><small>新的 instantLimit（BNB，最大 5）</small><input id="inInstantLimit" type="text" placeholder="例：0.5" /></label>
+    <button id="btnSetInstantLimit" class="btn">保存</button>
+  </div>
+
+  <div id="statusTr" class="status" style="display:none"></div>
+</section>
+
+<!-- ── ⑨ Treasury SHIB / ERC20 ─────────────────── -->
+<section class="card" id="treasury-shib">
+  <h2>⑨ 从金库提 SHIB（或任意 ERC20）</h2>
+  <p class="hint">
+    金库里的 SHIB 和其他 ERC20 <b>没有小额直提，只能走 24h 时间锁</b>：先发起 → 等 24 小时 → 执行。<br />
+    默认代币地址是 SHIB。想提别的 ERC20，改代币地址即可。
+  </p>
+  <div class="row col-3">
+    <label><small>代币地址（默认 SHIB）</small><input id="inRescueToken" type="text" value="0x2859e4544C4bB03966803b044A93563Bd2D0DD4D" /></label>
+    <label><small>收款地址</small><input id="inRescueTo" type="text" placeholder="0x…" /></label>
+    <label><small>金额（按代币精度自动换算，默认 18 位）</small><input id="inRescueAmt" type="text" placeholder="例：1000000" /></label>
+    <div></div>
+  </div>
+  <div class="cta-row">
+    <button id="btnProposeRescue" class="btn">① 发起 SHIB / ERC20 提取</button>
+    <button id="btnExecuteRescue" class="btn ok">② 执行（24h 后）</button>
+    <button id="btnCancelRescue" class="btn ghost">取消发起</button>
+  </div>
+  <div id="pendingRescue" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>
+  <div id="statusRescue" class="status" style="display:none"></div>
+</section>
+
+<!-- ── ⑩ Treasury owner ─────────────────────── -->
+<section class="card" id="treasury-owner">
+  <h2>⑩ 把 Treasury 所有权转给别人</h2>
+  <p class="hint">和 Factory 一样两步走：先发起 → 新地址接管。</p>
+  <div class="row">
+    <label><small>新 owner 地址</small><input id="inNewTreasuryOwner" type="text" placeholder="0x…" /></label>
+    <button id="btnTransferTreasury" class="btn">发起转让</button>
+  </div>
+  <div id="statusTOwner" class="status" style="display:none"></div>
+</section>
+
+</div>
+
+<script>
+/* ═══════════ 配置 ═══════════ */
+const CFG = {
+  chainId: 56,
+  chainHex: '0x38',
+  chainName: 'BNB Smart Chain',
+  rpc: 'https://bsc-dataseed.binance.org/',
+  explorer: 'https://bscscan.com',
+  factory:  '0x3Eb1FA8c361c7160cE07E042C0ff5a90A2A8d585',
+  treasury: '0x5E1f0de2e8eEAf5407Aa35b7427c52df59223169',
+  deployer: '0xCe9488D3127478bBc7d45a9827AC55465C66E4A7',
+  validator:'0xe9BF55AAeccc2c2c57E339864de40eF3958BaD96',
+  shib:     '0x2859e4544C4bB03966803b044A93563Bd2D0DD4D',
+};
+
+/* ═══════════ ABI ═══════════ */
+const ABI_FACTORY = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function acceptOwnership()',
+  'function transferOwnership(address)',
+  'function creationFee() view returns (uint256)',
+  'function platformTaxBps() view returns (uint16)',
+  'function dividendProcessGas() view returns (uint256)',
+  'function maxDividendProcessAccounts() view returns (uint256)',
+  'function minAutoClaim() view returns (uint256)',
+  'function setPlatformTaxBps(uint16)',
+  'function setCreationFee(uint256)',
+  'function setGlobalDividendProcessConfig(uint256 gas, uint256 maxAccounts, uint256 minAuto)',
+  'function callToken(address token, bytes data) returns (bytes)',
+];
+
+const ABI_TREASURY = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function acceptOwnership()',
+  'function transferOwnership(address)',
+  'function instantLimit() view returns (uint256)',
+  'function setInstantLimit(uint256)',
+  'function withdraw(address to, uint256 amount)',
+  'function proposeWithdraw(address to, uint256 amount)',
+  'function executeWithdraw()',
+  'function cancelWithdraw()',
+  'function pendingWithdrawTo() view returns (address)',
+  'function pendingWithdrawAmount() view returns (uint256)',
+  'function pendingWithdrawUnlockAt() view returns (uint256)',
+  'function proposeRescueERC20(address token, address to, uint256 amount)',
+  'function executeRescueERC20()',
+  'function cancelRescue()',
+  'function pendingRescueToken() view returns (address)',
+  'function pendingRescueTo() view returns (address)',
+  'function pendingRescueAmount() view returns (uint256)',
+  'function pendingRescueUnlockAt() view returns (uint256)',
+];
+
+const ABI_ERC20 = [
+  'function symbol() view returns (string)',
+  'function decimals() view returns (uint8)',
+  'function balanceOf(address) view returns (uint256)',
+];
+
+/* ═══════════ 状态 ═══════════ */
+let provider = null;       // read-only
+let signer   = null;       // wallet signer
+let account  = null;
+
+function elId(id){ return document.getElementById(id); }
+function setText(id,txt){ const e=elId(id); if(e) e.textContent = txt; }
+function setLink(id,addr){ const a=elId(id); if(!a) return; a.href = `${CFG.explorer}/address/${addr}`; a.textContent = addr; }
+function showStatus(id, msg, kind){ const el=elId(id); if(!el) return; el.style.display='block'; el.className='status'+(kind?(' '+kind):''); el.textContent = msg; }
+function short(a){ return a? a.slice(0,6)+'…'+a.slice(-4) : '—'; }
+function eq(a,b){ return String(a||'').toLowerCase()===String(b||'').toLowerCase(); }
+function txLink(hash){ return `${CFG.explorer}/tx/${hash}`; }
+function fmt(bn, dec=18, digits=4){
+  try { const s=ethers.utils.formatUnits(bn, dec); const n=Number(s); if(!isFinite(n)) return s; if(n===0) return '0'; if(n<0.0001) return n.toExponential(3); return n.toLocaleString('en-US',{ maximumFractionDigits: digits }); }
+  catch { return String(bn); }
+}
+
+/* ═══════════ 初始化只读 provider ═══════════ */
+function initProvider(){
+  provider = new ethers.providers.JsonRpcProvider(CFG.rpc);
+}
+initProvider();
+
+/* ═══════════ 连接钱包 ═══════════ */
+async function connect(){
+  if (!window.ethereum) { alert('请先安装 MetaMask 或 OKX Wallet 等钱包'); return; }
+  try {
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    // Switch/add BSC
+    try {
+      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CFG.chainHex }] });
+    } catch (err) {
+      if (err.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: CFG.chainHex,
+            chainName: CFG.chainName,
+            nativeCurrency: { name: 'BNB', symbol: 'BNB', decimals: 18 },
+            rpcUrls: [CFG.rpc],
+            blockExplorerUrls: [CFG.explorer],
+          }]
+        });
+      }
+    }
+    const eth = new ethers.providers.Web3Provider(window.ethereum, 'any');
+    signer  = eth.getSigner();
+    account = (await signer.getAddress()).toLowerCase();
+    elId('netBadge').textContent = 'BSC · 已连接';
+    elId('netBadge').className = 'badge you';
+    elId('addrBadge').textContent = short(account);
+    elId('btnConnect').textContent = '刷新账号';
+    window.ethereum.on('accountsChanged', () => location.reload());
+    window.ethereum.on('chainChanged', () => location.reload());
+    await refreshAll();
+  } catch (e) {
+    console.error(e); alert(e.message || String(e));
+  }
+}
+
+/* ═══════════ 刷新链上数据 ═══════════ */
+async function refreshAll(){
+  setLink('linkFactory',  CFG.factory);
+  setLink('linkTreasury', CFG.treasury);
+  setLink('linkDeployer', CFG.deployer);
+  setLink('linkValidator',CFG.validator);
+
+  const f  = new ethers.Contract(CFG.factory,  ABI_FACTORY,  provider);
+  const t  = new ethers.Contract(CFG.treasury, ABI_TREASURY, provider);
+  const shib = new ethers.Contract(CFG.shib, ABI_ERC20, provider);
+
+  try {
+    const [fee, pTax, dGas, dMax, minAuto, fOwner, fPending] = await Promise.all([
+      f.creationFee(), f.platformTaxBps(), f.dividendProcessGas(),
+      f.maxDividendProcessAccounts(), f.minAutoClaim(),
+      f.owner(), f.pendingOwner()
+    ]);
+    setText('vCreationFee', fee.isZero() ? '0（免费）' : `${fmt(fee)} SHIB`);
+    setText('vPlatformTax', `${(Number(pTax)/100).toFixed(2)}%（${pTax} bps）`);
+    setText('vDivGas', dGas.toString());
+    setText('vDivMax', dMax.toString());
+    setText('vMinAuto', `${fmt(minAuto)} SHIB`);
+    setText('vFOwner', fOwner);
+    setText('vFPending', (fPending === ethers.constants.AddressZero) ? '（无）' : fPending);
+    updateOwnerBadge(fOwner, fPending, null, null);
+  } catch (e) { console.warn(e); }
+
+  try {
+    const [inst, tOwner, tPending, bnb, sh] = await Promise.all([
+      t.instantLimit(), t.owner(), t.pendingOwner(),
+      provider.getBalance(CFG.treasury),
+      shib.balanceOf(CFG.treasury),
+    ]);
+    setText('vInstantLimit', `${fmt(inst)} BNB`);
+    setText('vTBnb', `${fmt(bnb)} BNB`);
+    setText('vTShib', `${fmt(sh)} SHIB`);
+    setText('vTOwner', tOwner);
+    setText('vTPending', (tPending === ethers.constants.AddressZero) ? '（无）' : tPending);
+    updateOwnerBadge(null, null, tOwner, tPending);
+    await refreshPendings();
+  } catch (e) { console.warn(e); }
+}
+
+function updateOwnerBadge(fOwner, fPending, tOwner, tPending){
+  if (!account) return;
+  const badge = elId('ownerBadge');
+  const isFO = fOwner ? eq(fOwner, account) : null;
+  const isTO = tOwner ? eq(tOwner, account) : null;
+  const isFP = fPending ? eq(fPending, account) : null;
+  const isTP = tPending ? eq(tPending, account) : null;
+  const roles = [];
+  if (isFO) roles.push('Factory Owner');
+  if (isTO) roles.push('Treasury Owner');
+  if (isFP) roles.push('Factory 待接管');
+  if (isTP) roles.push('Treasury 待接管');
+  if (roles.length){
+    badge.textContent = roles.join(' · ');
+    badge.className = 'badge you';
+  } else if (isFO===false && isTO===false && isFP===false && isTP===false){
+    badge.textContent = '非 owner（只读）';
+    badge.className = 'badge err';
+  }
+}
+
+async function refreshPendings(){
+  const t = new ethers.Contract(CFG.treasury, ABI_TREASURY, provider);
+  try {
+    const [wTo, wAmt, wUn] = await Promise.all([
+      t.pendingWithdrawTo(), t.pendingWithdrawAmount(), t.pendingWithdrawUnlockAt()
+    ]);
+    const wEl = elId('pendingWithdraw');
+    if (wAmt && !wAmt.isZero()){
+      const unlockMs = Number(wUn) * 1000;
+      const remain = unlockMs - Date.now();
+      wEl.textContent = `⏳ 待执行 BNB 提取：→ ${wTo}，${fmt(wAmt)} BNB，${remain>0?`剩 ${msFmt(remain)} 可执行`:'已到期，可执行'}`;
+    } else {
+      wEl.textContent = '（当前无 BNB 待执行提取）';
+    }
+  } catch {}
+  try {
+    const [tk, to, amt, un] = await Promise.all([
+      t.pendingRescueToken(), t.pendingRescueTo(), t.pendingRescueAmount(), t.pendingRescueUnlockAt()
+    ]);
+    const el = elId('pendingRescue');
+    if (amt && !amt.isZero()){
+      const unlockMs = Number(un) * 1000;
+      const remain = unlockMs - Date.now();
+      let sym = 'TOKEN', dec = 18;
+      try {
+        const erc = new ethers.Contract(tk, ABI_ERC20, provider);
+        [sym, dec] = await Promise.all([erc.symbol().catch(()=>'TOKEN'), erc.decimals().catch(()=>18)]);
+      } catch {}
+      el.textContent = `⏳ 待执行 ERC20 提取：${sym}（${tk}）→ ${to}，${fmt(amt, dec)} ${sym}，${remain>0?`剩 ${msFmt(remain)} 可执行`:'已到期，可执行'}`;
+    } else {
+      el.textContent = '（当前无 ERC20 待执行提取）';
+    }
+  } catch {}
+}
+function msFmt(ms){
+  if (ms<=0) return '0';
+  const s = Math.floor(ms/1000);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+  return `${h}小时 ${m}分 ${sec}秒`;
+}
+
+/* ═══════════ 交易封装 ═══════════ */
+async function runTx(statusId, actionName, fn){
+  if (!signer){ alert('请先连接钱包'); return; }
+  showStatus(statusId, `准备提交交易：${actionName}...`);
+  try {
+    const tx = await fn();
+    showStatus(statusId, `已提交，等待确认... TX: ${tx.hash}`);
+    const rc = await tx.wait();
+    const link = `${CFG.explorer}/tx/${tx.hash}`;
+    const el = elId(statusId);
+    el.className = 'status ok';
+    el.innerHTML = `✅ ${actionName} 成功。<a href="${link}" target="_blank">查看交易</a>（区块 ${rc.blockNumber}）`;
+    await refreshAll();
+  } catch (e) {
+    console.error(e);
+    const msg = e?.reason || e?.data?.message || e?.error?.message || e?.message || String(e);
+    showStatus(statusId, `❌ ${actionName} 失败：${msg}`, 'err');
+  }
+}
+
+/* ═══════════ 事件绑定 ═══════════ */
+elId('btnConnect').onclick = connect;
+elId('btnRefreshAll').onclick = refreshAll;
+
+// ② 接管
+elId('btnAcceptFactory').onclick = () => runTx('statusAccept', '接管 Factory 所有权',
+  () => new ethers.Contract(CFG.factory, ABI_FACTORY, signer).acceptOwnership());
+
+elId('btnAcceptTreasury').onclick = () => runTx('statusAccept', '接管 Treasury 所有权',
+  () => new ethers.Contract(CFG.treasury, ABI_TREASURY, signer).acceptOwnership());
+
+// ③ 平台税
+elId('btnSetPlatformTax').onclick = () => {
+  const v = Number(elId('inPlatformTax').value);
+  if (!Number.isInteger(v) || v<0 || v>2000) return alert('输入 0 - 2000 之间的整数（bps，2000=20%）');
+  runTx('statusPTax', `设置平台税率 = ${v} bps`,
+    () => new ethers.Contract(CFG.factory, ABI_FACTORY, signer).setPlatformTaxBps(v));
+};
+
+// ④ 创建费
+elId('btnSetCreationFee').onclick = () => {
+  const s = (elId('inCreationFee').value || '').trim();
+  if (!s) return alert('请输入 SHIB 数量（0 表示免费）');
+  let wei;
+  try { wei = ethers.utils.parseUnits(s, 18); } catch { return alert('输入格式不正确'); }
+  runTx('statusFee', `设置创建费 = ${s} SHIB`,
+    () => new ethers.Contract(CFG.factory, ABI_FACTORY, signer).setCreationFee(wei));
+};
+
+// ⑤ 分红参数
+elId('btnSetDiv').onclick = () => {
+  const g = Number(elId('inDivGas').value);
+  const m = Number(elId('inDivMax').value);
+  const a = (elId('inMinAuto').value || '').trim();
+  if (!Number.isInteger(g) || g<100000) return alert('Gas 上限至少 100000');
+  if (!Number.isInteger(m) || m<1 || m>50) return alert('派发人数 1 - 50');
+  if (!a) return alert('请输入最低门槛（SHIB）');
+  let wei;
+  try { wei = ethers.utils.parseUnits(a, 18); } catch { return alert('SHIB 数量格式错'); }
+  runTx('statusDiv', `更新分红参数`,
+    () => new ethers.Contract(CFG.factory, ABI_FACTORY, signer).setGlobalDividendProcessConfig(g, m, wei));
+};
+
+// ⑥ Factory 转让
+elId('btnTransferFactory').onclick = () => {
+  const to = (elId('inNewFactoryOwner').value || '').trim();
+  if (!ethers.utils.isAddress(to)) return alert('新 owner 地址无效');
+  runTx('statusFOwner', `Factory 发起转让 → ${to}`,
+    () => new ethers.Contract(CFG.factory, ABI_FACTORY, signer).transferOwnership(to));
+};
+
+// ⑦ callToken
+elId('btnCallToken').onclick = () => {
+  const tk = (elId('inCTToken').value || '').trim();
+  const data = (elId('inCTData').value || '').trim();
+  if (!ethers.utils.isAddress(tk)) return alert('目标代币地址无效');
+  if (!/^0x[0-9a-fA-F]*$/.test(data)) return alert('calldata 必须是 0x 开头的 16 进制');
+  runTx('statusCT', `callToken → ${tk}`,
+    () => new ethers.Contract(CFG.factory, ABI_FACTORY, signer).callToken(tk, data));
+};
+
+// ⑧ BNB 提取
+elId('btnWithdrawNow').onclick = () => {
+  const to = (elId('inWithdrawTo').value || '').trim();
+  const amt = (elId('inWithdrawAmt').value || '').trim();
+  if (!ethers.utils.isAddress(to)) return alert('收款地址无效');
+  if (!amt) return alert('请输入金额');
+  let wei; try { wei = ethers.utils.parseEther(amt); } catch { return alert('金额格式错'); }
+  runTx('statusTr', `直提 ${amt} BNB → ${to}`,
+    () => new ethers.Contract(CFG.treasury, ABI_TREASURY, signer).withdraw(to, wei));
+};
+elId('btnProposeWithdraw').onclick = () => {
+  const to = (elId('inWithdrawTo').value || '').trim();
+  const amt = (elId('inWithdrawAmt').value || '').trim();
+  if (!ethers.utils.isAddress(to)) return alert('收款地址无效');
+  if (!amt) return alert('请输入金额');
+  let wei; try { wei = ethers.utils.parseEther(amt); } catch { return alert('金额格式错'); }
+  runTx('statusTr', `发起提取 ${amt} BNB → ${to}（24h 后可执行）`,
+    () => new ethers.Contract(CFG.treasury, ABI_TREASURY, signer).proposeWithdraw(to, wei));
+};
+elId('btnExecuteWithdraw').onclick = () => runTx('statusTr', '执行 BNB 提取',
+  () => new ethers.Contract(CFG.treasury, ABI_TREASURY, signer).executeWithdraw());
+elId('btnCancelWithdraw').onclick = () => runTx('statusTr', '取消 BNB 提取',
+  () => new ethers.Contract(CFG.treasury, ABI_TREASURY, signer).cancelWithdraw());
+elId('btnSetInstantLimit').onclick = () => {
+  const s = (elId('inInstantLimit').value || '').trim();
+  if (!s) return alert('请输入新额度');
+  let wei; try { wei = ethers.utils.parseEther(s); } catch { return alert('格式错'); }
+  runTx('statusTr', `设置 instantLimit = ${s} BNB`,
+    () => new ethers.Contract(CFG.treasury, ABI_TREASURY, signer).setInstantLimit(wei));
+};
+
+// ⑨ SHIB / ERC20 提取
+async function ercWei(tokenAddr, amtStr){
+  let dec = 18;
+  try {
+    const erc = new ethers.Contract(tokenAddr, ABI_ERC20, provider);
+    dec = await erc.decimals();
+  } catch {}
+  return ethers.utils.parseUnits(amtStr, dec);
+}
+elId('btnProposeRescue').onclick = async () => {
+  const tk = (elId('inRescueToken').value || '').trim();
+  const to = (elId('inRescueTo').value || '').trim();
+  const amt = (elId('inRescueAmt').value || '').trim();
+  if (!ethers.utils.isAddress(tk)) return alert('代币地址无效');
+  if (!ethers.utils.isAddress(to)) return alert('收款地址无效');
+  if (!amt) return alert('请输入金额');
+  let wei; try { wei = await ercWei(tk, amt); } catch { return alert('金额格式错'); }
+  runTx('statusRescue', `发起 ERC20 提取 → ${to}（24h 后可执行）`,
+    () => new ethers.Contract(CFG.treasury, ABI_TREASURY, signer).proposeRescueERC20(tk, to, wei));
+};
+elId('btnExecuteRescue').onclick = () => runTx('statusRescue', '执行 ERC20 提取',
+  () => new ethers.Contract(CFG.treasury, ABI_TREASURY, signer).executeRescueERC20());
+elId('btnCancelRescue').onclick = () => runTx('statusRescue', '取消 ERC20 提取',
+  () => new ethers.Contract(CFG.treasury, ABI_TREASURY, signer).cancelRescue());
+
+// ⑩ Treasury 转让
+elId('btnTransferTreasury').onclick = () => {
+  const to = (elId('inNewTreasuryOwner').value || '').trim();
+  if (!ethers.utils.isAddress(to)) return alert('新 owner 地址无效');
+  runTx('statusTOwner', `Treasury 发起转让 → ${to}`,
+    () => new ethers.Contract(CFG.treasury, ABI_TREASURY, signer).transferOwnership(to));
+};
+
+/* 初次加载：只读展示 */
+refreshAll();
+setInterval(refreshPendings, 30_000);
+</script>
+</body>
+</html>
