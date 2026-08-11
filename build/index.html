@@ -1,0 +1,1104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Build · 质押销毁 · BNB 分红</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0a0705;
+  --bg-2:#120c07;
+  --panel:rgba(28,20,12,.72);
+  --panel-solid:#181109;
+  --line:rgba(214,158,72,.16);
+  --line-strong:rgba(214,158,72,.34);
+  --gold:#f0a020;
+  --gold-2:#ffcf6b;
+  --ember:#ff5a1f;
+  --ember-2:#ff8a3d;
+  --ink:#f6ead6;
+  --muted:#a4906f;
+  --muted-2:#6f6047;
+  --green:#4ade80;
+  --red:#ff5d6c;
+  --radius:16px;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --sans:'Noto Sans SC',system-ui,sans-serif;
+  --disp:'Oswald','Noto Sans SC',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{overflow-x:hidden}
+body{
+  font-family:var(--sans);
+  background:var(--bg);
+  color:var(--ink);
+  line-height:1.55;
+  min-height:100vh;
+  position:relative;
+  -webkit-font-smoothing:antialiased;
+}
+/* atmospheric background */
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(1100px 620px at 78% -10%, rgba(255,90,31,.16), transparent 60%),
+    radial-gradient(900px 520px at 10% 8%, rgba(240,160,32,.10), transparent 55%),
+    radial-gradient(700px 700px at 50% 120%, rgba(255,138,61,.08), transparent 60%),
+    linear-gradient(180deg,#0a0705,#0d0906 40%,#0a0705);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+}
+
+/* ===== top bar ===== */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;padding:14px clamp(14px,4vw,40px);
+  background:linear-gradient(180deg,rgba(10,7,5,.92),rgba(10,7,5,.55));
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand .mark{
+  width:40px;height:40px;flex:none;border-radius:11px;position:relative;
+  background:radial-gradient(circle at 32% 28%,var(--gold-2),var(--ember) 78%);
+  box-shadow:0 0 0 1px rgba(255,207,107,.4),0 6px 22px rgba(255,90,31,.4);
+  display:grid;place-items:center;overflow:hidden;
+}
+.brand .mark::after{content:"🔥";font-size:19px;filter:saturate(1.2)}
+.brand .txt{min-width:0}
+.brand h1{font-family:var(--disp);font-weight:700;font-size:20px;letter-spacing:.06em;text-transform:uppercase;line-height:1}
+.brand .sub{font-family:var(--mono);font-size:10.5px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:3px}
+
+.wallet-box{display:flex;align-items:center;gap:10px;flex:none}
+.net-pill{
+  font-family:var(--mono);font-size:11px;padding:6px 10px;border-radius:999px;
+  border:1px solid var(--line-strong);color:var(--gold-2);display:none;align-items:center;gap:6px;white-space:nowrap;
+}
+.net-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.net-pill.bad{color:var(--red);border-color:rgba(255,93,108,.5)}
+.net-pill.bad .dot{background:var(--red);box-shadow:0 0 8px var(--red)}
+
+.btn{
+  font-family:var(--disp);font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  font-size:14px;border:none;cursor:pointer;border-radius:12px;padding:11px 18px;color:#1a0f03;
+  background:linear-gradient(135deg,var(--gold-2),var(--gold) 55%,var(--ember));
+  box-shadow:0 6px 20px rgba(255,90,31,.28),inset 0 1px 0 rgba(255,255,255,.4);
+  transition:transform .15s ease,box-shadow .2s ease,filter .2s ease;white-space:nowrap;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(255,90,31,.42),inset 0 1px 0 rgba(255,255,255,.4)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{filter:grayscale(.6) brightness(.7);cursor:not-allowed;box-shadow:none;transform:none}
+.btn.ghost{
+  background:transparent;color:var(--gold-2);border:1px solid var(--line-strong);box-shadow:none;
+}
+.btn.ghost:hover{background:rgba(240,160,32,.08);box-shadow:none}
+.btn.block{width:100%;padding:14px;font-size:15px}
+.btn.sm{padding:8px 13px;font-size:12px;border-radius:10px}
+.btn.danger{background:linear-gradient(135deg,#ff8a3d,#ff5d6c);}
+
+/* ===== layout ===== */
+.wrap{max-width:1080px;margin:0 auto;padding:clamp(18px,4vw,34px) clamp(14px,4vw,40px) 90px}
+
+.hero{
+  position:relative;border:1px solid var(--line);border-radius:22px;overflow:hidden;
+  padding:clamp(20px,4vw,34px);margin-bottom:24px;
+  background:linear-gradient(135deg,rgba(28,20,12,.86),rgba(18,12,7,.7));
+}
+.hero::before{
+  content:"";position:absolute;right:-60px;top:-60px;width:280px;height:280px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,90,31,.28),transparent 70%);filter:blur(6px);
+}
+.hero-tag{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ember-2)}
+.hero h2{font-family:var(--disp);font-weight:700;font-size:clamp(26px,5.5vw,42px);line-height:1.05;letter-spacing:.02em;margin:10px 0 6px;text-transform:uppercase}
+.hero h2 span{background:linear-gradient(120deg,var(--gold-2),var(--ember));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--muted);font-size:14px;max-width:56ch}
+.hero-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chip{
+  font-family:var(--mono);font-size:11px;color:var(--gold-2);
+  border:1px solid var(--line);border-radius:999px;padding:6px 11px;background:rgba(240,160,32,.05);
+  display:inline-flex;align-items:center;gap:6px;
+}
+.chip a{color:var(--gold-2);text-decoration:none;border-bottom:1px dashed var(--line-strong)}
+
+/* ===== tabs ===== */
+.tabs{
+  display:flex;gap:6px;padding:6px;border:1px solid var(--line);border-radius:15px;
+  background:rgba(18,12,7,.6);margin-bottom:22px;overflow-x:auto;scrollbar-width:none;position:sticky;top:70px;z-index:30;backdrop-filter:blur(12px);
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:1 0 auto;font-family:var(--disp);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:13.5px;
+  padding:11px 16px;border-radius:11px;border:none;background:transparent;color:var(--muted);cursor:pointer;
+  transition:color .2s,background .2s;white-space:nowrap;display:flex;align-items:center;gap:7px;justify-content:center;
+}
+.tab .ic{font-size:14px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:#1a0f03;background:linear-gradient(135deg,var(--gold-2),var(--gold) 60%,var(--ember));box-shadow:0 4px 14px rgba(255,90,31,.3)}
+#tab-admin-btn{display:none}
+
+.panel{display:none;animation:fade .4s ease}
+.panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ===== cards / grid ===== */
+.grid{display:grid;gap:16px}
+.grid.g2{grid-template-columns:repeat(2,1fr)}
+.grid.g3{grid-template-columns:repeat(3,1fr)}
+.card{
+  border:1px solid var(--line);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;
+  background:var(--panel);backdrop-filter:blur(8px);
+}
+.card.accent{border-color:var(--line-strong);background:linear-gradient(150deg,rgba(40,27,13,.8),rgba(20,13,7,.7))}
+.card-h{display:flex;align-items:center;gap:9px;margin-bottom:14px}
+.card-h .k{font-family:var(--disp);font-weight:600;font-size:15px;letter-spacing:.05em;text-transform:uppercase;color:var(--gold-2)}
+.card-h .ic{font-size:16px}
+.stat .label{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.stat .val{font-family:var(--mono);font-weight:700;font-size:clamp(22px,4vw,30px);color:var(--ink);margin-top:6px;word-break:break-all;line-height:1.1}
+.stat .val .u{font-size:13px;color:var(--muted);font-weight:500;margin-left:5px}
+.stat .val.gold{color:var(--gold-2)}
+.stat .val.ember{background:linear-gradient(120deg,var(--gold-2),var(--ember));-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* progress */
+.bar{height:9px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden;margin-top:12px;border:1px solid var(--line)}
+.bar > i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--gold),var(--ember));width:0;transition:width .6s ease}
+.bar-cap{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:7px}
+
+/* input */
+.field{margin-top:14px}
+.field label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.inp{
+  width:100%;font-family:var(--mono);font-size:15px;color:var(--ink);background:rgba(10,7,5,.7);
+  border:1px solid var(--line-strong);border-radius:12px;padding:13px 14px;outline:none;transition:border-color .2s,box-shadow .2s;
+}
+.inp:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(240,160,32,.15)}
+.inp::placeholder{color:var(--muted-2)}
+.inp-row{display:flex;gap:10px}
+.inp-row .inp{flex:1}
+.hint{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
+.hint b{color:var(--gold-2)}
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.quick button{
+  font-family:var(--mono);font-size:12px;color:var(--gold-2);background:rgba(240,160,32,.06);
+  border:1px solid var(--line);border-radius:9px;padding:7px 11px;cursor:pointer;transition:.15s;
+}
+.quick button:hover{background:rgba(240,160,32,.14);border-color:var(--line-strong)}
+
+/* table / list */
+.tlist{margin-top:6px}
+.trow{
+  display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;
+  padding:12px 4px;border-bottom:1px solid var(--line);
+}
+.trow:last-child{border-bottom:none}
+.rank{font-family:var(--disp);font-weight:700;font-size:15px;color:var(--muted);text-align:center}
+.rank.g1{color:var(--gold-2)}.rank.g2{color:#d8d8d8}.rank.g3{color:#e0925a}
+.addr{font-family:var(--mono);font-size:13px;color:var(--ink);word-break:break-all}
+.addr .me{font-family:var(--sans);font-size:10px;color:#1a0f03;background:var(--gold-2);border-radius:6px;padding:2px 6px;margin-left:7px;font-weight:700;letter-spacing:.05em}
+.tamt{font-family:var(--mono);font-size:13px;color:var(--gold-2);text-align:right;white-space:nowrap}
+.tamt small{display:block;color:var(--muted);font-size:10.5px}
+
+.empty{text-align:center;padding:36px 16px;color:var(--muted);font-family:var(--mono);font-size:13px}
+.empty .big{font-size:30px;margin-bottom:10px;opacity:.6}
+
+.notice{
+  font-family:var(--mono);font-size:12px;color:var(--muted);border:1px dashed var(--line-strong);
+  border-radius:12px;padding:12px 14px;margin-top:14px;line-height:1.6;background:rgba(240,160,32,.03);
+}
+.notice b{color:var(--ember-2)}
+
+.divider{height:1px;background:var(--line);margin:22px 0}
+.sec-title{font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:26px 0 12px;display:flex;align-items:center;gap:9px}
+.sec-title::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* connect gate */
+.gate{
+  display:grid;place-items:center;text-align:center;padding:60px 20px;border:1px dashed var(--line-strong);border-radius:20px;background:rgba(18,12,7,.5);
+}
+.gate .big{font-size:46px;margin-bottom:14px}
+.gate h3{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:8px}
+.gate p{color:var(--muted);font-size:14px;max-width:40ch;margin-bottom:20px}
+
+.owner-badge{
+  display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:#1a0f03;background:linear-gradient(135deg,var(--gold-2),var(--ember));padding:5px 11px;border-radius:999px;font-weight:700;margin-bottom:16px;
+}
+
+/* toast */
+#toast-wrap{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:10px;width:min(92vw,420px)}
+.toast{
+  font-family:var(--mono);font-size:13px;padding:13px 16px;border-radius:12px;border:1px solid var(--line-strong);
+  background:rgba(20,13,7,.96);backdrop-filter:blur(10px);box-shadow:0 12px 40px rgba(0,0,0,.5);
+  display:flex;gap:11px;align-items:flex-start;animation:toastIn .3s ease;line-height:1.5;
+}
+.toast .ti{font-size:16px;flex:none;margin-top:1px}
+.toast.ok{border-color:rgba(74,222,128,.4)}
+.toast.ok .ti{filter:none}
+.toast.err{border-color:rgba(255,93,108,.5)}
+.toast .body{min-width:0;word-break:break-word}
+.toast a{color:var(--gold-2)}
+@keyframes toastIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(26,15,3,.35);border-top-color:#1a0f03;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+.foot{text-align:center;padding:30px 16px 10px;color:var(--muted-2);font-family:var(--mono);font-size:11px;letter-spacing:.06em;line-height:1.7}
+.foot a{color:var(--muted);text-decoration:none;border-bottom:1px dashed var(--muted-2)}
+
+.mono{font-family:var(--mono)}
+.hide{display:none !important}
+
+/* responsive */
+@media(max-width:720px){
+  .grid.g3{grid-template-columns:1fr}
+  .grid.g2{grid-template-columns:1fr}
+  .brand .sub{display:none}
+  .tabs{top:64px}
+  .tab{font-size:12px;padding:10px 12px}
+  .tab .lbl{display:inline}
+  .btn{padding:10px 14px;font-size:13px}
+  .hero-meta .chip.long{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+}
+@media(max-width:420px){
+  .brand h1{font-size:17px}
+  .tab .lbl{display:none}
+  .tab .ic{font-size:17px}
+}
+</style>
+</head>
+<body>
+<!-- ===== TOP BAR ===== -->
+<header class="topbar">
+  <div class="brand">
+    <div class="mark"></div>
+    <div class="txt">
+      <h1>Build</h1>
+      <div class="sub">Stake · Burn · Dividend</div>
+    </div>
+  </div>
+  <div class="wallet-box">
+    <span class="net-pill" id="netPill"><span class="dot"></span><span id="netText">BSC 主网</span></span>
+    <button class="btn" id="connectBtn">连接钱包</button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div class="hero-tag">BSC 主网 · Chain 56</div>
+    <h2>质押即<span>燃烧</span>，持续释放 · BNB 分红</h2>
+    <p>质押代币将被直接销毁，合约按累计质押量每 23 小时释放 1% 奖励，可随时领取；持仓进入前 150 名榜单还可分得合约内全部 BNB 分红。</p>
+    <div class="hero-meta">
+      <span class="chip long">合约 <a id="heroContract" href="#" target="_blank" rel="noopener">0x364B…2E99</a></span>
+      <span class="chip">单次质押 = <b class="mono" style="margin-left:4px">1,000,000</b> 的整数倍</span>
+      <span class="chip">释放 1% / 23h</span>
+      <span class="chip">分红榜 Top 150</span>
+    </div>
+  </section>
+
+  <!-- ===== TABS ===== -->
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="overview"><span class="ic">📊</span><span class="lbl">概览</span></button>
+    <button class="tab" data-tab="stake"><span class="ic">🔥</span><span class="lbl">质押</span></button>
+    <button class="tab" data-tab="claim"><span class="ic">🎁</span><span class="lbl">领取</span></button>
+    <button class="tab" data-tab="dividend"><span class="ic">💎</span><span class="lbl">分红榜</span></button>
+    <button class="tab" data-tab="admin" id="tab-admin-btn"><span class="ic">🛡️</span><span class="lbl">管理</span></button>
+  </nav>
+
+  <!-- ========== OVERVIEW ========== -->
+  <section class="panel active" data-panel="overview">
+    <div class="grid g3">
+      <div class="card accent stat">
+        <div class="card-h"><span class="ic">🔥</span><span class="k">我的累计质押</span></div>
+        <div class="val gold" id="ovMyStaked">—<span class="u">代币</span></div>
+      </div>
+      <div class="card accent stat">
+        <div class="card-h"><span class="ic">🎁</span><span class="k">当前可领取</span></div>
+        <div class="val ember" id="ovMyPending">—<span class="u">代币</span></div>
+      </div>
+      <div class="card stat">
+        <div class="card-h"><span class="ic">💰</span><span class="k">已领取合计</span></div>
+        <div class="val" id="ovMyClaimed">—<span class="u">代币</span></div>
+      </div>
+    </div>
+
+    <div class="sec-title">全网数据</div>
+    <div class="grid g3">
+      <div class="card stat">
+        <div class="card-h"><span class="ic">📈</span><span class="k">全网累计质押</span></div>
+        <div class="val gold" id="ovTotalStaked">—</div>
+      </div>
+      <div class="card stat">
+        <div class="card-h"><span class="ic">👥</span><span class="k">累计质押人数</span></div>
+        <div class="val" id="ovStakerCount">—</div>
+      </div>
+      <div class="card stat">
+        <div class="card-h"><span class="ic">🪙</span><span class="k">合约 BNB 余额</span></div>
+        <div class="val ember" id="ovBnbBal">—<span class="u">BNB</span></div>
+      </div>
+    </div>
+
+    <div class="sec-title">我的释放进度</div>
+    <div class="card">
+      <div class="stat"><div class="label">累计释放上限 = 我的累计质押量（最多释放 100%）</div></div>
+      <div class="bar"><i id="relBar"></i></div>
+      <div class="bar-cap"><span id="relText">已释放 —</span><span id="relPct">—%</span></div>
+      <div class="notice">已释放 = 已领取 + 当前可领取。释放速率随质押量提升，每满 23 小时释放当前累计质押量的 1%，封顶为你的累计质押总额。</div>
+    </div>
+  </section>
+
+  <!-- ========== STAKE ========== -->
+  <section class="panel" data-panel="stake">
+    <div class="grid g2">
+      <div class="card accent">
+        <div class="card-h"><span class="ic">🔥</span><span class="k">质押（销毁）代币</span></div>
+        <div class="stat"><div class="label">质押数量（必须是 1,000,000 的整数倍）</div></div>
+        <div class="field">
+          <div class="inp-row">
+            <input class="inp" id="stakeAmt" type="text" inputmode="numeric" placeholder="例如 1000000" />
+            <button class="btn ghost sm" id="stakeMax">MAX</button>
+          </div>
+          <div class="quick" id="stakeQuick">
+            <button data-p="25">25%</button><button data-p="50">50%</button>
+            <button data-p="75">75%</button><button data-p="100">100%</button>
+          </div>
+          <div class="hint">按余额比例填入，自动向下取整到 1,000,000 的整数倍。= <b id="stakeUnits">0</b> 份 × 1,000,000。<br>我的代币余额：<b id="myTokenBal">—</b></div>
+        </div>
+        <div class="divider"></div>
+        <button class="btn block" id="approveBtn">1 · 授权代币</button>
+        <div style="height:10px"></div>
+        <button class="btn block" id="stakeBtn">2 · 质押销毁</button>
+        <div class="notice"><b>⚠ 质押即销毁：</b>代币会被永久转入销毁地址，无法取回。合约只记录你的质押数量用于计算奖励与分红。请确认后再操作。</div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="ic">ℹ️</span><span class="k">规则说明</span></div>
+        <div class="tlist">
+          <div class="trow" style="grid-template-columns:1fr"><div class="addr" style="font-family:var(--sans);font-size:13px;color:var(--muted)"><b style="color:var(--gold-2)">质押单位</b><br>单次质押必须是 1,000,000 代币的整数倍，否则交易会被合约拒绝。</div></div>
+          <div class="trow" style="grid-template-columns:1fr"><div class="addr" style="font-family:var(--sans);font-size:13px;color:var(--muted)"><b style="color:var(--gold-2)">先授权后质押</b><br>首次或额度不足时需先点"授权代币"，成功后再"质押销毁"。</div></div>
+          <div class="trow" style="grid-template-columns:1fr"><div class="addr" style="font-family:var(--sans);font-size:13px;color:var(--muted)"><b style="color:var(--gold-2)">追加质押</b><br>再次质押会先结算已有奖励，并同步提高释放速率与释放上限。</div></div>
+          <div class="trow" style="grid-template-columns:1fr"><div class="addr" style="font-family:var(--sans);font-size:13px;color:var(--muted)"><b style="color:var(--gold-2)">免税代币</b><br>白名单代币需为 18 位小数且无转账税，带税代币会被合约拒绝。</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CLAIM ========== -->
+  <section class="panel" data-panel="claim">
+    <div class="grid g2">
+      <div class="card accent">
+        <div class="card-h"><span class="ic">🎁</span><span class="k">领取奖励</span></div>
+        <div class="stat">
+          <div class="label">当前可领取</div>
+          <div class="val ember" id="claimPending">—<span class="u">代币</span></div>
+        </div>
+        <div class="bar"><i id="claimBar"></i></div>
+        <div class="bar-cap"><span id="claimReleased">已释放 —</span><span id="claimPct">—%</span></div>
+        <div class="divider"></div>
+        <button class="btn block" id="claimBtn">领取奖励</button>
+        <div class="notice">领取会把当前已释放但未领取的代币转入你的钱包。若合约内奖励代币余额不足，交易会失败，请稍后再试或联系管理方补充。</div>
+      </div>
+      <div class="card stat">
+        <div class="card-h"><span class="ic">📜</span><span class="k">我的质押账户</span></div>
+        <div class="tlist">
+          <div class="trow" style="grid-template-columns:1fr auto"><div class="addr" style="font-family:var(--sans);color:var(--muted)">累计质押</div><div class="tamt" id="acStaked">—</div></div>
+          <div class="trow" style="grid-template-columns:1fr auto"><div class="addr" style="font-family:var(--sans);color:var(--muted)">已领取</div><div class="tamt" id="acClaimed">—</div></div>
+          <div class="trow" style="grid-template-columns:1fr auto"><div class="addr" style="font-family:var(--sans);color:var(--muted)">可领取</div><div class="tamt" id="acPending">—</div></div>
+          <div class="trow" style="grid-template-columns:1fr auto"><div class="addr" style="font-family:var(--sans);color:var(--muted)">是否在分红榜</div><div class="tamt" id="acInTop">—</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== DIVIDEND ========== -->
+  <section class="panel" data-panel="dividend">
+    <div class="grid g2">
+      <div class="card accent">
+        <div class="card-h"><span class="ic">💎</span><span class="k">BNB 分红</span></div>
+        <div class="stat">
+          <div class="label">合约当前 BNB 余额（可分配）</div>
+          <div class="val ember" id="divBnb">—<span class="u">BNB</span></div>
+        </div>
+        <div class="stat" style="margin-top:14px">
+          <div class="label">按预览我预计可得</div>
+          <div class="val gold" id="divMyShare">—<span class="u">BNB</span></div>
+        </div>
+        <div class="divider"></div>
+        <button class="btn block" id="distBtn">触发分红（任何人可执行）</button>
+        <div class="notice"><b>公开操作：</b>任何地址都可触发。触发瞬间会把合约全部 BNB 按前 150 名质押量占比分给各地址；个别地址接收失败会跳过，其份额留待下次。</div>
+      </div>
+      <div class="card">
+        <div class="card-h"><span class="ic">🏆</span><span class="k">质押榜 Top 150</span>
+          <button class="btn ghost sm" id="refreshTop" style="margin-left:auto">刷新</button>
+        </div>
+        <div class="tlist" id="topList">
+          <div class="empty"><div class="big">🏜️</div>暂无数据，连接钱包后加载</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== ADMIN (owner only) ========== -->
+  <section class="panel" data-panel="admin">
+    <div class="owner-badge">🛡️ Owner 专属面板 · 仅合约所有者可见</div>
+    <div class="grid g2">
+      <div class="card accent">
+        <div class="card-h"><span class="ic">🪙</span><span class="k">白名单代币</span></div>
+        <div class="stat"><div class="label">当前代币地址</div><div class="val" style="font-size:14px" id="admCurToken">—</div></div>
+        <div class="field">
+          <label>设置 / 更换质押代币（需 18 位小数、无税）</label>
+          <input class="inp" id="admTokenAddr" placeholder="0x 代币合约地址" />
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn block" id="admSetToken">setToken · 设置代币</button>
+      </div>
+
+      <div class="card accent">
+        <div class="card-h"><span class="ic">💵</span><span class="k">充值奖励代币</span></div>
+        <div class="field">
+          <label>充值数量（先授权，再充值）</label>
+          <input class="inp" id="admDepositAmt" type="text" inputmode="decimal" placeholder="数量（代币）" />
+        </div>
+        <div class="hint">合约奖励代币余额：<b id="admContractTokenBal">—</b></div>
+        <div style="height:12px"></div>
+        <button class="btn ghost block" id="admApproveDeposit">1 · 授权</button>
+        <div style="height:10px"></div>
+        <button class="btn block" id="admDeposit">2 · depositToken 充值</button>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span class="ic">📤</span><span class="k">提取代币</span></div>
+        <div class="field">
+          <label>提取指定数量</label>
+          <div class="inp-row">
+            <input class="inp" id="admWithdrawTokenAmt" type="text" inputmode="decimal" placeholder="数量" />
+            <button class="btn ghost sm" id="admWithdrawToken">提取</button>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn ghost block" id="admWithdrawAllToken">withdrawAllToken · 提取全部代币</button>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span class="ic">🪙</span><span class="k">提取 BNB</span></div>
+        <div class="field">
+          <label>提取指定数量 (BNB)</label>
+          <div class="inp-row">
+            <input class="inp" id="admWithdrawBnbAmt" type="text" inputmode="decimal" placeholder="BNB 数量" />
+            <button class="btn ghost sm" id="admWithdrawBnb">提取</button>
+          </div>
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn ghost block" id="admWithdrawAllBnb">withdrawAllBNB · 提取全部 BNB</button>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span class="ic">🚑</span><span class="k">救援误转代币</span></div>
+        <div class="field">
+          <label>代币地址</label>
+          <input class="inp" id="admRescueToken" placeholder="0x 误转入的代币地址" />
+        </div>
+        <div class="field">
+          <label>数量（按该代币小数位的原始整数）</label>
+          <input class="inp" id="admRescueAmt" type="text" inputmode="numeric" placeholder="raw amount" />
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn danger block" id="admRescue">rescueToken · 救援</button>
+        <div class="hint">注意：数量按该代币最小单位（wei）填写原始整数。</div>
+      </div>
+
+      <div class="card">
+        <div class="card-h"><span class="ic">👑</span><span class="k">转让所有权</span></div>
+        <div class="field">
+          <label>新 Owner 地址（无放弃所有权功能，请谨慎）</label>
+          <input class="inp" id="admNewOwner" placeholder="0x 新管理地址" />
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn danger block" id="admTransfer">transferOwnership · 转让</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    Build 合约 DApp · 前端仅与链上合约交互，无后端 · 请自行核对合约地址与授权额度<br>
+    Contract <a id="footContract" href="#" target="_blank" rel="noopener">0x364BA78C6ea13353E87dFde57b8BCFC2d7d22E99</a> · BSC Mainnet
+  </div>
+</div>
+
+<div id="toast-wrap"></div>
+<script>
+/* =================== CONFIG =================== */
+const CONTRACT = "0x364BA78C6ea13353E87dFde57b8BCFC2d7d22E99";
+const CHAIN_ID = 56;
+const CHAIN_HEX = "0x38";
+const RPC = "https://bsc-dataseed.bnbchain.org";
+const EXPLORER = "https://bscscan.com";
+const TOKEN_DECIMALS = 18; // 白名单代币固定 18 位小数
+const STAKE_UNIT_STR = "1000000000000000000000000"; // 1,000,000 * 1e18
+
+const CHAIN_PARAMS = {
+  chainId: CHAIN_HEX,
+  chainName: "BNB Smart Chain",
+  nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 },
+  rpcUrls: [RPC, "https://bsc-dataseed1.defibit.io"],
+  blockExplorerUrls: [EXPLORER]
+};
+
+const ABI = [
+  "function BURN_ADDRESS() view returns (address)",
+  "function STAKE_UNIT() view returns (uint256)",
+  "function RELEASE_INTERVAL() view returns (uint256)",
+  "function MAX_TOP() view returns (uint256)",
+  "function owner() view returns (address)",
+  "function token() view returns (address)",
+  "function totalStakedAll() view returns (uint256)",
+  "function stakerCount() view returns (uint256)",
+  "function pendingReward(address) view returns (uint256)",
+  "function stakes(address) view returns (uint256 staked,uint256 accrued,uint256 claimed,uint256 lastUpdate,bool exists)",
+  "function inTop(address) view returns (bool)",
+  "function topListLength() view returns (uint256)",
+  "function getTopListWithStakes() view returns (address[] addrs,uint256[] amounts)",
+  "function previewDividends() view returns (address[] addrs,uint256[] shares)",
+  "function stake(uint256 amount)",
+  "function claim()",
+  "function distributeDividends()",
+  "function setToken(address token_)",
+  "function depositToken(uint256 amount)",
+  "function withdrawToken(uint256 amount)",
+  "function withdrawAllToken()",
+  "function rescueToken(address token_,uint256 amount)",
+  "function withdrawBNB(uint256 amount)",
+  "function withdrawAllBNB()",
+  "function transferOwnership(address newOwner)"
+];
+const ERC20_ABI = [
+  "function balanceOf(address) view returns (uint256)",
+  "function allowance(address owner,address spender) view returns (uint256)",
+  "function approve(address spender,uint256 amount) returns (bool)",
+  "function decimals() view returns (uint8)",
+  "function symbol() view returns (string)"
+];
+
+/* =================== STATE =================== */
+const E = ethers;
+let provider, signer, account, roContract, rwContract, tokenContract;
+let readProvider = new E.providers.JsonRpcProvider(RPC);
+let roC = new E.Contract(CONTRACT, ABI, readProvider);
+let isOwner = false;
+let tokenAddr = null, tokenSymbol = "代币", pollTimer = null;
+
+/* =================== HELPERS =================== */
+const $ = id => document.getElementById(id);
+const short = a => a ? a.slice(0,6)+"…"+a.slice(-4) : "—";
+function fmt(bn, dec = TOKEN_DECIMALS, max = 4){
+  try{
+    const s = E.utils.formatUnits(bn, dec);
+    let n = Number(s);
+    if(!isFinite(n)) return s;
+    if(n === 0) return "0";
+    if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
+    if(n >= 1e6) return (n/1e6).toFixed(2)+"M";
+    if(n >= 1000) return n.toLocaleString("en-US",{maximumFractionDigits:2});
+    return n.toLocaleString("en-US",{maximumFractionDigits:max});
+  }catch(e){ return "—"; }
+}
+function fmtFull(bn, dec = TOKEN_DECIMALS){
+  try{ return Number(E.utils.formatUnits(bn,dec)).toLocaleString("en-US",{maximumFractionDigits:6}); }catch(e){ return "—"; }
+}
+
+let toastId = 0;
+function toast(msg, type = "info", timeout = 5200){
+  const id = "t"+(++toastId);
+  const icon = type==="ok" ? "✅" : type==="err" ? "⛔" : "⏳";
+  const el = document.createElement("div");
+  el.className = "toast "+type; el.id = id;
+  el.innerHTML = `<span class="ti">${icon}</span><div class="body">${msg}</div>`;
+  $("toast-wrap").appendChild(el);
+  if(timeout>0) setTimeout(()=>dismissToast(id), timeout);
+  return id;
+}
+function dismissToast(id){ const el = $(id); if(el){ el.style.opacity="0"; el.style.transform="translateY(10px)"; setTimeout(()=>el.remove(),250);} }
+function txLink(hash){ return `<a href="${EXPLORER}/tx/${hash}" target="_blank" rel="noopener">查看交易 ↗</a>`; }
+
+/* =================== TABS =================== */
+function initTabs(){
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.addEventListener("click", ()=>{
+      const name = t.dataset.tab;
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      t.classList.add("active");
+      document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active", p.dataset.panel===name));
+      if(name==="dividend") loadTopList();
+    });
+  });
+}
+
+/* =================== BOOT =================== */
+function initLinks(){
+  $("heroContract").href = `${EXPLORER}/address/${CONTRACT}`;
+  $("footContract").href = `${EXPLORER}/address/${CONTRACT}`;
+  $("footContract").textContent = CONTRACT;
+}
+
+/* placeholder anchors filled by later stages */
+/* =================== WALLET =================== */
+async function connectWallet(){
+  if(!window.ethereum){
+    toast("未检测到钱包。请在 MetaMask / TokenPocket / OKX 等 Web3 钱包内置浏览器中打开本页面。","err",7000);
+    return;
+  }
+  try{
+    $("connectBtn").disabled = true;
+    provider = new E.providers.Web3Provider(window.ethereum, "any");
+    await provider.send("eth_requestAccounts", []);
+    await ensureChain();
+    signer = provider.getSigner();
+    account = await signer.getAddress();
+    rwContract = new E.Contract(CONTRACT, ABI, signer);
+    updateWalletUI();
+    bindWalletEvents();
+    await afterConnect();
+  }catch(err){
+    toast("连接失败："+cleanErr(err),"err");
+  }finally{
+    $("connectBtn").disabled = false;
+  }
+}
+
+async function ensureChain(){
+  const net = await provider.getNetwork();
+  if(net.chainId === CHAIN_ID){ setNet(true); return; }
+  try{
+    await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:CHAIN_HEX}] });
+  }catch(e){
+    if(e.code === 4902){
+      await window.ethereum.request({ method:"wallet_addEthereumChain", params:[CHAIN_PARAMS] });
+    }else{ throw e; }
+  }
+  // refresh provider after switch
+  provider = new E.providers.Web3Provider(window.ethereum, "any");
+  const n2 = await provider.getNetwork();
+  setNet(n2.chainId === CHAIN_ID);
+  if(n2.chainId !== CHAIN_ID) throw new Error("请在钱包中切换到 BSC 主网");
+}
+
+function setNet(ok){
+  const pill = $("netPill");
+  pill.style.display = "inline-flex";
+  if(ok){ pill.classList.remove("bad"); $("netText").textContent = "BSC 主网"; }
+  else { pill.classList.add("bad"); $("netText").textContent = "网络错误"; }
+}
+
+function updateWalletUI(){
+  const b = $("connectBtn");
+  b.textContent = short(account);
+  b.classList.add("ghost");
+}
+
+function bindWalletEvents(){
+  if(!window.ethereum || window.__bound) return;
+  window.__bound = true;
+  window.ethereum.on("accountsChanged", ()=>location.reload());
+  window.ethereum.on("chainChanged", ()=>location.reload());
+}
+
+async function afterConnect(){
+  toast("钱包已连接："+short(account),"ok",3000);
+  await checkOwner();
+  await loadTokenMeta();
+  await refreshAll();
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(refreshAll, 20000);
+}
+
+async function checkOwner(){
+  try{
+    const o = await roC.owner();
+    isOwner = o.toLowerCase() === account.toLowerCase();
+    $("tab-admin-btn").style.display = isOwner ? "flex" : "none";
+    if(isOwner) toast("检测到你是合约 Owner，已解锁管理面板 🛡️","ok",4000);
+  }catch(e){ isOwner = false; }
+}
+
+function cleanErr(err){
+  let m = err?.data?.message || err?.error?.message || err?.reason || err?.message || String(err);
+  if(err?.code === 4001 || /user rejected|denied/i.test(m)) return "你取消了操作";
+  if(/insufficient funds/i.test(m)) return "BNB 余额不足以支付 gas";
+  m = m.replace(/execution reverted:?/i,"合约拒绝：").trim();
+  if(m.length > 140) m = m.slice(0,140)+"…";
+  return m || "未知错误";
+}
+/* =================== DATA LOADING =================== */
+async function loadPublicData(){
+  try{
+    const [total, count, bnb] = await Promise.all([
+      roC.totalStakedAll(),
+      roC.stakerCount(),
+      readProvider.getBalance(CONTRACT)
+    ]);
+    $("ovTotalStaked").innerHTML = fmt(total)+'<span class="u">代币</span>';
+    $("ovStakerCount").textContent = count.toString();
+    $("ovBnbBal").innerHTML = fmt(bnb,18)+'<span class="u">BNB</span>';
+    $("divBnb").innerHTML = fmt(bnb,18)+'<span class="u">BNB</span>';
+  }catch(e){ /* silent */ }
+}
+
+async function loadTokenMeta(){
+  try{
+    tokenAddr = await roC.token();
+    $("admCurToken") && ($("admCurToken").textContent = tokenAddr && tokenAddr!==E.constants.AddressZero ? tokenAddr : "尚未设置");
+    if(tokenAddr && tokenAddr !== E.constants.AddressZero){
+      tokenContract = new E.Contract(tokenAddr, ERC20_ABI, signer || readProvider);
+      try{ tokenSymbol = await tokenContract.symbol(); }catch(e){ tokenSymbol = "代币"; }
+    }
+  }catch(e){}
+}
+
+async function refreshAll(){
+  await Promise.all([loadPublicData(), loadUserData(), loadTokenBalances()]);
+  if(isOwner) loadAdminData();
+}
+
+async function loadUserData(){
+  if(!account) return;
+  try{
+    const [pending, st, inTop] = await Promise.all([
+      roC.pendingReward(account),
+      roC.stakes(account),
+      roC.inTop(account)
+    ]);
+    const staked = st.staked, claimed = st.claimed;
+    // released so far = claimed + pending ; cap = staked
+    const released = claimed.add(pending);
+    // overview
+    $("ovMyStaked").innerHTML = fmt(staked)+'<span class="u">代币</span>';
+    $("ovMyPending").innerHTML = fmt(pending)+'<span class="u">代币</span>';
+    $("ovMyClaimed").innerHTML = fmt(claimed)+'<span class="u">代币</span>';
+    // release progress
+    let pct = 0;
+    if(staked.gt(0)){
+      pct = Number(released.mul(10000).div(staked).toString())/100;
+      if(pct>100) pct=100;
+    }
+    $("relBar").style.width = pct+"%";
+    $("relText").textContent = "已释放 "+fmt(released)+" / "+fmt(staked);
+    $("relPct").textContent = pct.toFixed(2)+"%";
+    // claim tab
+    $("claimPending").innerHTML = fmt(pending)+'<span class="u">代币</span>';
+    $("claimBar").style.width = pct+"%";
+    $("claimReleased").textContent = "已释放 "+fmt(released)+" / "+fmt(staked);
+    $("claimPct").textContent = pct.toFixed(2)+"%";
+    // account card
+    $("acStaked").textContent = fmtFull(staked)+" "+tokenSymbol;
+    $("acClaimed").textContent = fmtFull(claimed)+" "+tokenSymbol;
+    $("acPending").textContent = fmtFull(pending)+" "+tokenSymbol;
+    $("acInTop").innerHTML = inTop ? '<span style="color:var(--green)">✔ 在榜</span>' : '<span style="color:var(--muted)">未进榜</span>';
+    // my dividend share (from preview)
+    loadMyDividendShare();
+  }catch(e){}
+}
+
+async function loadTokenBalances(){
+  if(!account || !tokenAddr || tokenAddr===E.constants.AddressZero) return;
+  try{
+    const tc = new E.Contract(tokenAddr, ERC20_ABI, readProvider);
+    const [bal, cbal] = await Promise.all([ tc.balanceOf(account), tc.balanceOf(CONTRACT) ]);
+    $("myTokenBal").textContent = fmt(bal)+" "+tokenSymbol;
+    if($("admContractTokenBal")) $("admContractTokenBal").textContent = fmt(cbal)+" "+tokenSymbol;
+  }catch(e){}
+}
+
+async function loadMyDividendShare(){
+  try{
+    const {addrs, shares} = await roC.previewDividends();
+    let mine = E.BigNumber.from(0);
+    for(let i=0;i<addrs.length;i++){
+      if(addrs[i].toLowerCase()===account.toLowerCase()){ mine = shares[i]; break; }
+    }
+    $("divMyShare").innerHTML = fmt(mine,18,6)+'<span class="u">BNB</span>';
+  }catch(e){ $("divMyShare").innerHTML = '0<span class="u">BNB</span>'; }
+}
+
+async function loadTopList(){
+  const box = $("topList");
+  try{
+    const res = await roC.getTopListWithStakes();
+    const addrs = res.addrs || res[0], amounts = res.amounts || res[1];
+    if(!addrs || addrs.length===0){
+      box.innerHTML = '<div class="empty"><div class="big">🏜️</div>暂无质押，成为第一个上榜者</div>';
+      return;
+    }
+    // sort by amount desc
+    const rows = addrs.map((a,i)=>({a, amt:amounts[i]}))
+                      .sort((x,y)=> x.amt.gt(y.amt)?-1:x.amt.lt(y.amt)?1:0);
+    let total = amounts.reduce((s,x)=>s.add(x), E.BigNumber.from(0));
+    box.innerHTML = rows.map((r,i)=>{
+      const rank = i+1;
+      const rc = rank===1?"g1":rank===2?"g2":rank===3?"g3":"";
+      const pctShare = total.gt(0) ? (Number(r.amt.mul(10000).div(total).toString())/100).toFixed(2) : "0";
+      const me = account && r.a.toLowerCase()===account.toLowerCase() ? '<span class="me">我</span>' : "";
+      return `<div class="trow">
+        <div class="rank ${rc}">${rank}</div>
+        <div class="addr">${short(r.a)}${me}</div>
+        <div class="tamt">${fmt(r.amt)}<small>${pctShare}% 占比</small></div>
+      </div>`;
+    }).join("");
+  }catch(e){
+    box.innerHTML = '<div class="empty"><div class="big">⚠️</div>加载失败，请稍后刷新</div>';
+  }
+}
+/* =================== TX HELPER =================== */
+function requireWallet(){
+  if(!account){ toast("请先连接钱包","err"); return false; }
+  return true;
+}
+async function withBtn(btn, label, fn){
+  if(btn.disabled) return;
+  const orig = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spin"></span>${label}`;
+  try{ await fn(); }
+  catch(err){ toast(cleanErr(err),"err"); }
+  finally{ btn.disabled = false; btn.innerHTML = orig; }
+}
+async function sendTx(txPromise, pendingMsg, okMsg){
+  const tid = toast(pendingMsg+"，请在钱包中确认…","info",0);
+  const tx = await txPromise;
+  dismissToast(tid);
+  const tid2 = toast(`交易已提交，等待确认… ${txLink(tx.hash)}`,"info",0);
+  const rc = await tx.wait();
+  dismissToast(tid2);
+  toast(`${okMsg} ${txLink(rc.transactionHash)}`,"ok",6000);
+  await refreshAll();
+  return rc;
+}
+
+/* =================== STAKE INPUT =================== */
+const STAKE_UNIT = E.BigNumber.from(STAKE_UNIT_STR);
+function stakeUnitsFromInput(){
+  const raw = ($("stakeAmt").value || "").replace(/[, ]/g,"").trim();
+  if(!raw || !/^\d+$/.test(raw)) return null;
+  // input is in whole tokens; must be multiple of 1,000,000
+  let tokens;
+  try{ tokens = E.BigNumber.from(raw); }catch(e){ return null; }
+  const MILLION = E.BigNumber.from("1000000");
+  if(!tokens.mod(MILLION).eq(0)) return {invalid:true, tokens};
+  const units = tokens.div(MILLION);
+  return {units, tokens, amountWei: tokens.mul(E.BigNumber.from("1000000000000000000"))};
+}
+function syncStakeUnits(){
+  const r = stakeUnitsFromInput();
+  if(!r){ $("stakeUnits").textContent = "0"; return; }
+  if(r.invalid){ $("stakeUnits").textContent = "非整数倍 ✗"; return; }
+  $("stakeUnits").textContent = r.units.toString();
+}
+$("stakeAmt").addEventListener("input", syncStakeUnits);
+
+// 读取用户实际余额（wei）
+async function fetchTokenBalance(){
+  if(!requireWallet()) return null;
+  if(!tokenAddr || tokenAddr===E.constants.AddressZero){ toast("尚未设置质押代币","err"); return null; }
+  try{
+    const tc = new E.Contract(tokenAddr, ERC20_ABI, readProvider);
+    return await tc.balanceOf(account);
+  }catch(e){ toast("读取余额失败","err"); return null; }
+}
+
+// 把 wei 余额按百分比取值，再向下取整到 1,000,000 代币的整数倍，写入输入框
+function applyPercentOfBalance(balWei, pct){
+  const ONE = E.BigNumber.from("1000000000000000000"); // 1e18
+  const MILLION = E.BigNumber.from("1000000");
+  // 目标数量 = 余额 * pct / 100
+  const target = balWei.mul(pct).div(100);
+  // 换算成整代币，再向下取整到百万倍
+  const tokens = target.div(ONE);
+  const floored = tokens.div(MILLION).mul(MILLION);
+  if(floored.eq(0)){
+    toast("按 "+pct+"% 计算不足 1,000,000 代币，无法质押","err",6000);
+    return false;
+  }
+  $("stakeAmt").value = floored.toString();
+  syncStakeUnits();
+  return true;
+}
+
+// 百分比快捷按钮：25% / 50% / 75% / 100%
+document.querySelectorAll("#stakeQuick button").forEach(b=>{
+  b.addEventListener("click", async ()=>{
+    const pct = parseInt(b.dataset.p,10);
+    const bal = await fetchTokenBalance();
+    if(!bal) return;
+    if(bal.eq(0)){ toast("你的代币余额为 0","err"); return; }
+    if(applyPercentOfBalance(bal, pct)){
+      toast("已按余额 "+pct+"% 填入（向下取整到 1,000,000 整数倍）","ok",3500);
+    }
+  });
+});
+
+// MAX = 100% 余额
+$("stakeMax").addEventListener("click", async ()=>{
+  const bal = await fetchTokenBalance();
+  if(!bal) return;
+  if(bal.eq(0)){ toast("你的代币余额为 0","err"); return; }
+  applyPercentOfBalance(bal, 100);
+});
+
+/* =================== APPROVE + STAKE =================== */
+$("approveBtn").addEventListener("click", ()=> withBtn($("approveBtn"),"授权中…", async ()=>{
+  if(!requireWallet()) return;
+  if(!tokenAddr || tokenAddr===E.constants.AddressZero){ toast("尚未设置质押代币，无法授权","err"); return; }
+  const r = stakeUnitsFromInput();
+  if(!r || r.invalid){ toast("请输入 1,000,000 的整数倍数量","err"); return; }
+  const tc = new E.Contract(tokenAddr, ERC20_ABI, signer);
+  await sendTx(tc.approve(CONTRACT, r.amountWei), "提交授权", "授权成功，可以质押了");
+}));
+
+$("stakeBtn").addEventListener("click", ()=> withBtn($("stakeBtn"),"质押中…", async ()=>{
+  if(!requireWallet()) return;
+  if(!tokenAddr || tokenAddr===E.constants.AddressZero){ toast("尚未设置质押代币","err"); return; }
+  const r = stakeUnitsFromInput();
+  if(!r){ toast("请输入质押数量","err"); return; }
+  if(r.invalid){ toast("数量必须是 1,000,000 的整数倍","err"); return; }
+  // check balance & allowance
+  const tc = new E.Contract(tokenAddr, ERC20_ABI, signer);
+  const [bal, alw] = await Promise.all([ tc.balanceOf(account), tc.allowance(account, CONTRACT) ]);
+  if(bal.lt(r.amountWei)){ toast("代币余额不足","err"); return; }
+  if(alw.lt(r.amountWei)){ toast("授权额度不足，请先点『授权代币』","err",6000); return; }
+  await sendTx(rwContract.stake(r.amountWei), "提交质押(销毁)", "质押成功！代币已销毁并开始释放");
+  $("stakeAmt").value = ""; syncStakeUnits();
+}));
+
+/* =================== CLAIM =================== */
+$("claimBtn").addEventListener("click", ()=> withBtn($("claimBtn"),"领取中…", async ()=>{
+  if(!requireWallet()) return;
+  const pending = await roC.pendingReward(account);
+  if(pending.eq(0)){ toast("当前没有可领取的奖励","err"); return; }
+  await sendTx(rwContract.claim(), "提交领取", "领取成功，奖励已到账");
+}));
+
+/* =================== DISTRIBUTE DIVIDENDS =================== */
+$("distBtn").addEventListener("click", ()=> withBtn($("distBtn"),"触发中…", async ()=>{
+  if(!requireWallet()) return;
+  const bnb = await readProvider.getBalance(CONTRACT);
+  if(bnb.eq(0)){ toast("合约当前无 BNB 可分配","err"); return; }
+  await sendTx(rwContract.distributeDividends(), "提交分红", "分红已触发并完成分配");
+}));
+/* =================== ADMIN =================== */
+function requireOwner(){
+  if(!requireWallet()) return false;
+  if(!isOwner){ toast("仅合约 Owner 可执行此操作","err"); return false; }
+  return true;
+}
+function isAddr(a){ try{ return E.utils.isAddress(a); }catch(e){ return false; } }
+
+async function loadAdminData(){
+  try{
+    if(tokenAddr) $("admCurToken").textContent = tokenAddr && tokenAddr!==E.constants.AddressZero ? tokenAddr : "尚未设置";
+    if(tokenAddr && tokenAddr!==E.constants.AddressZero){
+      const tc = new E.Contract(tokenAddr, ERC20_ABI, readProvider);
+      const cbal = await tc.balanceOf(CONTRACT);
+      $("admContractTokenBal").textContent = fmt(cbal)+" "+tokenSymbol;
+    }
+  }catch(e){}
+}
+
+// setToken
+$("admSetToken").addEventListener("click", ()=> withBtn($("admSetToken"),"提交中…", async ()=>{
+  if(!requireOwner()) return;
+  const a = $("admTokenAddr").value.trim();
+  if(!isAddr(a)){ toast("请输入有效的代币地址","err"); return; }
+  await sendTx(rwContract.setToken(a), "设置白名单代币", "代币设置成功");
+  await loadTokenMeta();
+  $("admTokenAddr").value = "";
+}));
+
+// approve for deposit
+$("admApproveDeposit").addEventListener("click", ()=> withBtn($("admApproveDeposit"),"授权中…", async ()=>{
+  if(!requireOwner()) return;
+  if(!tokenAddr || tokenAddr===E.constants.AddressZero){ toast("请先设置代币","err"); return; }
+  const v = $("admDepositAmt").value.trim();
+  if(!v || Number(v)<=0){ toast("请输入充值数量","err"); return; }
+  const amt = E.utils.parseUnits(v, TOKEN_DECIMALS);
+  const tc = new E.Contract(tokenAddr, ERC20_ABI, signer);
+  await sendTx(tc.approve(CONTRACT, amt), "授权充值额度", "授权成功");
+}));
+
+// depositToken
+$("admDeposit").addEventListener("click", ()=> withBtn($("admDeposit"),"充值中…", async ()=>{
+  if(!requireOwner()) return;
+  const v = $("admDepositAmt").value.trim();
+  if(!v || Number(v)<=0){ toast("请输入充值数量","err"); return; }
+  const amt = E.utils.parseUnits(v, TOKEN_DECIMALS);
+  const tc = new E.Contract(tokenAddr, ERC20_ABI, signer);
+  const alw = await tc.allowance(account, CONTRACT);
+  if(alw.lt(amt)){ toast("授权额度不足，请先点『授权』","err",6000); return; }
+  await sendTx(rwContract.depositToken(amt), "充值奖励代币", "充值成功");
+  $("admDepositAmt").value = "";
+}));
+
+// withdraw token amount
+$("admWithdrawToken").addEventListener("click", ()=> withBtn($("admWithdrawToken"),"提取…", async ()=>{
+  if(!requireOwner()) return;
+  const v = $("admWithdrawTokenAmt").value.trim();
+  if(!v || Number(v)<=0){ toast("请输入提取数量","err"); return; }
+  const amt = E.utils.parseUnits(v, TOKEN_DECIMALS);
+  await sendTx(rwContract.withdrawToken(amt), "提取代币", "提取成功");
+  $("admWithdrawTokenAmt").value = "";
+}));
+$("admWithdrawAllToken").addEventListener("click", ()=> withBtn($("admWithdrawAllToken"),"提取中…", async ()=>{
+  if(!requireOwner()) return;
+  await sendTx(rwContract.withdrawAllToken(), "提取全部代币", "已提取全部代币");
+}));
+
+// withdraw BNB
+$("admWithdrawBnb").addEventListener("click", ()=> withBtn($("admWithdrawBnb"),"提取…", async ()=>{
+  if(!requireOwner()) return;
+  const v = $("admWithdrawBnbAmt").value.trim();
+  if(!v || Number(v)<=0){ toast("请输入 BNB 数量","err"); return; }
+  const amt = E.utils.parseUnits(v, 18);
+  await sendTx(rwContract.withdrawBNB(amt), "提取 BNB", "提取成功");
+  $("admWithdrawBnbAmt").value = "";
+}));
+$("admWithdrawAllBnb").addEventListener("click", ()=> withBtn($("admWithdrawAllBnb"),"提取中…", async ()=>{
+  if(!requireOwner()) return;
+  await sendTx(rwContract.withdrawAllBNB(), "提取全部 BNB", "已提取全部 BNB");
+}));
+
+// rescue token
+$("admRescue").addEventListener("click", ()=> withBtn($("admRescue"),"救援中…", async ()=>{
+  if(!requireOwner()) return;
+  const a = $("admRescueToken").value.trim();
+  const amtStr = $("admRescueAmt").value.replace(/[, ]/g,"").trim();
+  if(!isAddr(a)){ toast("请输入有效代币地址","err"); return; }
+  if(!/^\d+$/.test(amtStr) || amtStr==="0"){ toast("请输入原始整数数量(wei)","err"); return; }
+  const amt = E.BigNumber.from(amtStr);
+  await sendTx(rwContract.rescueToken(a, amt), "救援代币", "救援成功");
+  $("admRescueToken").value=""; $("admRescueAmt").value="";
+}));
+
+// transfer ownership
+$("admTransfer").addEventListener("click", ()=> withBtn($("admTransfer"),"转让中…", async ()=>{
+  if(!requireOwner()) return;
+  const a = $("admNewOwner").value.trim();
+  if(!isAddr(a)){ toast("请输入有效的新 Owner 地址","err"); return; }
+  if(a.toLowerCase()===account.toLowerCase()){ toast("新地址不能是当前地址","err"); return; }
+  if(!confirm("确认将合约所有权转让给\n"+a+"\n\n此操作不可撤销，转让后你将失去管理权限！")) return;
+  await sendTx(rwContract.transferOwnership(a), "转让所有权", "所有权已转让");
+  location.reload();
+}));
+
+initLinks();
+initTabs();
+loadPublicData(); // 未连接钱包也展示全网数据
+$("connectBtn").addEventListener("click", connectWallet);
+$("refreshTop").addEventListener("click", loadTopList);
+loadTopList();
+</script>
+</body>
+</html>
