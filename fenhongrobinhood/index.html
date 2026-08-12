@@ -68,6 +68,16 @@
     padding:9px 12px;font-size:12px;
   }
   .btn-ghost:hover:not(:disabled){color:var(--text);border-color:var(--accent)}
+  .btn-secondary{
+    width:100%;padding:15px;font-size:15px;color:var(--text);
+    background:rgba(255,207,92,.10);border:1px solid rgba(255,207,92,.35);
+  }
+  .btn-secondary:hover:not(:disabled){background:rgba(255,207,92,.18)}
+  .warn-note{
+    font-size:12.5px;color:var(--warn);background:rgba(255,207,92,.07);
+    border:1px solid rgba(255,207,92,.25);border-radius:12px;padding:12px 14px;line-height:1.55;
+  }
+  .warn-note b{color:#ffe08a}
   .wallet-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
   .wallet-meta{font-size:13px;color:var(--muted)}
   .wallet-meta b{color:var(--text);font-family:ui-monospace,monospace;font-weight:600}
@@ -161,6 +171,27 @@
     <div class="status" id="status"></div>
   </div>
 
+  <!-- 池子 1% 手续费 -->
+  <div class="card">
+    <div class="sec-title">💧 领取池子 1% 手续费（LP Fee）</div>
+    <div class="warn-note" id="lpWarn">
+      ⚠️ 注意：这里领的是 Uniswap V3 池子 1% 手续费，跟上面的买税是两回事。<b>ETH 部分 100% 归平台收款地址</b>，代币部分会回流到分红池。任何人都能点，但点的人不拿钱、只是替系统结算。
+    </div>
+    <div class="field" style="margin-top:14px">
+      <label for="lpTokenId">LP NFT 的 tokenId（发币建池锁 LP 时产生的 NFT 编号，不是代币地址）</label>
+      <input id="lpTokenId" placeholder="例如 12345" spellcheck="false" autocomplete="off" inputmode="numeric" />
+      <div class="hint">填数字编号。填好后点“查询待领”看池子累积了多少手续费。</div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn-ghost" id="lpLoadBtn">查询待领</button>
+      <span class="wallet-meta" id="lpPending"></span>
+    </div>
+    <div style="margin-top:16px">
+      <button class="btn-secondary" id="collectBtn" disabled>触发 collectFees</button>
+    </div>
+    <div class="status" id="lpStatus"></div>
+  </div>
+
   <!-- 说明 -->
   <div class="card">
     <div class="sec-title">ℹ️ 运作说明</div>
@@ -187,6 +218,14 @@
     rpcUrls: ["https://rpc.mainnet.chain.robinhood.com"],
     blockExplorerUrls: []
   };
+
+  // LiquidityLocker 合约（Robinhood Chain 上固定地址）
+  const LOCKER_ADDR = "0x0226A4219461F43041B610bd6a9C8F20F773EcC8";
+  const LOCKER_ABI = [
+    "function collectFees(uint256 tokenId) external returns (uint256 amount0, uint256 amount1)",
+    "function pendingTokensOwed(uint256 tokenId) external view returns (uint128 tokensOwed0, uint128 tokensOwed1)",
+    "function locks(uint256 tokenId) external view returns (address creator, address token0, address token1, bool locked)"
+  ];
 
   // TaxToken 需要用到的 ABI 片段
   const ABI = [
@@ -239,6 +278,7 @@
       $("connectBtn").textContent = "已连接";
       await checkNetwork();
       updateProcessBtn();
+      updateLpBtn();
     }catch(e){
       setStatus("连接失败：" + (e.shortMessage || e.message), "err");
     }
@@ -276,6 +316,7 @@
     }
     await checkNetwork();
     updateProcessBtn();
+    updateLpBtn();
   }
 
   // ---- 读取代币状态 ----
@@ -382,11 +423,95 @@
     return raw;
   }
 
+  // ================= 池子 1% 手续费（LiquidityLocker.collectFees） =================
+  const WETH_ADDR = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73";
+  const ERC20_MINI = [
+    "function symbol() external view returns (string)",
+    "function decimals() external view returns (uint8)"
+  ];
+
+  function lpStatus(msg, type){
+    const el = $("lpStatus");
+    el.className = "status show " + (type||"info");
+    el.innerHTML = msg;
+  }
+  function lpClear(){ $("lpStatus").className = "status"; }
+  function validId(v){ try{ return v.trim() !== "" && BigInt(v.trim()) >= 0n; }catch(e){ return false; } }
+
+  async function tokenMeta(addr, ro){
+    if (!addr || addr === ethers.ZeroAddress) return { sym:"?", dec:18n };
+    if (addr.toLowerCase() === WETH_ADDR.toLowerCase()) return { sym:"WETH", dec:18n };
+    try{
+      const c = new ethers.Contract(addr, ERC20_MINI, ro);
+      const [s, d] = await Promise.all([c.symbol().catch(()=> "?"), c.decimals().catch(()=> 18)]);
+      return { sym:s, dec:BigInt(d) };
+    }catch(e){ return { sym:"?", dec:18n }; }
+  }
+
+  async function lpLoad(){
+    const idStr = $("lpTokenId").value.trim();
+    if (!validId(idStr)){ lpStatus("tokenId 需要是非负整数。", "err"); return; }
+    const ro = provider || new ethers.JsonRpcProvider(CHAIN_PARAMS.rpcUrls[0]);
+    if (!provider) provider = ro;
+    try{
+      lpStatus("<span class='spinner'></span>正在查询待领手续费…", "pending");
+      const id = BigInt(idStr);
+      const locker = new ethers.Contract(LOCKER_ADDR, LOCKER_ABI, ro);
+      const info = await locker.locks(id);
+      if (!info.locked){ lpStatus("该 tokenId 未在本 Locker 锁仓（NOT_LOCKED），确认编号是否正确。", "err"); $("lpPending").textContent=""; return; }
+      const [owed0, owed1] = await locker.pendingTokensOwed(id);
+      const [m0, m1] = await Promise.all([tokenMeta(info.token0, ro), tokenMeta(info.token1, ro)]);
+      const p0 = fmt(owed0, m0.dec) + " " + m0.sym;
+      const p1 = fmt(owed1, m1.dec) + " " + m1.sym;
+      $("lpPending").textContent = "待领：" + p0 + " ｜ " + p1;
+      if (owed0 === 0n && owed1 === 0n) lpStatus("当前池子暂无待领手续费。", "info");
+      else lpClear();
+      updateLpBtn();
+    }catch(e){
+      lpStatus("查询失败：" + decodeErr(e) + "（确认 tokenId 属于本链的 LiquidityLocker）", "err");
+    }
+  }
+
+  function updateLpBtn(){
+    $("collectBtn").disabled = !(signer && validId($("lpTokenId").value));
+  }
+
+  async function collectFees(){
+    const idStr = $("lpTokenId").value.trim();
+    if (!validId(idStr)){ lpStatus("请先填写正确的 tokenId。", "err"); return; }
+    if (!signer){ lpStatus("请先连接钱包。", "err"); return; }
+    if (!(await checkNetwork())){ lpStatus("请先切换到 Robinhood Chain（4663）。", "err"); return; }
+
+    const btn = $("collectBtn");
+    const oldText = btn.textContent;
+    btn.disabled = true; btn.innerHTML = "<span class='spinner'></span>等待钱包确认…";
+    try{
+      const id = BigInt(idStr);
+      const locker = new ethers.Contract(LOCKER_ADDR, LOCKER_ABI, signer);
+      try{ await locker.collectFees.staticCall(id); }
+      catch(sim){ lpStatus("预检未通过：" + decodeErr(sim), "err"); btn.disabled=false; btn.textContent=oldText; return; }
+
+      lpStatus("<span class='spinner'></span>正在发送交易…", "pending");
+      const tx = await locker.collectFees(id);
+      lpStatus("<span class='spinner'></span>已提交，等待确认…<br>Tx: " + short(tx.hash), "pending");
+      const rc = await tx.wait();
+      lpStatus("✅ 已结算！WETH 部分转平台，代币部分回流分红池。<br>Tx: " + tx.hash + "<br>区块 #" + rc.blockNumber, "info");
+      await lpLoad();
+    }catch(e){
+      lpStatus("交易失败：" + decodeErr(e), "err");
+    }finally{
+      btn.disabled = false; btn.textContent = oldText; updateLpBtn();
+    }
+  }
+
   // ---- 事件绑定 ----
   $("connectBtn").addEventListener("click", connect);
   $("loadBtn").addEventListener("click", loadToken);
   $("processBtn").addEventListener("click", processTax);
   $("tokenAddr").addEventListener("input", updateProcessBtn);
+  $("lpLoadBtn").addEventListener("click", lpLoad);
+  $("collectBtn").addEventListener("click", collectFees);
+  $("lpTokenId").addEventListener("input", updateLpBtn);
 
   if (window.ethereum){
     window.ethereum.on && window.ethereum.on("accountsChanged", ()=> location.reload());
