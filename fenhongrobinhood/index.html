@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>税币分红触发器 · TaxLaunch</title>
+<style>
+  :root{
+    --bg:#0a0e0d; --panel:#121a17; --panel2:#0e1512;
+    --line:#1f2d27; --accent:#00d17a; --accent2:#00b368;
+    --text:#e8f1ec; --muted:#8aa398; --danger:#ff5c6c; --warn:#ffcf5c;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%,#0f1e18 0%,var(--bg) 60%);
+    color:var(--text); line-height:1.6; min-height:100%;
+    display:flex; flex-direction:column; align-items:center; padding:24px 16px 60px;
+  }
+  .wrap{width:100%;max-width:640px}
+  header{text-align:center;margin:10px 0 24px}
+  .logo{
+    display:inline-flex;align-items:center;gap:10px;font-weight:800;font-size:15px;
+    letter-spacing:.5px;color:var(--accent);background:rgba(0,209,122,.08);
+    border:1px solid rgba(0,209,122,.25);padding:6px 14px;border-radius:999px;margin-bottom:18px;
+  }
+  .logo .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent)}
+  h1{font-size:26px;font-weight:800;margin-bottom:8px}
+  header p{color:var(--muted);font-size:14px;max-width:460px;margin:0 auto}
+  .card{
+    background:linear-gradient(180deg,var(--panel) 0%,var(--panel2) 100%);
+    border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px;margin-bottom:16px;box-shadow:0 10px 40px rgba(0,0,0,.35);
+  }
+  .row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+  .row+.row{margin-top:12px}
+  label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px;font-weight:600}
+  input{
+    width:100%;background:#0a100d;border:1px solid var(--line);border-radius:12px;
+    color:var(--text);padding:13px 14px;font-size:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    outline:none;transition:border-color .15s;
+  }
+  input:focus{border-color:var(--accent)}
+  input::placeholder{color:#3f5249}
+  .field+.field{margin-top:16px}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  button{
+    font-family:inherit;cursor:pointer;border:none;border-radius:12px;font-weight:700;
+    transition:transform .08s ease,filter .15s,background .15s;user-select:none;
+  }
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{
+    width:100%;padding:16px;font-size:16px;color:#04120b;
+    background:linear-gradient(180deg,var(--accent) 0%,var(--accent2) 100%);
+    box-shadow:0 6px 24px rgba(0,209,122,.35);
+  }
+  .btn-primary:hover:not(:disabled){filter:brightness(1.06)}
+  .btn-wallet{
+    padding:11px 18px;font-size:14px;color:var(--text);
+    background:rgba(0,209,122,.10);border:1px solid rgba(0,209,122,.3);white-space:nowrap;
+  }
+  .btn-wallet:hover:not(:disabled){background:rgba(0,209,122,.18)}
+  .btn-ghost{
+    background:transparent;border:1px solid var(--line);color:var(--muted);
+    padding:9px 12px;font-size:12px;
+  }
+  .btn-ghost:hover:not(:disabled){color:var(--text);border-color:var(--accent)}
+  .wallet-bar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .wallet-meta{font-size:13px;color:var(--muted)}
+  .wallet-meta b{color:var(--text);font-family:ui-monospace,monospace;font-weight:600}
+  .net-pill{
+    display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:4px 10px;border-radius:999px;
+    background:rgba(255,207,92,.1);border:1px solid rgba(255,207,92,.3);color:var(--warn);margin-top:6px;
+  }
+  .net-pill.ok{background:rgba(0,209,122,.1);border-color:rgba(0,209,122,.3);color:var(--accent)}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .stat{background:#0a100d;border:1px solid var(--line);border-radius:12px;padding:14px}
+  .stat .k{font-size:12px;color:var(--muted);margin-bottom:4px}
+  .stat .v{font-size:17px;font-weight:700;font-family:ui-monospace,monospace;word-break:break-all}
+  .status{
+    display:none;margin-top:14px;padding:13px 14px;border-radius:12px;font-size:13px;
+    border:1px solid var(--line);background:#0a100d;word-break:break-all;
+  }
+  .status.show{display:block}
+  .status.info{border-color:rgba(0,209,122,.3);color:var(--accent)}
+  .status.err{border-color:rgba(255,92,108,.4);color:var(--danger)}
+  .status.pending{border-color:rgba(255,207,92,.4);color:var(--warn)}
+  .status a{color:inherit;text-decoration:underline}
+  .divider{height:1px;background:var(--line);margin:18px 0}
+  .info-list{list-style:none;font-size:13px;color:var(--muted)}
+  .info-list li{padding:7px 0;border-bottom:1px solid var(--line);display:flex;gap:8px}
+  .info-list li:last-child{border-bottom:none}
+  .info-list li::before{content:"▸";color:var(--accent);flex-shrink:0}
+  .sec-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:8px}
+  footer a{color:var(--accent);text-decoration:none}
+  .spinner{
+    display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.25);
+    border-top-color:currentColor;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-right:6px;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media(max-width:480px){.stats{grid-template-columns:1fr}h1{font-size:22px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo"><span class="dot"></span> Robinhood Chain · TaxLaunch</div>
+    <h1>税币分红触发器</h1>
+    <p>连接钱包，点击按钮触发买税兑换成 ETH 分红给持币人。任何人都可以调用 <b>processTax(minEthOut)</b>，无需权限。</p>
+  </header>
+
+  <!-- 钱包连接 -->
+  <div class="card">
+    <div class="wallet-bar">
+      <div>
+        <div class="wallet-meta" id="walletMeta">未连接钱包</div>
+        <div class="net-pill" id="netPill" style="display:none"></div>
+      </div>
+      <button class="btn-wallet" id="connectBtn">连接钱包</button>
+    </div>
+  </div>
+
+  <!-- 代币信息 -->
+  <div class="card">
+    <div class="sec-title">🪙 代币设置</div>
+    <div class="field">
+      <label for="tokenAddr">税币合约地址（你刚发出来的 TaxToken 地址）</label>
+      <input id="tokenAddr" placeholder="0x..." spellcheck="false" autocomplete="off" />
+      <div class="hint">每个新发的代币各自有独立地址。粘贴发币时得到的 TaxToken 地址，然后点“读取状态”。</div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn-ghost" id="loadBtn">读取状态</button>
+      <span class="wallet-meta" id="tokenName"></span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="stats">
+      <div class="stat"><div class="k">待处理税池</div><div class="v" id="statPending">—</div></div>
+      <div class="stat"><div class="k">出售触发门槛</div><div class="v" id="statTrigger">—</div></div>
+      <div class="stat"><div class="k">单次出售上限</div><div class="v" id="statCap">—</div></div>
+      <div class="stat"><div class="k">是否可触发</div><div class="v" id="statReady">—</div></div>
+    </div>
+  </div>
+
+  <!-- 触发 -->
+  <div class="card">
+    <div class="sec-title">⚡ 触发税币卖出</div>
+    <div class="field">
+      <label for="minEth">minEthOut — 最低收到的 ETH（滑点保护，单位 ETH）</label>
+      <input id="minEth" value="0" placeholder="0" spellcheck="false" autocomplete="off" />
+      <div class="hint">填 0 = 不设滑点保护（任何成交价都接受，可能被夹）。谨慎起见可填一个略低于预期兑换额的值。</div>
+    </div>
+    <div style="margin-top:18px">
+      <button class="btn-primary" id="processBtn" disabled>点此触发 processTax</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+  <!-- 说明 -->
+  <div class="card">
+    <div class="sec-title">ℹ️ 运作说明</div>
+    <ul class="info-list">
+      <li>买入方向收买税（≤6%），截留进合约；卖出不收税。</li>
+      <li>税池累积到 <b>触发门槛</b>（默认 50 万枚）后，任何人都能调 processTax 把税换成 ETH。</li>
+      <li>换来的 ETH 打进分红合约，持币人自行 claim 领取。</li>
+      <li>单次最多卖出总量的 0.5%，限制被夹损失。</li>
+      <li>此页面不托管资金、无权限，只是替你构造并发送一笔标准合约调用。</li>
+    </ul>
+  </div>
+
+  <footer>基于 Robinhood Chain（chainId 4663）· 交易需你在钱包中签名确认</footer>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.2/dist/ethers.umd.min.js"></script>
+<script>
+  // ===== Robinhood Chain 网络参数 =====
+  const CHAIN_ID = 4663;
+  const CHAIN_HEX = "0x1237";
+  const CHAIN_PARAMS = {
+    chainId: CHAIN_HEX,
+    chainName: "Robinhood Chain",
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://rpc.mainnet.chain.robinhood.com"],
+    blockExplorerUrls: []
+  };
+
+  // TaxToken 需要用到的 ABI 片段
+  const ABI = [
+    "function processTax(uint256 minEthOut) external returns (uint256)",
+    "function pendingTaxTokens() external view returns (uint256)",
+    "function sellTriggerThreshold() external view returns (uint256)",
+    "function PROCESS_CAP() external view returns (uint256)",
+    "function buyTaxBps() external view returns (uint16)",
+    "function pool() external view returns (address)",
+    "function name() external view returns (string)",
+    "function symbol() external view returns (string)",
+    "function decimals() external view returns (uint8)"
+  ];
+
+  const $ = (id) => document.getElementById(id);
+  let provider, signer, account, decimals = 18n, tokenSym = "TOKEN";
+
+  // ---- 工具 ----
+  function short(a){ return a ? a.slice(0,6) + "…" + a.slice(-4) : ""; }
+  function fmt(bn, dec){
+    try{
+      const s = ethers.formatUnits(bn, dec);
+      const n = parseFloat(s);
+      if (n === 0) return "0";
+      if (n >= 1) return n.toLocaleString("en-US",{maximumFractionDigits:2});
+      return n.toLocaleString("en-US",{maximumFractionDigits:6});
+    }catch(e){ return bn.toString(); }
+  }
+  function setStatus(msg, type){
+    const el = $("status");
+    el.className = "status show " + (type||"info");
+    el.innerHTML = msg;
+  }
+  function clearStatus(){ $("status").className = "status"; }
+
+  function isAddr(a){ try{ return ethers.isAddress(a); }catch(e){ return false; } }
+
+  // ---- 连接钱包 ----
+  async function connect(){
+    if (!window.ethereum){
+      setStatus("未检测到钱包。请安装 MetaMask 或使用内置浏览器的钱包 App 打开本页。", "err");
+      return;
+    }
+    try{
+      provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = await provider.getSigner();
+      account = await signer.getAddress();
+      $("walletMeta").innerHTML = "已连接：<b>" + short(account) + "</b>";
+      $("connectBtn").textContent = "已连接";
+      await checkNetwork();
+      updateProcessBtn();
+    }catch(e){
+      setStatus("连接失败：" + (e.shortMessage || e.message), "err");
+    }
+  }
+
+  async function checkNetwork(){
+    if (!provider) return false;
+    const net = await provider.getNetwork();
+    const pill = $("netPill");
+    pill.style.display = "inline-flex";
+    if (Number(net.chainId) === CHAIN_ID){
+      pill.className = "net-pill ok";
+      pill.textContent = "✓ Robinhood Chain (4663)";
+      return true;
+    } else {
+      pill.className = "net-pill";
+      pill.innerHTML = "⚠ 当前网络 " + net.chainId + "，点此切换到 Robinhood Chain";
+      pill.style.cursor = "pointer";
+      pill.onclick = switchNetwork;
+      return false;
+    }
+  }
+
+  async function switchNetwork(){
+    try{
+      await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{chainId:CHAIN_HEX}] });
+    }catch(err){
+      if (err.code === 4902 || (err.data && err.data.originalError && err.data.originalError.code === 4902)){
+        try{
+          await window.ethereum.request({ method:"wallet_addEthereumChain", params:[CHAIN_PARAMS] });
+        }catch(e2){ setStatus("添加网络失败：" + (e2.shortMessage||e2.message), "err"); return; }
+      } else {
+        setStatus("切换网络失败：" + (err.shortMessage||err.message), "err"); return;
+      }
+    }
+    await checkNetwork();
+    updateProcessBtn();
+  }
+
+  // ---- 读取代币状态 ----
+  async function loadToken(){
+    const addr = $("tokenAddr").value.trim();
+    if (!isAddr(addr)){ setStatus("代币地址格式不正确。", "err"); return; }
+    if (!provider){
+      // 未连接钱包时也可用 RPC 只读
+      provider = new ethers.JsonRpcProvider(CHAIN_PARAMS.rpcUrls[0]);
+    }
+    try{
+      setStatus("<span class='spinner'></span>正在读取链上状态…", "pending");
+      const c = new ethers.Contract(addr, ABI, provider);
+      const [nm, sym, dec, pending, trigger, cap, pool] = await Promise.all([
+        c.name().catch(()=> "?"),
+        c.symbol().catch(()=> "TOKEN"),
+        c.decimals().catch(()=> 18),
+        c.pendingTaxTokens(),
+        c.sellTriggerThreshold(),
+        c.PROCESS_CAP(),
+        c.pool().catch(()=> ethers.ZeroAddress)
+      ]);
+      decimals = BigInt(dec); tokenSym = sym;
+      $("tokenName").textContent = nm + " ($" + sym + ")";
+      $("statPending").textContent = fmt(pending, decimals) + " " + sym;
+      $("statTrigger").textContent = fmt(trigger, decimals) + " " + sym;
+      $("statCap").textContent = fmt(cap, decimals) + " " + sym;
+
+      const launched = pool && pool !== ethers.ZeroAddress;
+      const ready = launched && pending > 0n && pending >= trigger;
+      const readyEl = $("statReady");
+      if (!launched){ readyEl.textContent = "未建池"; readyEl.style.color = "var(--danger)"; }
+      else if (ready){ readyEl.textContent = "✓ 可触发"; readyEl.style.color = "var(--accent)"; }
+      else if (pending === 0n){ readyEl.textContent = "税池为空"; readyEl.style.color = "var(--muted)"; }
+      else { readyEl.textContent = "未达门槛"; readyEl.style.color = "var(--warn)"; }
+
+      clearStatus();
+      updateProcessBtn();
+    }catch(e){
+      setStatus("读取失败：" + (e.shortMessage || e.message) + "（确认地址是本链上的 TaxToken）", "err");
+    }
+  }
+
+  function updateProcessBtn(){
+    const ok = signer && isAddr($("tokenAddr").value.trim());
+    $("processBtn").disabled = !ok;
+  }
+
+  // ---- 触发 processTax ----
+  async function processTax(){
+    const addr = $("tokenAddr").value.trim();
+    if (!isAddr(addr)){ setStatus("请先填写正确的代币地址。", "err"); return; }
+    if (!signer){ setStatus("请先连接钱包。", "err"); return; }
+    if (!(await checkNetwork())){ setStatus("请先切换到 Robinhood Chain（4663）。", "err"); return; }
+
+    let minEthWei;
+    try{
+      const v = ($("minEth").value.trim() || "0");
+      minEthWei = ethers.parseEther(v);
+    }catch(e){ setStatus("minEthOut 数值无效。", "err"); return; }
+
+    const btn = $("processBtn");
+    btn.disabled = true;
+    const oldText = btn.textContent;
+    btn.innerHTML = "<span class='spinner'></span>等待钱包确认…";
+
+    try{
+      const c = new ethers.Contract(addr, ABI, signer);
+
+      // 先做静态调用预检，给出更友好的失败原因
+      try{
+        await c.processTax.staticCall(minEthWei);
+      }catch(sim){
+        const reason = decodeErr(sim);
+        setStatus("预检未通过：" + reason, "err");
+        btn.disabled = false; btn.textContent = oldText;
+        return;
+      }
+
+      setStatus("<span class='spinner'></span>正在发送交易…", "pending");
+      const tx = await c.processTax(minEthWei);
+      setStatus("<span class='spinner'></span>已提交，等待打包确认…<br>Tx: " + short(tx.hash), "pending");
+      const rc = await tx.wait();
+      setStatus("✅ 触发成功！税币已换成 ETH 分红给持币人。<br>Tx: " + tx.hash + "<br>区块 #" + rc.blockNumber, "info");
+      await loadToken();
+    }catch(e){
+      setStatus("交易失败：" + decodeErr(e), "err");
+    }finally{
+      btn.disabled = false; btn.textContent = oldText;
+      updateProcessBtn();
+    }
+  }
+
+  // 把常见的合约自定义错误翻译成中文
+  function decodeErr(e){
+    const raw = (e && (e.shortMessage || e.reason || e.message)) || String(e);
+    if (/BelowSellTrigger/.test(raw)) return "税池未达到出售触发门槛，暂时不能卖（BelowSellTrigger）。";
+    if (/NothingToProcess/.test(raw)) return "税池为空，没有可处理的税（NothingToProcess）。";
+    if (/NotLaunched/.test(raw)) return "该代币尚未建池（NotLaunched）。";
+    if (/Reentrancy/.test(raw)) return "重入保护触发，请稍后再试（Reentrancy）。";
+    if (/Too little received|amountOutMin|slippage/i.test(raw)) return "滑点保护触发：实际兑换低于 minEthOut，请调低该值后重试。";
+    if (/user rejected|ACTION_REJECTED|4001/i.test(raw)) return "你在钱包中取消了交易。";
+    if (/insufficient funds/i.test(raw)) return "ETH 余额不足以支付 gas。";
+    return raw;
+  }
+
+  // ---- 事件绑定 ----
+  $("connectBtn").addEventListener("click", connect);
+  $("loadBtn").addEventListener("click", loadToken);
+  $("processBtn").addEventListener("click", processTax);
+  $("tokenAddr").addEventListener("input", updateProcessBtn);
+
+  if (window.ethereum){
+    window.ethereum.on && window.ethereum.on("accountsChanged", ()=> location.reload());
+    window.ethereum.on && window.ethereum.on("chainChanged", ()=> location.reload());
+  }
+</script>
+</body>
+</html>
