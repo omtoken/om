@@ -510,6 +510,10 @@ body {
         </div>
         <div class="owner-section">
           <label>充值代币到合约</label>
+          <div class="allowance-info" id="ownerAllowanceInfo" style="display:none">
+            <span id="ownerAllowanceText">授权额度不足，需要先授权</span>
+            <button class="btn-sm" id="btnOwnerApprove" onclick="ownerApproveToken()">授权</button>
+          </div>
           <div class="input-group">
             <input type="number" id="inputDepositAmt" placeholder="充值数量">
           </div>
@@ -871,6 +875,34 @@ async function refreshOwnerStatus() {
     badge.textContent = '状态：运行中';
     badge.className = 'status-badge';
   }
+  await refreshOwnerAllowance();
+}
+
+async function refreshOwnerAllowance() {
+  if (!isOwner || !tokenContract) return;
+  try {
+    const allowance = await tokenContract.allowance(userAddr, CONTRACT_ADDR);
+    const info = document.getElementById('ownerAllowanceInfo');
+    if (allowance.eq(0)) {
+      info.style.display = 'flex';
+      document.getElementById('ownerAllowanceText').textContent = '需要先授权代币给合约';
+    } else {
+      info.style.display = 'none';
+    }
+  } catch(e) { console.error('owner allowance check error:', e); }
+}
+
+async function ownerApproveToken() {
+  if (!tokenContract) { toast('代币未设置', 'error'); return; }
+  try {
+    toast('正在授权...', 'info');
+    const maxApprove = ethers.constants.MaxUint256;
+    const tx = await tokenContract.approve(CONTRACT_ADDR, maxApprove);
+    toast('交易已提交，等待确认...', 'info');
+    await tx.wait();
+    toast('授权成功', 'success');
+    refreshOwnerAllowance();
+  } catch(e) { toast('授权失败: ' + (e.reason || e.message), 'error'); }
 }
 
 // ====== Tab 切换 ======
@@ -939,18 +971,34 @@ async function setToken() {
     const tx = await contract.setToken(addr);
     await tx.wait();
     toast('代币设置成功', 'success');
+    // 重新初始化代币合约实例
+    tokenAddr = addr;
+    tokenContract = new ethers.Contract(tokenAddr, ERC20_ABI, signer);
+    try { tokenSymbol = await tokenContract.symbol(); } catch { tokenSymbol = 'TOKEN'; }
+    try { tokenDecimals = await tokenContract.decimals(); } catch { tokenDecimals = 18; }
+    document.getElementById('tokenSymbol').textContent = tokenSymbol;
+    await refreshOwnerAllowance();
   } catch(e) { toast('设置失败: ' + (e.reason || e.message), 'error'); }
 }
 
 async function depositToken() {
   const amt = document.getElementById('inputDepositAmt').value;
   if (!amt || parseFloat(amt) <= 0) { toast('请输入数量', 'error'); return; }
+  if (!tokenContract) { toast('代币未设置', 'error'); return; }
   try {
     const amount = ethers.utils.parseUnits(amt, tokenDecimals);
+    // 检查授权额度
+    const allowance = await tokenContract.allowance(userAddr, CONTRACT_ADDR);
+    if (allowance.lt(amount)) {
+      toast('授权额度不足，请先授权', 'error');
+      refreshOwnerAllowance();
+      return;
+    }
     toast('正在充值...', 'info');
     const tx = await contract.depositToken(amount);
     await tx.wait();
     toast('充值成功', 'success');
+    document.getElementById('inputDepositAmt').value = '';
     await refreshAll();
   } catch(e) { toast('充值失败: ' + (e.reason || e.message), 'error'); }
 }
@@ -958,17 +1006,20 @@ async function depositToken() {
 async function withdrawToken() {
   const amt = document.getElementById('inputWithdrawAmt').value;
   if (!amt || parseFloat(amt) <= 0) { toast('请输入数量', 'error'); return; }
+  if (!tokenContract) { toast('代币未设置', 'error'); return; }
   try {
     const amount = ethers.utils.parseUnits(amt, tokenDecimals);
     toast('正在提取...', 'info');
     const tx = await contract.withdrawToken(amount);
     await tx.wait();
     toast('提取成功', 'success');
+    document.getElementById('inputWithdrawAmt').value = '';
     await refreshAll();
   } catch(e) { toast('提取失败: ' + (e.reason || e.message), 'error'); }
 }
 
 async function withdrawAllToken() {
+  if (!tokenContract) { toast('代币未设置', 'error'); return; }
   if (!confirm('确认提取合约内所有代币？')) return;
   try {
     toast('正在提取全部代币...', 'info');
@@ -986,11 +1037,19 @@ async function rescueToken() {
   if (!amt || parseFloat(amt) <= 0) { toast('请输入数量', 'error'); return; }
   if (!confirm('确认紧急提取？此操作不可逆！')) return;
   try {
-    const amount = ethers.utils.parseUnits(amt, 18);
+    // 尝试获取代币精度，失败则默认18
+    let decimals = 18;
+    try {
+      const rescueTokenContract = new ethers.Contract(addr, ERC20_ABI, signer);
+      decimals = await rescueTokenContract.decimals();
+    } catch(e) { console.log('无法获取代币精度，使用默认18'); }
+    const amount = ethers.utils.parseUnits(amt, decimals);
     toast('正在紧急提取...', 'info');
     const tx = await contract.rescueToken(addr, amount);
     await tx.wait();
     toast('紧急提取成功', 'success');
+    document.getElementById('inputRescueAddr').value = '';
+    document.getElementById('inputRescueAmt').value = '';
   } catch(e) { toast('提取失败: ' + (e.reason || e.message), 'error'); }
 }
 
