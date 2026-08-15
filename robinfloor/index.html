@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Woofpump V6 - Owner Admin Panel</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.1/ethers.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f1117; color: #e1e4e8; min-height: 100vh; }
+header { background: #161b22; border-bottom: 1px solid #30363d; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+h1 { font-size: 20px; color: #58a6ff; }
+#connect-area { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+#network-info, #wallet-info { font-size: 13px; color: #8b949e; }
+button { background: #238636; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; }
+button:hover { background: #2ea043; }
+button:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+button.danger { background: #da3633; }
+button.danger:hover { background: #f85149; }
+button.secondary { background: #30363d; }
+button.secondary:hover { background: #484f58; }
+main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+.card h2 { font-size: 16px; color: #58a6ff; margin-bottom: 16px; border-bottom: 1px solid #21262d; padding-bottom: 8px; }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.stat-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 14px; }
+.stat-box .label { font-size: 12px; color: #8b949e; margin-bottom: 4px; }
+.stat-box .value { font-size: 18px; font-weight: 600; color: #f0f6fc; word-break: break-all; }
+.form-row { display: flex; gap: 10px; align-items: end; margin-bottom: 12px; flex-wrap: wrap; }
+.form-row label { font-size: 13px; color: #8b949e; display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px; }
+.form-row input { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 8px 12px; color: #e1e4e8; font-size: 14px; }
+.form-row input:focus { outline: none; border-color: #58a6ff; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+#log { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; line-height: 1.6; }
+#log .log-entry { border-bottom: 1px solid #21262d; padding: 4px 0; }
+#log .log-entry:last-child { border-bottom: none; }
+.log-time { color: #484f58; }
+.log-ok { color: #3fb950; }
+.log-err { color: #f85149; }
+.log-info { color: #58a6ff; }
+.not-owner { color: #f85149; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.is-owner { color: #3fb950; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.section-disabled { opacity: 0.5; pointer-events: none; }
+#factory-owner-addr, #treasury-owner-addr { 
+  background: #0d1117; 
+  padding: 8px 12px; 
+  border-radius: 4px; 
+  border: 1px solid #30363d;
+  margin-top: 4px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Woofpump V6 Owner Panel</h1>
+    <div id="connect-area">
+      <span id="network-info"></span>
+      <span id="wallet-info"></span>
+      <button id="btn-connect" onclick="connectWallet()">连接钱包</button>
+    </div>
+  </header>
+  <main id="main-content">
+    <!-- Owner Info Banner -->
+    <div class="card" id="owner-banner" style="background:#1a2332;border:1px solid #1f6feb;">
+      <h2 style="color:#79c0ff;border-bottom-color:#1f6feb;">当前 Owner 信息</h2>
+      <div id="owner-info-display" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;">
+        <div>
+          <div style="font-size:12px;color:#8b949e;margin-bottom:4px;">Factory Owner</div>
+          <div id="factory-owner-addr" style="font-size:14px;color:#f0f6fc;font-family:monospace;word-break:break-all;">加载中...</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:#8b949e;margin-bottom:4px;">Treasury Owner</div>
+          <div id="treasury-owner-addr" style="font-size:14px;color:#f0f6fc;font-family:monospace;word-break:break-all;">加载中...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="card">
+      <h2>概览 Dashboard</h2>
+      <div class="stats" id="dashboard-stats">
+        <div class="stat-box"><div class="label">加载中...</div><div class="value" style="color:#484f58;">正在连接 RPC...</div></div>
+      </div>
+      <button class="secondary" onclick="refreshAll()">刷新数据</button>
+    </div>
+
+    <!-- Factory Admin -->
+    <div class="card" id="factory-card">
+      <h2>Factory 管理</h2>
+      <div id="factory-owner-status"></div>
+      <div id="factory-actions" class="section-disabled">
+        <h3 style="font-size:14px;color:#c9d1d9;margin-bottom:10px;">设置创建费用 (setCreationFee)</h3>
+        <div class="form-row">
+          <label>费用 (ETH)
+            <input type="text" id="input-creation-fee" placeholder="0.01">
+          </label>
+        </div>
+        <div class="actions">
+          <button onclick="setCreationFee()">设置费用</button>
+        </div>
+
+        <h3 style="font-size:14px;color:#c9d1d9;margin:16px 0 10px;">提取 Factory 余额 (withdrawAll)</h3>
+        <div class="form-row">
+          <label>接收地址
+            <input type="text" id="input-withdraw-to" placeholder="0x...">
+          </label>
+        </div>
+        <div class="actions">
+          <button onclick="withdrawAll()">提取全部 ETH</button>
+        </div>
+
+        <h3 style="font-size:14px;color:#c9d1d9;margin:16px 0 10px;">更新 Token Creator (updateCreator)</h3>
+        <div class="form-row">
+          <label>Token 地址
+            <input type="text" id="input-token-addr" placeholder="0x...">
+          </label>
+          <label>新 Creator 地址
+            <input type="text" id="input-new-creator" placeholder="0x...">
+          </label>
+        </div>
+        <div class="actions">
+          <button onclick="updateCreator()">更新 Creator</button>
+        </div>
+
+        <h3 style="font-size:14px;color:#c9d1d9;margin:16px 0 10px;">转移 Factory 所有权 (transferOwnership)</h3>
+        <div class="form-row">
+          <label>新 Owner 地址
+            <input type="text" id="input-factory-new-owner" placeholder="0x...">
+          </label>
+        </div>
+        <div class="actions">
+          <button class="danger" onclick="transferFactoryOwnership()">转移所有权</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Treasury Admin -->
+    <div class="card" id="treasury-card">
+      <h2>Treasury 管理</h2>
+      <div id="treasury-owner-status"></div>
+      <div id="treasury-actions" class="section-disabled">
+        <h3 style="font-size:14px;color:#c9d1d9;margin-bottom:10px;">设置接收地址 (setRecipient)</h3>
+        <div class="form-row">
+          <label>新接收地址
+            <input type="text" id="input-treasury-recipient" placeholder="0x...">
+          </label>
+        </div>
+        <div class="actions">
+          <button onclick="setRecipient()">设置接收地址</button>
+        </div>
+
+        <h3 style="font-size:14px;color:#c9d1d9;margin:16px 0 10px;">Flush Treasury 余额</h3>
+        <p style="font-size:13px;color:#8b949e;margin-bottom:8px;">将 Treasury 全部 ETH 发送到当前 recipient 地址</p>
+        <div class="actions">
+          <button onclick="flushTreasury()">执行 Flush</button>
+        </div>
+
+        <h3 style="font-size:14px;color:#c9d1d9;margin:16px 0 10px;">转移 Treasury 所有权 (transferOwnership)</h3>
+        <div class="form-row">
+          <label>新 Owner 地址
+            <input type="text" id="input-treasury-new-owner" placeholder="0x...">
+          </label>
+        </div>
+        <div class="actions">
+          <button class="danger" onclick="transferTreasuryOwnership()">转移所有权</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Creator Fee Withdraw (for any user) -->
+    <div class="card">
+      <h2>提取 Creator 费用 (Curve)</h2>
+      <p style="font-size:13px;color:#8b949e;margin-bottom:12px;">任何有待提取 creator 费用的地址都可以调用</p>
+      <div class="form-row">
+        <label>接收地址
+          <input type="text" id="input-creator-fee-to" placeholder="0x...">
+        </label>
+      </div>
+      <div class="actions">
+        <button onclick="withdrawCreatorFees()">提取 Creator 费用</button>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="card">
+      <h2>操作日志</h2>
+      <div id="log"></div>
+    </div>
+  </main>
+</div>
+<script>
+// ============ Contract Config ============
+const CONFIG = {
+  chainId: 4663,
+  chainName: 'Robinhood Chain Mainnet',
+  rpcUrl: 'https://rpc.mainnet.chain.robinhood.com/',
+  blockExplorer: 'https://explorer.chain.robinhood.com/',
+  factory: '0x3C0E1296600d8C8a49649b0c0bccf8cBCA828Ce7',
+  curve:   '0x53c590e30C9073a805dd7c71056FEC7841EaCE05',
+  treasury:'0xd8B0F2A189178A21939bcD74C39dB86dA0a29F07',
+  expectedOwner: '0x038C66BDA2e892559295599c32d2C5831a448385',
+  treasuryRecipient: '0xF94f02057E08dE2f2658f69467AdDA79Cb61389a',
+};
+
+// Minimal ABIs
+const FACTORY_ABI = [
+  'function owner() view returns (address)',
+  'function creationFee() view returns (uint256)',
+  'function totalTokens() view returns (uint256)',
+  'function curve() view returns (address)',
+  'function setCreationFee(uint256 newFee)',
+  'function withdrawAll(address payable to)',
+  'function updateCreator(address token, address newCreator)',
+  'function transferOwnership(address newOwner)',
+  'function allTokens(uint256 index) view returns (address)',
+  'function tokenToCreator(address token) view returns (address)',
+];
+
+const TREASURY_ABI = [
+  'function owner() view returns (address)',
+  'function recipient() view returns (address)',
+  'function setRecipient(address _recipient)',
+  'function flush()',
+  'function transferOwnership(address newOwner)',
+];
+
+const CURVE_ABI = [
+  'function pendingCreatorFees(address creator) view returns (uint256)',
+  'function withdrawCreatorFees(address payable to)',
+  'function TREASURY() view returns (address)',
+  'function FACTORY() view returns (address)',
+];
+
+// ============ State ============
+let rpcProvider = null;    // read-only, always available
+let browserProvider = null; // wallet provider, only after connect
+let signer = null;
+let userAddress = null;
+let walletConnected = false;
+
+// Write contracts (need signer)
+let factoryContract = null;
+let treasuryContract = null;
+let curveContract = null;
+
+// Read contracts (use rpcProvider)
+let readFactory = null;
+let readTreasury = null;
+let readCurve = null;
+
+// ============ Logging ============
+function log(msg, type = 'info') {
+  const el = document.getElementById('log');
+  const time = new Date().toLocaleTimeString();
+  const cls = type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : 'log-info';
+  el.innerHTML = `<div class="log-entry"><span class="log-time">[${time}]</span> <span class="${cls}">${msg}</span></div>` + el.innerHTML;
+}
+
+// ============ Init on page load ============
+function initReadOnly() {
+  rpcProvider = new ethers.JsonRpcProvider(CONFIG.rpcUrl, CONFIG.chainId);
+  readFactory = new ethers.Contract(CONFIG.factory, FACTORY_ABI, rpcProvider);
+  readTreasury = new ethers.Contract(CONFIG.treasury, TREASURY_ABI, rpcProvider);
+  readCurve = new ethers.Contract(CONFIG.curve, CURVE_ABI, rpcProvider);
+  document.getElementById('network-info').textContent = `Robinhood Chain (${CONFIG.chainId})`;
+  refreshAll();
+}
+
+// ============ Wallet Connection ============
+async function connectWallet() {
+  if (!window.ethereum) {
+    log('未检测到 MetaMask 或兼容钱包，请安装钱包插件', 'err');
+    return;
+  }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    browserProvider = new ethers.BrowserProvider(window.ethereum);
+    signer = await browserProvider.getSigner();
+    userAddress = await signer.getAddress();
+
+    // Check / switch network
+    const network = await browserProvider.getNetwork();
+    if (Number(network.chainId) !== CONFIG.chainId) {
+      log(`当前链 ID ${network.chainId}，正在切换到 Robinhood Chain (${CONFIG.chainId})...`, 'info');
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x' + CONFIG.chainId.toString(16) }],
+        });
+      } catch (switchErr) {
+        if (switchErr.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x' + CONFIG.chainId.toString(16),
+              chainName: CONFIG.chainName,
+              rpcUrls: [CONFIG.rpcUrl],
+              blockExplorerUrls: [CONFIG.blockExplorer],
+              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+            }],
+          });
+        } else {
+          throw switchErr;
+        }
+      }
+      browserProvider = new ethers.BrowserProvider(window.ethereum);
+      signer = await browserProvider.getSigner();
+      userAddress = await signer.getAddress();
+    }
+
+    // Init write contracts
+    factoryContract = new ethers.Contract(CONFIG.factory, FACTORY_ABI, signer);
+    treasuryContract = new ethers.Contract(CONFIG.treasury, TREASURY_ABI, signer);
+    curveContract = new ethers.Contract(CONFIG.curve, CURVE_ABI, signer);
+
+    walletConnected = true;
+    document.getElementById('wallet-info').textContent = `钱包: ${userAddress.slice(0,6)}...${userAddress.slice(-4)}`;
+    document.getElementById('btn-connect').textContent = '已连接';
+    document.getElementById('btn-connect').disabled = true;
+
+    log(`钱包已连接: ${userAddress}`, 'ok');
+    await refreshAll();
+  } catch (err) {
+    log('连接失败: ' + err.message, 'err');
+  }
+}
+
+// ============ Refresh Dashboard ============
+async function refreshAll() {
+  if (!readFactory) return;
+  log('正在刷新数据...', 'info');
+  const statsEl = document.getElementById('dashboard-stats');
+  try {
+    const [
+      factoryOwner, factoryBal, creationFee, totalTokens,
+      treasuryOwner, treasuryBal, treasuryRecipient,
+      curveBal,
+    ] = await Promise.all([
+      readFactory.owner(),
+      rpcProvider.getBalance(CONFIG.factory),
+      readFactory.creationFee(),
+      readFactory.totalTokens(),
+      readTreasury.owner(),
+      rpcProvider.getBalance(CONFIG.treasury),
+      readTreasury.recipient(),
+      rpcProvider.getBalance(CONFIG.curve),
+    ]);
+
+    // Update owner banner
+    document.getElementById('factory-owner-addr').textContent = factoryOwner;
+    document.getElementById('treasury-owner-addr').textContent = treasuryOwner;
+
+    // Owner status checks
+    const fStatus = document.getElementById('factory-owner-status');
+    const tStatus = document.getElementById('treasury-owner-status');
+
+    if (!walletConnected || !userAddress) {
+      fStatus.innerHTML = '<div class="not-owner">⚠ 未连接钱包 — 只读模式，无法执行管理操作</div>';
+      tStatus.innerHTML = '<div class="not-owner">⚠ 未连接钱包 — 只读模式，无法执行管理操作</div>';
+      document.getElementById('factory-actions').classList.add('section-disabled');
+      document.getElementById('treasury-actions').classList.add('section-disabled');
+    } else {
+      const userIsFactoryOwner = userAddress.toLowerCase() === factoryOwner.toLowerCase();
+      const userIsTreasuryOwner = userAddress.toLowerCase() === treasuryOwner.toLowerCase();
+
+      if (userIsFactoryOwner) {
+        fStatus.innerHTML = '<div class="is-owner">✓ 当前钱包是 Factory Owner</div>';
+        document.getElementById('factory-actions').classList.remove('section-disabled');
+      } else {
+        fStatus.innerHTML = '<div class="not-owner">✗ 当前钱包不是 Factory Owner (无权操作)</div>';
+        document.getElementById('factory-actions').classList.add('section-disabled');
+      }
+
+      if (userIsTreasuryOwner) {
+        tStatus.innerHTML = '<div class="is-owner">✓ 当前钱包是 Treasury Owner</div>';
+        document.getElementById('treasury-actions').classList.remove('section-disabled');
+      } else {
+        tStatus.innerHTML = '<div class="not-owner">✗ 当前钱包不是 Treasury Owner (无权操作)</div>';
+        document.getElementById('treasury-actions').classList.add('section-disabled');
+      }
+    }
+
+    statsEl.innerHTML = `
+      <div class="stat-box"><div class="label">Factory 地址</div><div class="value" style="font-size:12px;">${CONFIG.factory}</div></div>
+      <div class="stat-box"><div class="label">Factory Owner</div><div class="value" style="font-size:12px;">${factoryOwner}</div></div>
+      <div class="stat-box"><div class="label">Factory ETH 余额</div><div class="value">${ethers.formatEther(factoryBal)} ETH</div></div>
+      <div class="stat-box"><div class="label">创建费用 (creationFee)</div><div class="value">${ethers.formatEther(creationFee)} ETH</div></div>
+      <div class="stat-box"><div class="label">Token 总数</div><div class="value">${totalTokens.toString()}</div></div>
+      <div class="stat-box"><div class="label">Curve 地址</div><div class="value" style="font-size:12px;">${CONFIG.curve}</div></div>
+      <div class="stat-box"><div class="label">Curve ETH 余额</div><div class="value">${ethers.formatEther(curveBal)} ETH</div></div>
+      <div class="stat-box"><div class="label">Treasury 地址</div><div class="value" style="font-size:12px;">${CONFIG.treasury}</div></div>
+      <div class="stat-box"><div class="label">Treasury Owner</div><div class="value" style="font-size:12px;">${treasuryOwner}</div></div>
+      <div class="stat-box"><div class="label">Treasury ETH 余额</div><div class="value">${ethers.formatEther(treasuryBal)} ETH</div></div>
+      <div class="stat-box"><div class="label">Treasury Recipient</div><div class="value" style="font-size:12px;">${treasuryRecipient}</div></div>
+    `;
+
+    log('数据刷新完成', 'ok');
+  } catch (err) {
+    log('刷新失败: ' + err.message, 'err');
+  }
+}
+
+// ============ Write Functions ============
+function requireWallet() {
+  if (!walletConnected) {
+    log('请先连接钱包', 'err');
+    return false;
+  }
+  return true;
+}
+
+async function setCreationFee() {
+  if (!requireWallet()) return;
+  const val = document.getElementById('input-creation-fee').value.trim();
+  if (!val) return log('请输入费用金额', 'err');
+  try {
+    const wei = ethers.parseEther(val);
+    log(`正在设置 creationFee = ${val} ETH...`, 'info');
+    const tx = await factoryContract.setCreationFee(wei);
+    log(`Tx 已提交: ${tx.hash}`, 'info');
+    await tx.wait();
+    log('setCreationFee 成功!', 'ok');
+    await refreshAll();
+  } catch (err) {
+    log('setCreationFee 失败: ' + (err.reason || err.message), 'err');
+  }
+}
+
+async function withdrawAll() {
+  if (!requireWallet()) return;
+  const to = document.getElementById('input-withdraw-to').value.trim();
+  if (!to) return log('请输入接收地址', 'err');
+  try {
+    log(`正在提取 Factory 全部 ETH 到 ${to}...`, 'info');
+    const tx = await factoryContract.withdrawAll(to);
+    log(`Tx 已提交: ${tx.hash}`, 'info');
+    await tx.wait();
+    log('withdrawAll 成功!', 'ok');
+    await refreshAll();
+  } catch (err) {
+    log('withdrawAll 失败: ' + (err.reason || err.message), 'err');
+  }
+}
+
+async function updateCreator() {
+  if (!requireWallet()) return;
+  const token = document.getElementById('input-token-addr').value.trim();
+  const newCreator = document.getElementById('input-new-creator').value.trim();
+  if (!token || !newCreator) return log('请输入 Token 地址和新 Creator 地址', 'err');
+  try {
+    log(`正在更新 token ${token} 的 creator 为 ${newCreator}...`, 'info');
+    const tx = await factoryContract.updateCreator(token, newCreator);
+    log(`Tx 已提交: ${tx.hash}`, 'info');
+    await tx.wait();
+    log('updateCreator 成功!', 'ok');
+    await refreshAll();
+  } catch (err) {
+    log('updateCreator 失败: ' + (err.reason || err.message), 'err');
+  }
+}
+
+async function transferFactoryOwnership() {
+  if (!requireWallet()) return;
+  const newOwner = document.getElementById('input-factory-new-owner').value.trim();
+  if (!newOwner) return log('请输入新 Owner 地址', 'err');
+  if (!confirm('确定要转移 Factory 所有权？此操作不可逆！')) return;
+  try {
+    log(`正在转移 Factory 所有权到 ${newOwner}...`, 'info');
+    const tx = await factoryContract.transferOwnership(newOwner);
+    log(`Tx 已提交: ${tx.hash}`, 'info');
+    await tx.wait();
+    log('Factory transferOwnership 成功!', 'ok');
+    await refreshAll();
+  } catch (err) {
+    log('transferOwnership 失败: ' + (err.reason || err.message), 'err');
+  }
+}
+
+async function setRecipient() {
+  if (!requireWallet()) return;
+  const recipient = document.getElementById('input-treasury-recipient').value.trim();
+  if (!recipient) return log('请输入接收地址', 'err');
+  try {
+    log(`正在设置 Treasury recipient = ${recipient}...`, 'info');
+    const tx = await treasuryContract.setRecipient(recipient);
+    log(`Tx 已提交: ${tx.hash}`, 'info');
+    await tx.wait();
+    log('setRecipient 成功!', 'ok');
+    await refreshAll();
+  } catch (err) {
+    log('setRecipient 失败: ' + (err.reason || err.message), 'err');
+  }
+}
+
+async function flushTreasury() {
+  if (!requireWallet()) return;
+  if (!confirm('确定要执行 flush？将发送 Treasury 全部余额到 recipient 地址')) return;
+  try {
+    log('正在执行 Treasury flush...', 'info');
+    const tx = await treasuryContract.flush();
+    log(`Tx 已提交: ${tx.hash}`, 'info');
+    await tx.wait();
+    log('flush 成功!', 'ok');
+    await refreshAll();
+  } catch (err) {
+    log('flush 失败: ' + (err.reason || err.message), 'err');
+  }
+}
+
+async function transferTreasuryOwnership() {
+  if (!requireWallet()) return;
+  const newOwner = document.getElementById('input-treasury-new-owner').value.trim();
+  if (!newOwner) return log('请输入新 Owner 地址', 'err');
+  if (!confirm('确定要转移 Treasury 所有权？此操作不可逆！')) return;
+  try {
+    log(`正在转移 Treasury 所有权到 ${newOwner}...`, 'info');
+    const tx = await treasuryContract.transferOwnership(newOwner);
+    log(`Tx 已提交: ${tx.hash}`, 'info');
+    await tx.wait();
+    log('Treasury transferOwnership 成功!', 'ok');
+    await refreshAll();
+  } catch (err) {
+    log('transferOwnership 失败: ' + (err.reason || err.message), 'err');
+  }
+}
+
+async function withdrawCreatorFees() {
+  if (!requireWallet()) return;
+  const to = document.getElementById('input-creator-fee-to').value.trim();
+  if (!to) return log('请输入接收地址', 'err');
+  try {
+    log(`正在提取 creator 费用到 ${to}...`, 'info');
+    const tx = await curveContract.withdrawCreatorFees(to);
+    log(`Tx 已提交: ${tx.hash}`, 'info');
+    await tx.wait();
+    log('withdrawCreatorFees 成功!', 'ok');
+  } catch (err) {
+    log('withdrawCreatorFees 失败: ' + (err.reason || err.message), 'err');
+  }
+}
+
+// ============ Account change listener ============
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', () => {
+    log('账户已切换，请重新连接', 'info');
+    location.reload();
+  });
+  window.ethereum.on('chainChanged', () => {
+    log('链已切换，请重新连接', 'info');
+    location.reload();
+  });
+}
+
+// ============ Auto-init on load ============
+window.addEventListener('DOMContentLoaded', initReadOnly);
+</script>
+</body>
+</html>
