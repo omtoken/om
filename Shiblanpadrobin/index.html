@@ -1,0 +1,1395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShibLaunchpad Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+:root {
+  --bg-base: #f4f5f7;
+  --bg-surface: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f9fafb;
+  --bg-input: #f4f5f7;
+  --border: #e2e4e9;
+  --border-focus: #b8860b;
+  --text-primary: #1a1d26;
+  --text-secondary: #4a4f5c;
+  --text-muted: #7c818f;
+  --accent: #b8860b;
+  --accent-dim: rgba(184,134,11,0.08);
+  --accent-glow: rgba(184,134,11,0.18);
+  --green: #16a34a;
+  --green-dim: rgba(22,163,74,0.08);
+  --red: #dc2626;
+  --red-dim: rgba(220,38,38,0.08);
+  --blue: #2563eb;
+  --blue-dim: rgba(37,99,235,0.08);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --sidebar-w: 240px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  display: flex;
+  overflow: hidden;
+}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* SIDEBAR */
+#sidebar {
+  width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  height: 100vh;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 20px 0;
+  box-shadow: 1px 0 3px rgba(0,0,0,0.04);
+}
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+.brand-icon {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--accent), #8b6914);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px; color: #ffffff;
+}
+.brand-text { font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+.sidebar-nav { flex: 1; padding: 8px 10px; display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  color: var(--text-secondary); text-decoration: none;
+  font-size: 13.5px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+}
+.nav-item:hover { background: var(--bg-card); color: var(--text-primary); }
+.nav-item.active { background: var(--accent-dim); color: var(--accent); }
+.sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+.contract-addrs { display: flex; flex-direction: column; gap: 6px; }
+.addr-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); }
+.addr-value { font-family: var(--font-mono); font-size: 11px; color: var(--text-secondary); }
+
+/* MAIN */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#topbar {
+  height: 60px; min-height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+.topbar-left { display: flex; align-items: center; gap: 12px; }
+#page-title { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+.chain-badge {
+  font-family: var(--font-mono); font-size: 11px;
+  background: var(--accent-dim); color: var(--accent);
+  padding: 3px 10px; border-radius: 20px; font-weight: 500;
+}
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+.owner-status {
+  font-family: var(--font-mono); font-size: 11px;
+  padding: 4px 10px; border-radius: 20px;
+}
+.owner-status.disconnected { background: var(--red-dim); color: var(--red); }
+.owner-status.is-owner { background: var(--green-dim); color: var(--green); }
+.owner-status.not-owner { background: var(--red-dim); color: var(--red); }
+.btn-connect {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--accent); color: #ffffff;
+  border: none; border-radius: var(--radius-sm);
+  padding: 8px 16px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  font-family: var(--font-sans);
+}
+.btn-connect:hover { filter: brightness(0.9); }
+
+/* CONTENT */
+#content { flex: 1; overflow-y: auto; padding: 28px; }
+.tab-content { display: none; animation: fadeIn 0.2s ease; }
+.tab-content.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* CARDS */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.card-title {
+  font-size: 14px; font-weight: 700;
+  margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
+}
+.card-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+/* GRID */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+@media (max-width: 1200px) { .grid-3 { grid-template-columns: 1fr 1fr; } .grid-4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+/* STAT CARD */
+.stat-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-muted); margin-bottom: 6px; }
+.stat-value { font-family: var(--font-mono); font-size: 18px; font-weight: 600; color: var(--text-primary); word-break: break-all; }
+.stat-value.small { font-size: 13px; }
+.stat-value.green { color: var(--green); }
+.stat-value.red { color: var(--red); }
+.stat-value.accent { color: var(--accent); }
+
+/* FORM */
+.form-row { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 14px; flex-wrap: wrap; }
+.form-group { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 160px; }
+.form-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-muted); font-weight: 500; }
+.form-input, .form-select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.form-input:focus, .form-select:focus { border-color: var(--border-focus); }
+.form-input::placeholder { color: var(--text-muted); }
+.form-select { cursor: pointer; }
+.form-select option { background: var(--bg-surface); color: var(--text-primary); }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: none; border-radius: var(--radius-sm);
+  padding: 9px 18px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #ffffff; }
+.btn-primary:hover { filter: brightness(0.9); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+.btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+.btn-ghost:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+.btn-danger { background: var(--red-dim); color: var(--red); }
+.btn-danger:hover { background: rgba(240,68,68,0.2); }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+/* TOAST */
+#toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 18px;
+  font-size: 13px;
+  min-width: 280px;
+  max-width: 420px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  animation: toastIn 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+}
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error { border-left: 3px solid var(--red); }
+.toast.info { border-left: 3px solid var(--blue); }
+.toast.loading { border-left: 3px solid var(--accent); }
+@keyframes toastIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+
+/* TX LINK */
+.tx-link {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--blue); text-decoration: none;
+}
+.tx-link:hover { text-decoration: underline; }
+
+/* DIVIDER */
+.divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* SECTION HEADER */
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.section-title { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+
+/* READ-ONLY VALUE */
+.readonly-val {
+  font-family: var(--font-mono); font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  word-break: break-all;
+}
+
+/* TAG */
+.tag {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  padding: 2px 8px; border-radius: 4px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.tag-green { background: var(--green-dim); color: var(--green); }
+.tag-red { background: var(--red-dim); color: var(--red); }
+.tag-blue { background: var(--blue-dim); color: var(--blue); }
+
+/* HELP DESCRIPTION */
+.card-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-top: -10px;
+  margin-bottom: 16px;
+  padding-left: 14px;
+  border-left: 2px solid var(--accent);
+  background: var(--accent-dim);
+  padding: 10px 14px;
+  border-radius: 0 6px 6px 0;
+}
+</style>
+</head>
+<body>
+<!-- === SIDEBAR === -->
+<aside id="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">S</div>
+    <span class="brand-text">Admin Panel</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item active" data-tab="dashboard" onclick="switchTab('dashboard')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-item" data-tab="launchpad-global" onclick="switchTab('launchpad-global')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      Launchpad 全局
+    </a>
+    <a class="nav-item" data-tab="launchpad-token" onclick="switchTab('launchpad-token')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      Launchpad 代币
+    </a>
+    <a class="nav-item" data-tab="factory" onclick="switchTab('factory')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20h20M5 20V8l5-4v16M14 20V4l5 4v12"/></svg>
+      Token Factory
+    </a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="contract-addrs">
+      <div class="addr-label">ShibLaunchpad</div>
+      <div class="addr-value">0x5FE9...efEDF</div>
+      <div class="addr-label">TokenFactory</div>
+      <div class="addr-value">0xE48D...F26A</div>
+    </div>
+  </div>
+</aside>
+
+<!-- === MAIN === -->
+<main id="main">
+  <!-- HEADER -->
+  <header id="topbar">
+    <div class="topbar-left">
+      <h1 id="page-title">Dashboard</h1>
+      <span id="chain-badge" class="chain-badge">Robinhood Chain</span>
+    </div>
+    <div class="topbar-right">
+      <div id="owner-status" class="owner-status disconnected">未连接</div>
+      <button id="connect-btn" class="btn-connect" onclick="connectWallet()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2v-5z"/><path d="M16 12h4v-2h-4v2z"/></svg>
+        连接钱包
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <div id="content">
+    <!-- DASHBOARD TAB -->
+    <section id="tab-dashboard" class="tab-content active">
+      <div class="section-header">
+        <div class="section-title">合约概览</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadDashboard()">刷新</button>
+      </div>
+      <div class="grid-4" id="dash-stats">
+        <div class="stat-card"><div class="stat-label">ShibLaunchpad Owner</div><div class="stat-value small" id="d-shib-owner">--</div></div>
+        <div class="stat-card"><div class="stat-label">Platform Recipient</div><div class="stat-value small" id="d-platform-recipient">--</div></div>
+        <div class="stat-card"><div class="stat-label">TokenFactory Owner</div><div class="stat-value small" id="d-tf-owner">--</div></div>
+        <div class="stat-card"><div class="stat-label">Public Launch</div><div class="stat-value" id="d-public-launch">--</div></div>
+      </div>
+      <div class="grid-4" style="margin-top:16px">
+        <div class="stat-card"><div class="stat-label">Platform BPS</div><div class="stat-value" id="d-platform-bps">--</div></div>
+        <div class="stat-card"><div class="stat-label">Reward BPS</div><div class="stat-value" id="d-reward-bps">--</div></div>
+        <div class="stat-card"><div class="stat-label">Slippage BPS</div><div class="stat-value" id="d-slippage">--</div></div>
+        <div class="stat-card"><div class="stat-label">Min Buyback ETH</div><div class="stat-value" id="d-min-buyback">--</div></div>
+      </div>
+      <div class="grid-3" style="margin-top:16px">
+        <div class="stat-card"><div class="stat-label">V3 Buyback Fee</div><div class="stat-value" id="d-v3-fee">--</div></div>
+        <div class="stat-card"><div class="stat-label">TWAP Window</div><div class="stat-value" id="d-twap-window">--</div></div>
+        <div class="stat-card"><div class="stat-label">TWAP Band BPS</div><div class="stat-value" id="d-twap-band">--</div></div>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <div class="card-title"><span class="dot"></span>快捷操作</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="quickProcess()">processAll (输入代币地址)</button>
+          <button class="btn btn-ghost" onclick="switchTab('launchpad-global')">全局设置</button>
+          <button class="btn btn-ghost" onclick="switchTab('factory')">白名单管理</button>
+        </div>
+        <div class="form-row" style="margin-top:14px">
+          <div class="form-group">
+            <label class="form-label">Token 地址 (快捷操作)</label>
+            <input class="form-input" id="quick-token-addr" placeholder="0x...">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LAUNCHPAD GLOBAL TAB -->
+    <section id="tab-launchpad-global" class="tab-content">
+      <div class="section-header">
+        <div class="section-title">ShibLaunchpad 全局设置</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadLaunchpadGlobal()">刷新</button>
+      </div>
+
+      <!-- Ownership -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>所有权</div>
+        <div class="card-desc">把整个 Launchpad 合约的"管理员权限"转给别人。转出去之后，你就不能再改任何设置了，新地址才是老大。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">当前 Owner</label>
+            <div class="readonly-val" id="lg-owner">--</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">新 Owner 地址</label>
+            <input class="form-input" id="lg-new-owner" placeholder="0x...">
+          </div>
+          <button class="btn btn-danger" onclick="shibTransferOwnership()">转移所有权</button>
+        </div>
+      </div>
+
+      <!-- Platform -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>平台设置</div>
+        <div class="card-desc">
+          <b>Platform Recipient</b>：平台手续费的收款地址。每次交易产生的手续费，平台抽成的那部分会打到这个地址。<br>
+          <b>Factory</b>：告诉 Launchpad "哪个合约有资格调用我"。只有这个 Factory 合约才能触发发币流程。<br>
+          <b>Hook</b>：V4 池子的"门卫"合约，控制谁能加/撤流动性。防止别人随便撤池子。
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">当前 Platform Recipient</label>
+            <div class="readonly-val" id="lg-recipient">--</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">新 Recipient 地址</label>
+            <input class="form-input" id="lg-new-recipient" placeholder="0x...">
+          </div>
+          <button class="btn btn-primary" onclick="shibSetPlatformRecipient()">更新</button>
+        </div>
+        <div class="divider"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Factory 地址</label>
+            <input class="form-input" id="lg-factory" placeholder="0x...">
+          </div>
+          <button class="btn btn-primary" onclick="shibSetFactory()">更新 Factory</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Hook 地址</label>
+            <input class="form-input" id="lg-hook" placeholder="0x...">
+          </div>
+          <button class="btn btn-primary" onclick="shibSetHook()">更新 Hook</button>
+        </div>
+      </div>
+
+      <!-- Fee Split -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>费率分配</div>
+        <div class="card-desc">设置手续费的分成比例。Platform BPS 是平台拿多少，Reward BPS 是分红池拿多少。比如 4000/6000 就是平台拿 40%，分红池拿 60%。两个加起来必须等于 10000。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Platform BPS (当前: <span id="lg-pbps-cur">--</span>)</label>
+            <input class="form-input" id="lg-platform-bps" type="number" placeholder="4000">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Reward BPS (当前: <span id="lg-rbps-cur">--</span>)</label>
+            <input class="form-input" id="lg-reward-bps" type="number" placeholder="6000">
+          </div>
+          <button class="btn btn-primary" onclick="shibSetFeeSplit()">更新</button>
+        </div>
+      </div>
+
+      <!-- Trading Params -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>交易参数</div>
+        <div class="card-desc">
+          <b>Slippage</b>：滑点保护。回购分红代币时，如果实际成交价比预期差太多，交易就会失败，防止被套利。<br>
+          <b>TWAP Band</b>：TWAP 偏差容忍度。回购时会拿实时价格和 TWAP 均价对比，偏差超过这个范围说明价格被操控了。<br>
+          <b>TWAP Window</b>：TWAP 的时间窗口（秒）。默认 1800 就是看过去 30 分钟的平均价格。窗口越长越不容易被操控。<br>
+          <b>V3 Buyback Fee</b>：用 Uniswap V3 回购分红代币时选的池子费率。<br>
+          <b>Min Buyback ETH</b>：最低回购金额。累积的手续费 ETH 要达到这个数才能触发回购，太小的金额不值得花 gas。
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Slippage BPS (当前: <span id="lg-slip-cur">--</span>)</label>
+            <input class="form-input" id="lg-slippage" type="number" placeholder="100">
+          </div>
+          <button class="btn btn-primary" onclick="shibSetSlippage()">更新</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">TWAP Band BPS (当前: <span id="lg-twap-band-cur">--</span>)</label>
+            <input class="form-input" id="lg-twap-band" type="number" placeholder="1500">
+          </div>
+          <button class="btn btn-primary" onclick="shibSetTwapBand()">更新</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">TWAP Window (当前: <span id="lg-twap-win-cur">--</span>)</label>
+            <input class="form-input" id="lg-twap-window" type="number" placeholder="1800">
+          </div>
+          <button class="btn btn-primary" onclick="shibSetTwapWindow()">更新</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">V3 Buyback Fee (当前: <span id="lg-v3fee-cur">--</span>)</label>
+            <select class="form-select" id="lg-v3-fee">
+              <option value="100">100 (0.01%)</option>
+              <option value="500">500 (0.05%)</option>
+              <option value="3000">3000 (0.3%)</option>
+              <option value="10000">10000 (1%)</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="shibSetV3BuybackFee()">更新</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Min Buyback ETH (当前: <span id="lg-min-bb-cur">--</span>)</label>
+            <input class="form-input" id="lg-min-buyback" placeholder="0.001">
+          </div>
+          <button class="btn btn-primary" onclick="shibSetMinBuybackEth()">更新</button>
+        </div>
+      </div>
+
+      <!-- Dividend Blacklist -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>分红黑名单</div>
+        <div class="card-desc">把某个地址加进去，这个地址就永远拿不到分红。一般用来封禁合约自身、黑洞地址等不该参与分红的地址。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">地址</label>
+            <input class="form-input" id="lg-bl-addr" placeholder="0x...">
+          </div>
+          <div class="form-group" style="max-width:120px">
+            <label class="form-label">状态</label>
+            <select class="form-select" id="lg-bl-status">
+              <option value="true">黑名单</option>
+              <option value="false">移除</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="shibSetDividendBlacklist()">设置</button>
+        </div>
+      </div>
+
+      <!-- Estimated Price -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>预估价格</div>
+        <div class="card-desc">手动设置某个分红代币的预估价格。当没有配置 TWAP 池子时，系统用这个价格来算最低回购量，防止滑点过大。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Dividend Token 地址</label>
+            <input class="form-input" id="lg-ep-token" placeholder="0x...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">价格 (wei)</label>
+            <input class="form-input" id="lg-ep-price" placeholder="1000000000000000000">
+          </div>
+          <button class="btn btn-primary" onclick="shibSetEstimatedPrice()">设置</button>
+        </div>
+      </div>
+
+      <!-- Buyback Pool -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Buyback Pool 配置</div>
+        <div class="card-desc">配置用哪个池子来回购分红代币。可以选 V3 或 V4 的池子，指定费率和 Hook。如果某个分红代币没有配置专属池子，就默认走 V3 的 buyback fee 池子。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Dividend Token</label>
+            <input class="form-input" id="lg-bp-token" placeholder="0x...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">DEX</label>
+            <select class="form-select" id="lg-bp-dex">
+              <option value="0">V3</option>
+              <option value="1">V4</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Fee</label>
+            <select class="form-select" id="lg-bp-fee">
+              <option value="100">100</option>
+              <option value="500">500</option>
+              <option value="3000" selected>3000</option>
+              <option value="10000">10000</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tick Spacing</label>
+            <input class="form-input" id="lg-bp-ts" type="number" placeholder="60">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Hooks</label>
+            <input class="form-input" id="lg-bp-hooks" placeholder="0x...">
+          </div>
+          <button class="btn btn-primary" onclick="shibSetBuybackPool()">设置</button>
+        </div>
+        <div class="form-row" style="margin-top:8px">
+          <div class="form-group">
+            <label class="form-label">移除 Pool (Dividend Token)</label>
+            <input class="form-input" id="lg-bp-remove" placeholder="0x...">
+          </div>
+          <button class="btn btn-danger" onclick="shibRemoveBuybackPool()">移除</button>
+        </div>
+      </div>
+
+      <!-- Rescue ERC20 -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Rescue ERC20</div>
+        <div class="card-desc">紧急救援。如果有 ERC20 代币误转到 Launchpad 合约里了，用这个功能把它转到指定地址。只能救援还没发币的代币，已发币的不行（防止误操作影响池子）。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Token 地址</label>
+            <input class="form-input" id="lg-rescue-token" placeholder="0x...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">接收地址</label>
+            <input class="form-input" id="lg-rescue-to" placeholder="0x...">
+          </div>
+          <button class="btn btn-danger" onclick="shibRescueERC20()">Rescue</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LAUNCHPAD TOKEN TAB -->
+    <section id="tab-launchpad-token" class="tab-content">
+      <div class="section-header">
+        <div class="section-title">ShibLaunchpad 代币级设置</div>
+      </div>
+
+      <!-- Token Query -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>查询代币信息</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Token 地址</label>
+            <input class="form-input" id="lt-token-addr" placeholder="0x...">
+          </div>
+          <button class="btn btn-primary" onclick="loadTokenInfo()">查询</button>
+        </div>
+      </div>
+
+      <!-- Token Info Display -->
+      <div id="lt-info-panel" style="display:none">
+        <div class="grid-4" style="margin-bottom:16px">
+          <div class="stat-card"><div class="stat-label">Launched</div><div class="stat-value" id="lt-launched">--</div></div>
+          <div class="stat-card"><div class="stat-label">Creator</div><div class="stat-value small" id="lt-creator">--</div></div>
+          <div class="stat-card"><div class="stat-label">Dividend Token</div><div class="stat-value small" id="lt-div-token">--</div></div>
+          <div class="stat-card"><div class="stat-label">Pool Fee</div><div class="stat-value" id="lt-pool-fee">--</div></div>
+        </div>
+        <div class="grid-4" style="margin-bottom:16px">
+          <div class="stat-card"><div class="stat-label">Pending ETH</div><div class="stat-value" id="lt-pending-eth">--</div></div>
+          <div class="stat-card"><div class="stat-label">Creator Tokens</div><div class="stat-value" id="lt-creator-tokens">--</div></div>
+          <div class="stat-card"><div class="stat-label">Tracker</div><div class="stat-value small" id="lt-tracker">--</div></div>
+          <div class="stat-card"><div class="stat-label">Buyback V3 Fee</div><div class="stat-value" id="lt-bb-fee">--</div></div>
+        </div>
+
+        <!-- Per-Token Actions -->
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>修改 Creator</div>
+          <div class="card-desc">改某个币的 creator 地址。creator 是领取 token 手续费的人，改了之后手续费就打给新地址。</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">新 Creator 地址</label>
+              <input class="form-input" id="lt-new-creator" placeholder="0x...">
+            </div>
+            <button class="btn btn-primary" onclick="shibSetCreator()">更新</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>代币级 TWAP / Slippage / Fee</div>
+          <div class="card-desc">给某个币单独设参数，覆盖全局设置。<b>TWAP Pool</b>：配一个专属的 TWAP 参考池子，回购时用这个池子的均价校验价格，更精准。留空就是清除，回退到全局。<b>TWAP Band / Slippage / Buyback Fee</b>：分别覆盖全局的偏差容忍度、滑点、回购费率。</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">TWAP Pool 地址 (0x 清除)</label>
+              <input class="form-input" id="lt-twap-pool" placeholder="0x...">
+            </div>
+            <div class="form-group">
+              <label class="form-label">TWAP Window</label>
+              <input class="form-input" id="lt-twap-window" type="number" placeholder="1800">
+            </div>
+            <button class="btn btn-primary" onclick="shibSetTokenTwapPool()">设置 TWAP</button>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">TWAP Band BPS</label>
+              <input class="form-input" id="lt-twap-band" type="number" placeholder="1500">
+            </div>
+            <button class="btn btn-primary" onclick="shibSetTokenTwapBand()">设置 Band</button>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Slippage BPS</label>
+              <input class="form-input" id="lt-slippage" type="number" placeholder="100">
+            </div>
+            <button class="btn btn-primary" onclick="shibSetTokenSlippage()">设置 Slippage</button>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Buyback Fee</label>
+              <select class="form-select" id="lt-bb-fee-sel">
+                <option value="100">100 (0.01%)</option>
+                <option value="500">500 (0.05%)</option>
+                <option value="3000">3000 (0.3%)</option>
+                <option value="10000">10000 (1%)</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="shibSetTokenBuybackFee()">设置 Fee</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>修改 Dividend Token / Tracker</div>
+          <div class="card-desc">
+            <b>Dividend Token</b>：改某个币的分红代币。比如原来用 ETH 分红，现在想改成用另一个 ERC20 分红。改了之后 TWAP 池子会被清空，需要重新配。<br>
+            <b>Tracker</b>：改某个币的分红追踪器合约地址。一般不需要改，除非 Tracker 合约要升级。
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">新 Dividend Token</label>
+              <input class="form-input" id="lt-new-div-token" placeholder="0x... (address(0) = ETH)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Decimals</label>
+              <input class="form-input" id="lt-new-div-dec" type="number" placeholder="18">
+            </div>
+            <button class="btn btn-primary" onclick="shibSetTokenDividendToken()">更新</button>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">新 Tracker 地址</label>
+              <input class="form-input" id="lt-new-tracker" placeholder="0x...">
+            </div>
+            <button class="btn btn-primary" onclick="shibSetTokenTracker()">更新 Tracker</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>操作</div>
+          <div class="card-desc">
+            <b>collectFees</b>：从 V4 池子里把累积的手续费（ETH + token）收到 Launchpad 里。<br>
+            <b>buybackAndDistribute</b>：用收到的 ETH 去回购分红代币，然后分给所有持币人。<br>
+            <b>payCreator</b>：把累积的 token 手续费打给 creator。<br>
+            <b>processAll</b>：一键执行上面三步，哪步失败不影响其他步骤。<br>
+            <b>bookStrayEth</b>：如果链上有"无主"的 ETH 转到 Launchpad，用这个把它记到某个币的 pending 里，让它参与回购分红。
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="shibCollectFees()">collectFees</button>
+            <button class="btn btn-primary" onclick="shibBuybackAndDistribute()">buybackAndDistribute</button>
+            <button class="btn btn-primary" onclick="shibPayCreator()">payCreator</button>
+            <button class="btn btn-ghost" onclick="shibProcessAll()">processAll</button>
+            <button class="btn btn-ghost" onclick="shibBookStrayEth()">bookStrayEth</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FACTORY TAB -->
+    <section id="tab-factory" class="tab-content">
+      <div class="section-header">
+        <div class="section-title">TokenFactory 管理</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadFactory()">刷新</button>
+      </div>
+
+      <!-- Ownership -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>所有权</div>
+        <div class="card-desc">把 Factory 合约的管理员权限转给别人。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">当前 Owner</label>
+            <div class="readonly-val" id="tf-owner">--</div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">新 Owner 地址</label>
+            <input class="form-input" id="tf-new-owner" placeholder="0x...">
+          </div>
+          <button class="btn btn-danger" onclick="tfTransferOwnership()">转移所有权</button>
+        </div>
+      </div>
+
+      <!-- Public Launch -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>公开发射</div>
+        <div class="card-desc">开关"公开发币"。开启后任何人都能发币；关闭后只有白名单里的地址才能发。</div>
+        <div class="form-row" style="align-items:center">
+          <div>
+            <span class="form-label">Public Launch Enabled: </span>
+            <span id="tf-public-val" class="tag tag-green">--</span>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="tfTogglePublicLaunch(true)">开启</button>
+          <button class="btn btn-danger btn-sm" onclick="tfTogglePublicLaunch(false)">关闭</button>
+        </div>
+      </div>
+
+      <!-- Whitelist -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>发射白名单</div>
+        <div class="card-desc">管理谁能发币。可以单个添加/移除，也可以批量操作（每行一个地址）。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">地址</label>
+            <input class="form-input" id="tf-wl-addr" placeholder="0x...">
+          </div>
+          <div class="form-group" style="max-width:120px">
+            <label class="form-label">状态</label>
+            <select class="form-select" id="tf-wl-status">
+              <option value="true">允许</option>
+              <option value="false">移除</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="tfSetWhitelist()">设置</button>
+        </div>
+        <div class="divider"></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">批量设置 (每行一个地址)</label>
+            <textarea class="form-input" id="tf-wl-batch" rows="4" placeholder="0x...&#10;0x...&#10;0x..." style="resize:vertical;font-family:var(--font-mono);font-size:12px"></textarea>
+          </div>
+          <div class="form-group" style="max-width:120px">
+            <label class="form-label">状态</label>
+            <select class="form-select" id="tf-wl-batch-status">
+              <option value="true">允许</option>
+              <option value="false">移除</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" onclick="tfSetWhitelistBatch()">批量设置</button>
+        </div>
+        <div class="form-row" style="margin-top:8px">
+          <div class="form-group">
+            <label class="form-label">查询白名单状态</label>
+            <input class="form-input" id="tf-wl-check" placeholder="0x...">
+          </div>
+          <button class="btn btn-ghost" onclick="tfCheckWhitelist()">查询</button>
+          <div class="form-group" style="max-width:200px">
+            <div class="readonly-val" id="tf-wl-result" style="text-align:center">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Withdraw -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>提取</div>
+        <div class="card-desc">把 Factory 合约里误收到的 ETH 或 ERC20 代币提走。</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">提取全部 ETH 到</label>
+            <input class="form-input" id="tf-withdraw-eth-to" placeholder="0x...">
+          </div>
+          <button class="btn btn-primary" onclick="tfWithdrawETH()">提取 ETH</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Token 地址</label>
+            <input class="form-input" id="tf-withdraw-token-addr" placeholder="0x...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">接收地址</label>
+            <input class="form-input" id="tf-withdraw-token-to" placeholder="0x...">
+          </div>
+          <button class="btn btn-primary" onclick="tfWithdrawToken()">提取 Token</button>
+        </div>
+      </div>
+
+      <!-- Claim Platform Fee -->
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Claim Platform Fee</div>
+        <div class="card-desc">领取 Launchpad 里累积的、还没成功打出去的平台手续费 ETH。有时候打款会失败（比如收款地址是合约且拒绝接收），ETH 会暂存在这里，用这个按钮重新领取。</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span class="form-label">Pending Platform ETH: <span id="tf-pending-platform" style="color:var(--accent)">--</span></span>
+          <button class="btn btn-primary" onclick="shibClaimPlatformFee()">Claim</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<!-- TOAST -->
+<div id="toast-container"></div>
+
+<script>
+// ===================== CONFIG =====================
+const CHAIN_ID = 4663;
+const RPC_URL = 'https://robinhood-rpc.publicnode.com';
+const SHIB_ADDR = '0x5FE92031F93946085e66Ec3E78DAF8015F2efEDF';
+const TF_ADDR = '0xE48D4C61046bC7795425983a1Ea8d348B203F26A';
+
+// ===================== ABI =====================
+const SHIB_ABI = [
+  'function owner() view returns (address)',
+  'function platformRecipient() view returns (address)',
+  'function factory() view returns (address)',
+  'function hook() view returns (address)',
+  'function platformBps() view returns (uint256)',
+  'function rewardBps() view returns (uint256)',
+  'function slippageBps() view returns (uint16)',
+  'function twapBandBps() view returns (uint16)',
+  'function twapWindow() view returns (uint32)',
+  'function v3BuybackFee() view returns (uint24)',
+  'function minBuybackEth() view returns (uint256)',
+  'function platformPendingEth() view returns (uint256)',
+  'function dividendBlacklist(address) view returns (bool)',
+  'function tokenInfo(address) view returns (bool launched, address tracker, address creator, address dividendToken, uint8 dividendTokenDecimals, uint24 poolFee, uint24 buybackV3Fee, uint256 pendingEth, uint256 creatorTokens, address twapPool, uint32 twapWindow, uint16 twapBandBps, uint16 slippageBps, bool twapPoolSet, bool slippageOverridden, bool twapBandOverridden)',
+  'function strayEth() view returns (uint256)',
+  'function transferOwnership(address)',
+  'function setPlatformRecipient(address)',
+  'function setFactory(address)',
+  'function setHook(address)',
+  'function setFeeSplit(uint256,uint256)',
+  'function setSlippage(uint16)',
+  'function setTwapBand(uint16)',
+  'function setTwapWindow(uint32)',
+  'function setV3BuybackFee(uint24)',
+  'function setMinBuybackEth(uint256)',
+  'function setDividendBlacklist(address,bool)',
+  'function setEstimatedPrice(address,uint256)',
+  'function setBuybackPool(address,uint8,uint24,int24,address)',
+  'function removeBuybackPool(address)',
+  'function rescueERC20(address,address)',
+  'function setCreator(address,address)',
+  'function setTokenTwapPool(address,address,uint32)',
+  'function setTokenTwapBand(address,uint16)',
+  'function setTokenSlippage(address,uint16)',
+  'function setTokenBuybackFee(address,uint24)',
+  'function setTokenDividendToken(address,address,uint8)',
+  'function setTokenTracker(address,address)',
+  'function collectFees(address)',
+  'function buybackAndDistribute(address,uint256)',
+  'function payCreator(address)',
+  'function processAll(address)',
+  'function bookStrayEth(address)',
+  'function claimPlatformFee()',
+  'event OwnershipTransferred(address,address)',
+  'event PlatformRecipientUpdated(address,address)',
+];
+
+const TF_ABI = [
+  'function owner() view returns (address)',
+  'function publicLaunchEnabled() view returns (bool)',
+  'function launchWhitelist(address) view returns (bool)',
+  'function nextLaunchId() view returns (uint256)',
+  'function transferOwnership(address)',
+  'function setPublicLaunchEnabled(bool)',
+  'function setLaunchWhitelist(address,bool)',
+  'function setLaunchWhitelistBatch(address[],bool)',
+  'function withdrawAllETH(address)',
+  'function withdrawAllToken(address,address)',
+  'event OwnershipTransferred(address,address)',
+];
+
+// ===================== STATE =====================
+let provider = null;
+let signer = null;
+let userAddr = null;
+let shibContract = null;
+let tfContract = null;
+let shibWrite = null;
+let tfWrite = null;
+
+// ===================== HELPERS =====================
+function $(id) { return document.getElementById(id); }
+function shortAddr(a) { return a ? a.slice(0,6) + '...' + a.slice(-4) : '--'; }
+
+function toast(msg, type='info') {
+  const c = $('toast-container');
+  const d = document.createElement('div');
+  d.className = `toast ${type}`;
+  d.textContent = msg;
+  c.appendChild(d);
+  setTimeout(() => { d.style.opacity='0'; d.style.transition='opacity 0.3s'; setTimeout(() => d.remove(), 300); }, 4000);
+}
+
+async function sendTx(contractFn, label) {
+  try {
+    toast(`发送交易: ${label}...`, 'loading');
+    const tx = await contractFn;
+    toast(`等待确认: ${label}...`, 'loading');
+    const receipt = await tx.wait();
+    const hash = receipt.hash;
+    toast(`${label} 成功! Gas: ${receipt.gasUsed.toString()}`, 'success');
+    console.log(`${label} TX: ${hash}`);
+    return receipt;
+  } catch(e) {
+    const msg = e.reason || e.message || String(e);
+    toast(`${label} 失败: ${msg.slice(0,100)}`, 'error');
+    console.error(label, e);
+    return null;
+  }
+}
+
+function getShibWrite() {
+  if (!signer) { toast('请先连接钱包', 'error'); return null; }
+  return new ethers.Contract(SHIB_ADDR, SHIB_ABI, signer);
+}
+function getTfWrite() {
+  if (!signer) { toast('请先连接钱包', 'error'); return null; }
+  return new ethers.Contract(TF_ADDR, TF_ABI, signer);
+}
+function getShibRead() {
+  const p = provider || new ethers.JsonRpcProvider(RPC_URL);
+  return new ethers.Contract(SHIB_ADDR, SHIB_ABI, p);
+}
+function getTfRead() {
+  const p = provider || new ethers.JsonRpcProvider(RPC_URL);
+  return new ethers.Contract(TF_ADDR, TF_ABI, p);
+}
+
+// ===================== TAB SWITCH =====================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  $(`tab-${tab}`).classList.add('active');
+  document.querySelector(`.nav-item[data-tab="${tab}"]`).classList.add('active');
+  const titles = { dashboard:'Dashboard', 'launchpad-global':'Launchpad 全局设置', 'launchpad-token':'Launchpad 代币设置', factory:'TokenFactory 管理' };
+  $('page-title').textContent = titles[tab] || tab;
+  if (tab === 'dashboard') loadDashboard();
+  if (tab === 'launchpad-global') loadLaunchpadGlobal();
+  if (tab === 'factory') loadFactory();
+}
+
+// ===================== WALLET =====================
+async function connectWallet() {
+  if (!window.ethereum) { toast('未检测到 MetaMask 或 Web3 钱包', 'error'); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner();
+    userAddr = await signer.getAddress();
+    $('connect-btn').innerHTML = `<span style="font-family:var(--font-mono);font-size:12px">${shortAddr(userAddr)}</span>`;
+    toast(`钱包已连接: ${shortAddr(userAddr)}`, 'success');
+
+    // Check chain
+    const network = await provider.getNetwork();
+    if (Number(network.chainId) !== CHAIN_ID) {
+      toast(`请切换到 Robinhood Chain (Chain ID: ${CHAIN_ID})`, 'error');
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x' + CHAIN_ID.toString(16) }]
+        });
+      } catch(e) {
+        toast('切换链失败，请手动添加 Robinhood Chain', 'error');
+      }
+    }
+
+    await checkOwnerStatus();
+    loadDashboard();
+  } catch(e) {
+    toast('连接失败: ' + (e.message || e), 'error');
+  }
+}
+
+async function checkOwnerStatus() {
+  if (!userAddr) return;
+  const shib = getShibRead();
+  const tf = getTfRead();
+  const shibOwner = await shib.owner();
+  const tfOwner = await tf.owner();
+  const isOwner = shibOwner.toLowerCase() === userAddr.toLowerCase() || tfOwner.toLowerCase() === userAddr.toLowerCase();
+  const el = $('owner-status');
+  if (isOwner) {
+    el.textContent = 'Owner';
+    el.className = 'owner-status is-owner';
+  } else {
+    el.textContent = '非 Owner';
+    el.className = 'owner-status not-owner';
+  }
+}
+
+// ===================== DASHBOARD =====================
+async function loadDashboard() {
+  try {
+    const shib = getShibRead();
+    const tf = getTfRead();
+    const [sOwner, recip, tfOwner, pubLaunch, pBps, rBps, slip, minBb, v3Fee, twapWin, twapBand] = await Promise.all([
+      shib.owner(), shib.platformRecipient(), tf.owner(), tf.publicLaunchEnabled(),
+      shib.platformBps(), shib.rewardBps(), shib.slippageBps(), shib.minBuybackEth(),
+      shib.v3BuybackFee(), shib.twapWindow(), shib.twapBandBps()
+    ]);
+    $('d-shib-owner').textContent = shortAddr(sOwner);
+    $('d-platform-recipient').textContent = shortAddr(recip);
+    $('d-tf-owner').textContent = shortAddr(tfOwner);
+    $('d-public-launch').innerHTML = pubLaunch ? '<span class="tag tag-green">ON</span>' : '<span class="tag tag-red">OFF</span>';
+    $('d-platform-bps').textContent = pBps.toString();
+    $('d-reward-bps').textContent = rBps.toString();
+    $('d-slippage').textContent = slip.toString();
+    $('d-min-buyback').textContent = ethers.formatEther(minBb) + ' ETH';
+    $('d-v3-fee').textContent = v3Fee.toString();
+    $('d-twap-window').textContent = twapWin.toString() + 's';
+    $('d-twap-band').textContent = twapBand.toString();
+  } catch(e) {
+    console.error('Dashboard load error:', e);
+  }
+}
+
+// ===================== LAUNCHPAD GLOBAL READ =====================
+async function loadLaunchpadGlobal() {
+  try {
+    const shib = getShibRead();
+    const [owner, recip, pBps, rBps, slip, twapBand, twapWin, v3Fee, minBb] = await Promise.all([
+      shib.owner(), shib.platformRecipient(), shib.platformBps(), shib.rewardBps(),
+      shib.slippageBps(), shib.twapBandBps(), shib.twapWindow(), shib.v3BuybackFee(), shib.minBuybackEth()
+    ]);
+    $('lg-owner').textContent = owner;
+    $('lg-recipient').textContent = recip;
+    $('lg-pbps-cur').textContent = pBps.toString();
+    $('lg-rbps-cur').textContent = rBps.toString();
+    $('lg-slip-cur').textContent = slip.toString();
+    $('lg-twap-band-cur').textContent = twapBand.toString();
+    $('lg-twap-win-cur').textContent = twapWin.toString();
+    $('lg-v3fee-cur').textContent = v3Fee.toString();
+    $('lg-min-bb-cur').textContent = ethers.formatEther(minBb) + ' ETH';
+  } catch(e) { console.error(e); }
+}
+
+// ===================== LAUNCHPAD GLOBAL WRITE =====================
+async function shibTransferOwnership() {
+  const c = getShibWrite(); if (!c) return;
+  const addr = $('lg-new-owner').value.trim();
+  if (!addr) { toast('请输入地址', 'error'); return; }
+  await sendTx(c.transferOwnership(addr), 'transferOwnership');
+}
+async function shibSetPlatformRecipient() {
+  const c = getShibWrite(); if (!c) return;
+  const addr = $('lg-new-recipient').value.trim();
+  if (!addr) { toast('请输入地址', 'error'); return; }
+  await sendTx(c.setPlatformRecipient(addr), 'setPlatformRecipient');
+}
+async function shibSetFactory() {
+  const c = getShibWrite(); if (!c) return;
+  const addr = $('lg-factory').value.trim();
+  if (!addr) { toast('请输入地址', 'error'); return; }
+  await sendTx(c.setFactory(addr), 'setFactory');
+}
+async function shibSetHook() {
+  const c = getShibWrite(); if (!c) return;
+  const addr = $('lg-hook').value.trim();
+  if (!addr) { toast('请输入地址', 'error'); return; }
+  await sendTx(c.setHook(addr), 'setHook');
+}
+async function shibSetFeeSplit() {
+  const c = getShibWrite(); if (!c) return;
+  const p = $('lg-platform-bps').value.trim();
+  const r = $('lg-reward-bps').value.trim();
+  if (!p || !r) { toast('请输入 BPS 值', 'error'); return; }
+  await sendTx(c.setFeeSplit(p, r), 'setFeeSplit');
+}
+async function shibSetSlippage() {
+  const c = getShibWrite(); if (!c) return;
+  const v = $('lg-slippage').value.trim();
+  if (!v) { toast('请输入值', 'error'); return; }
+  await sendTx(c.setSlippage(v), 'setSlippage');
+}
+async function shibSetTwapBand() {
+  const c = getShibWrite(); if (!c) return;
+  const v = $('lg-twap-band').value.trim();
+  if (!v) { toast('请输入值', 'error'); return; }
+  await sendTx(c.setTwapBand(v), 'setTwapBand');
+}
+async function shibSetTwapWindow() {
+  const c = getShibWrite(); if (!c) return;
+  const v = $('lg-twap-window').value.trim();
+  if (!v) { toast('请输入值', 'error'); return; }
+  await sendTx(c.setTwapWindow(v), 'setTwapWindow');
+}
+async function shibSetV3BuybackFee() {
+  const c = getShibWrite(); if (!c) return;
+  const v = $('lg-v3-fee').value;
+  await sendTx(c.setV3BuybackFee(v), 'setV3BuybackFee');
+}
+async function shibSetMinBuybackEth() {
+  const c = getShibWrite(); if (!c) return;
+  const v = $('lg-min-buyback').value.trim();
+  if (!v) { toast('请输入值', 'error'); return; }
+  await sendTx(c.setMinBuybackEth(ethers.parseEther(v)), 'setMinBuybackEth');
+}
+async function shibSetDividendBlacklist() {
+  const c = getShibWrite(); if (!c) return;
+  const addr = $('lg-bl-addr').value.trim();
+  const status = $('lg-bl-status').value === 'true';
+  if (!addr) { toast('请输入地址', 'error'); return; }
+  await sendTx(c.setDividendBlacklist(addr, status), 'setDividendBlacklist');
+}
+async function shibSetEstimatedPrice() {
+  const c = getShibWrite(); if (!c) return;
+  const token = $('lg-ep-token').value.trim();
+  const price = $('lg-ep-price').value.trim();
+  if (!token || !price) { toast('请填写完整', 'error'); return; }
+  await sendTx(c.setEstimatedPrice(token, price), 'setEstimatedPrice');
+}
+async function shibSetBuybackPool() {
+  const c = getShibWrite(); if (!c) return;
+  const token = $('lg-bp-token').value.trim();
+  const dex = parseInt($('lg-bp-dex').value);
+  const fee = parseInt($('lg-bp-fee').value);
+  const ts = parseInt($('lg-bp-ts').value);
+  const hooks = $('lg-bp-hooks').value.trim() || ethers.ZeroAddress;
+  if (!token) { toast('请输入 Dividend Token', 'error'); return; }
+  await sendTx(c.setBuybackPool(token, dex, fee, ts, hooks), 'setBuybackPool');
+}
+async function shibRemoveBuybackPool() {
+  const c = getShibWrite(); if (!c) return;
+  const token = $('lg-bp-remove').value.trim();
+  if (!token) { toast('请输入地址', 'error'); return; }
+  await sendTx(c.removeBuybackPool(token), 'removeBuybackPool');
+}
+async function shibRescueERC20() {
+  const c = getShibWrite(); if (!c) return;
+  const token = $('lg-rescue-token').value.trim();
+  const to = $('lg-rescue-to').value.trim();
+  if (!token || !to) { toast('请填写完整', 'error'); return; }
+  await sendTx(c.rescueERC20(token, to), 'rescueERC20');
+}
+
+// ===================== TOKEN INFO =====================
+async function loadTokenInfo() {
+  const addr = $('lt-token-addr').value.trim();
+  if (!addr) { toast('请输入 Token 地址', 'error'); return; }
+  try {
+    const shib = getShibRead();
+    const info = await shib.tokenInfo(addr);
+    $('lt-info-panel').style.display = 'block';
+    $('lt-launched').innerHTML = info.launched ? '<span class="tag tag-green">YES</span>' : '<span class="tag tag-red">NO</span>';
+    $('lt-creator').textContent = shortAddr(info.creator);
+    $('lt-div-token').textContent = info.dividendToken === ethers.ZeroAddress ? 'ETH (native)' : shortAddr(info.dividendToken);
+    $('lt-pool-fee').textContent = info.poolFee.toString();
+    $('lt-pending-eth').textContent = ethers.formatEther(info.pendingEth) + ' ETH';
+    $('lt-creator-tokens').textContent = ethers.formatEther(info.creatorTokens);
+    $('lt-tracker').textContent = shortAddr(info.tracker);
+    $('lt-bb-fee').textContent = info.buybackV3Fee.toString();
+    toast('代币信息已加载', 'success');
+  } catch(e) {
+    toast('查询失败: ' + (e.reason || e.message), 'error');
+  }
+}
+
+function getCurToken() {
+  const addr = $('lt-token-addr').value.trim();
+  if (!addr) { toast('请先查询代币', 'error'); return null; }
+  return addr;
+}
+
+// ===================== TOKEN-LEVEL WRITE =====================
+async function shibSetCreator() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  const newCreator = $('lt-new-creator').value.trim();
+  if (!newCreator) { toast('请输入地址', 'error'); return; }
+  await sendTx(c.setCreator(token, newCreator), 'setCreator');
+}
+async function shibSetTokenTwapPool() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  const pool = $('lt-twap-pool').value.trim();
+  const win = parseInt($('lt-twap-window').value) || 0;
+  await sendTx(c.setTokenTwapPool(token, pool || ethers.ZeroAddress, win), 'setTokenTwapPool');
+}
+async function shibSetTokenTwapBand() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  const v = parseInt($('lt-twap-band').value);
+  if (!v) { toast('请输入值', 'error'); return; }
+  await sendTx(c.setTokenTwapBand(token, v), 'setTokenTwapBand');
+}
+async function shibSetTokenSlippage() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  const v = parseInt($('lt-slippage').value);
+  if (!v) { toast('请输入值', 'error'); return; }
+  await sendTx(c.setTokenSlippage(token, v), 'setTokenSlippage');
+}
+async function shibSetTokenBuybackFee() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  const v = parseInt($('lt-bb-fee-sel').value);
+  await sendTx(c.setTokenBuybackFee(token, v), 'setTokenBuybackFee');
+}
+async function shibSetTokenDividendToken() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  const newToken = $('lt-new-div-token').value.trim();
+  const dec = parseInt($('lt-new-div-dec').value);
+  if (!newToken || isNaN(dec)) { toast('请填写完整', 'error'); return; }
+  await sendTx(c.setTokenDividendToken(token, newToken, dec), 'setTokenDividendToken');
+}
+async function shibSetTokenTracker() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  const newTracker = $('lt-new-tracker').value.trim();
+  if (!newTracker) { toast('请输入地址', 'error'); return; }
+  await sendTx(c.setTokenTracker(token, newTracker), 'setTokenTracker');
+}
+async function shibCollectFees() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  await sendTx(c.collectFees(token), 'collectFees');
+}
+async function shibBuybackAndDistribute() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  await sendTx(c.buybackAndDistribute(token, 0), 'buybackAndDistribute');
+}
+async function shibPayCreator() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  await sendTx(c.payCreator(token), 'payCreator');
+}
+async function shibProcessAll() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  await sendTx(c.processAll(token), 'processAll');
+}
+async function shibBookStrayEth() {
+  const c = getShibWrite(); if (!c) return;
+  const token = getCurToken(); if (!token) return;
+  await sendTx(c.bookStrayEth(token), 'bookStrayEth');
+}
+async function shibClaimPlatformFee() {
+  const c = getShibWrite(); if (!c) return;
+  await sendTx(c.claimPlatformFee(), 'claimPlatformFee');
+}
+async function quickProcess() {
+  const token = $('quick-token-addr').value.trim();
+  if (!token) { toast('请输入 Token 地址', 'error'); return; }
+  const c = getShibWrite(); if (!c) return;
+  await sendTx(c.processAll(token), 'processAll');
+}
+
+// ===================== FACTORY READ =====================
+async function loadFactory() {
+  try {
+    const tf = getTfRead();
+    const shib = getShibRead();
+    const [owner, pubLaunch, pendingPlatform] = await Promise.all([
+      tf.owner(), tf.publicLaunchEnabled(), shib.platformPendingEth()
+    ]);
+    $('tf-owner').textContent = owner;
+    $('tf-public-val').textContent = pubLaunch ? 'ON' : 'OFF';
+    $('tf-public-val').className = pubLaunch ? 'tag tag-green' : 'tag tag-red';
+    $('tf-pending-platform').textContent = ethers.formatEther(pendingPlatform) + ' ETH';
+  } catch(e) { console.error(e); }
+}
+
+// ===================== FACTORY WRITE =====================
+async function tfTransferOwnership() {
+  const c = getTfWrite(); if (!c) return;
+  const addr = $('tf-new-owner').value.trim();
+  if (!addr) { toast('请输入地址', 'error'); return; }
+  await sendTx(c.transferOwnership(addr), 'TF transferOwnership');
+}
+async function tfTogglePublicLaunch(enabled) {
+  const c = getTfWrite(); if (!c) return;
+  await sendTx(c.setPublicLaunchEnabled(enabled), `setPublicLaunchEnabled(${enabled})`);
+}
+async function tfSetWhitelist() {
+  const c = getTfWrite(); if (!c) return;
+  const addr = $('tf-wl-addr').value.trim();
+  const allowed = $('tf-wl-status').value === 'true';
+  if (!addr) { toast('请输入地址', 'error'); return; }
+  await sendTx(c.setLaunchWhitelist(addr, allowed), 'setLaunchWhitelist');
+}
+async function tfSetWhitelistBatch() {
+  const c = getTfWrite(); if (!c) return;
+  const text = $('tf-wl-batch').value.trim();
+  const allowed = $('tf-wl-batch-status').value === 'true';
+  if (!text) { toast('请输入地址', 'error'); return; }
+  const addrs = text.split('\n').map(a => a.trim()).filter(a => a && a.startsWith('0x'));
+  if (addrs.length === 0) { toast('没有有效地址', 'error'); return; }
+  toast(`批量设置 ${addrs.length} 个地址...`, 'loading');
+  await sendTx(c.setLaunchWhitelistBatch(addrs, allowed), `setLaunchWhitelistBatch(${addrs.length})`);
+}
+async function tfCheckWhitelist() {
+  const tf = getTfRead();
+  const addr = $('tf-wl-check').value.trim();
+  if (!addr) { toast('请输入地址', 'error'); return; }
+  const result = await tf.launchWhitelist(addr);
+  $('tf-wl-result').innerHTML = result ? '<span class="tag tag-green">允许</span>' : '<span class="tag tag-red">未允许</span>';
+}
+async function tfWithdrawETH() {
+  const c = getTfWrite(); if (!c) return;
+  const to = $('tf-withdraw-eth-to').value.trim();
+  if (!to) { toast('请输入接收地址', 'error'); return; }
+  await sendTx(c.withdrawAllETH(to), 'withdrawAllETH');
+}
+async function tfWithdrawToken() {
+  const c = getTfWrite(); if (!c) return;
+  const token = $('tf-withdraw-token-addr').value.trim();
+  const to = $('tf-withdraw-token-to').value.trim();
+  if (!token || !to) { toast('请填写完整', 'error'); return; }
+  await sendTx(c.withdrawAllToken(token, to), 'withdrawAllToken');
+}
+
+// ===================== INIT =====================
+window.addEventListener('load', () => {
+  loadDashboard();
+  // Auto-reconnect if already connected
+  if (window.ethereum) {
+    window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+      if (accounts.length > 0) connectWallet();
+    });
+    window.ethereum.on('accountsChanged', () => { if (provider) connectWallet(); });
+  }
+});
+</script>
+</body>
+</html>
