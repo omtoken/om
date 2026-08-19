@@ -737,8 +737,6 @@ const DIVIDEND_TOKENS = [
   { name: 'BONE', symbol: 'BONE', address: '0x9813037ee2218799597d83D4a5B6F3b6778218d9', icon: 'bone', decimals: 18 },
 ];
 
-const OWNER_ADDR = '0xf94f02057e08de2f2658f69467adda79cb61389a';
-
 // === ABI DEFINITIONS ===
 const ABI = {
   feedToken: [
@@ -883,11 +881,18 @@ async function connectWallet() {
     contracts.launchpad = new ethers.Contract(CONTRACTS.launchpad, ABI.launchpad, signer);
     contracts.factory = new ethers.Contract(CONTRACTS.factory, ABI.factory, signer);
 
-    // Check owner
-    const factoryOwner = await contracts.factory.owner();
-    const launchpadOwner = await contracts.launchpad.owner();
-    const feedOwner = await contracts.feed.owner();
-    isOwner = userAddress.toLowerCase() === OWNER_ADDR.toLowerCase();
+    // Check owner — read from chain so it stays correct after ownership transfer
+    const [factoryOwner, launchpadOwner, feedOwner] = await Promise.all([
+      contracts.factory.owner(),
+      contracts.launchpad.owner(),
+      contracts.feed.owner(),
+    ]);
+    // Show owner panel if user owns any of the core contracts
+    isOwner = (
+      userAddress.toLowerCase() === factoryOwner.toLowerCase() ||
+      userAddress.toLowerCase() === launchpadOwner.toLowerCase() ||
+      userAddress.toLowerCase() === feedOwner.toLowerCase()
+    );
 
     // Update UI
     updateWalletUI();
