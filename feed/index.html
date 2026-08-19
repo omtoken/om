@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feed Protocol — Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+<style>
+:root {
+  --bg: #FAF7F2;
+  --bg2: #FFF8EE;
+  --card: #FFFFFF;
+  --card-border: #EDE8E0;
+  --text: #1A1612;
+  --text2: #6B6560;
+  --text3: #9C9590;
+  --accent: #E8573F;
+  --accent2: #FF7A5C;
+  --accent-soft: #FFF0EC;
+  --green: #2DA44E;
+  --green-soft: #E6F9ED;
+  --blue: #3B82F6;
+  --blue-soft: #EBF3FF;
+  --purple: #8B5CF6;
+  --purple-soft: #F3EEFF;
+  --gold: #D4A017;
+  --gold-soft: #FFF8E1;
+  --danger: #DC2626;
+  --danger-soft: #FEF2F2;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* === HEADER === */
+.header {
+  background: linear-gradient(135deg, #FFF8EE 0%, #FFF0EC 50%, #F3EEFF 100%);
+  border-bottom: 1px solid var(--card-border);
+  padding: 0 32px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(12px);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(232,87,63,0.3);
+}
+
+.logo-text {
+  font-family: 'Instrument Serif', serif;
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.logo-text em {
+  color: var(--accent);
+  font-style: italic;
+}
+
+.wallet-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  border-radius: 100px;
+  border: 2px solid var(--card-border);
+  background: var(--card);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  transition: all 0.2s;
+}
+
+.wallet-btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.wallet-btn.connected {
+  background: var(--green-soft);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.wallet-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* === NAV TABS === */
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 32px 0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.nav-tab {
+  padding: 12px 24px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text2);
+  transition: all 0.2s;
+  position: relative;
+}
+
+.nav-tab:hover { color: var(--text); background: rgba(0,0,0,0.02); }
+
+.nav-tab.active {
+  background: var(--card);
+  color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.nav-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 3px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+}
+
+.nav-tab .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 100px;
+  background: var(--accent);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 6px;
+}
+
+/* === MAIN CONTENT === */
+.main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 32px 64px;
+}
+
+.tab-content {
+  display: none;
+  background: var(--card);
+  border-radius: 0 var(--radius) var(--radius) var(--radius);
+  padding: 32px;
+  box-shadow: var(--shadow);
+  animation: fadeIn 0.3s ease;
+}
+
+.tab-content.active { display: block; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* === CARDS & GRIDS === */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  padding: 20px 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg2) 100%);
+}
+
+.stat-card.accent {
+  background: linear-gradient(135deg, var(--accent-soft) 0%, #FFF5F0 100%);
+  border-color: #FDDDD4;
+}
+
+.stat-card.green {
+  background: linear-gradient(135deg, var(--green-soft) 0%, #F0FFF5 100%);
+  border-color: #B8E6C8;
+}
+
+.stat-card.blue {
+  background: linear-gradient(135deg, var(--blue-soft) 0%, #F0F7FF 100%);
+  border-color: #BFD9FF;
+}
+
+.stat-card.purple {
+  background: linear-gradient(135deg, var(--purple-soft) 0%, #F8F4FF 100%);
+  border-color: #D4C4FF;
+}
+
+.stat-card.gold {
+  background: linear-gradient(135deg, var(--gold-soft) 0%, #FFFCF0 100%);
+  border-color: #F0DFA0;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+
+.stat-value.small { font-size: 18px; }
+
+.stat-sub {
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+
+/* === SECTION === */
+.section-title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 22px;
+  font-weight: 400;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--card-border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-title .icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+
+/* === DIVIDEND CLAIM === */
+.dividend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dividend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+  background: var(--bg);
+  transition: all 0.2s;
+}
+
+.dividend-row:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.dividend-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dividend-icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.dividend-icon.eth { background: linear-gradient(135deg, #627EEA, #8B9FFF); color: white; }
+.dividend-icon.shib { background: linear-gradient(135deg, #FFA409, #FFD060); color: white; }
+.dividend-icon.bone { background: linear-gradient(135deg, #C5A55A, #E8D5A0); color: white; }
+
+.dividend-name { font-weight: 600; font-size: 16px; }
+.dividend-addr { font-size: 12px; color: var(--text3); font-family: monospace; }
+
+.dividend-amount {
+  text-align: right;
+  margin-right: 16px;
+}
+
+.dividend-amount .value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.dividend-amount .label {
+  font-size: 12px;
+  color: var(--text3);
+}
+
+/* === BUTTONS === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 100px;
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  color: white;
+  box-shadow: 0 2px 8px rgba(232,87,63,0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  box-shadow: 0 4px 16px rgba(232,87,63,0.4);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--card-border);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--text3);
+}
+
+.btn-green {
+  background: linear-gradient(135deg, var(--green), #34D058);
+  color: white;
+  box-shadow: 0 2px 8px rgba(45,164,78,0.3);
+}
+
+.btn-green:hover:not(:disabled) {
+  box-shadow: 0 4px 16px rgba(45,164,78,0.4);
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid #FECACA;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #FEE2E2;
+}
+
+.btn-sm { padding: 6px 14px; font-size: 13px; }
+
+/* === FORM ELEMENTS === */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+
+.form-input, .form-select {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+  background: var(--bg);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--text);
+  transition: all 0.2s;
+}
+
+.form-input:focus, .form-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.form-input::placeholder { color: var(--text3); }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* === OWNER PANEL === */
+.owner-section {
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.owner-section:last-child { border-bottom: none; }
+
+.owner-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.owner-section-title {
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.owner-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.config-card {
+  padding: 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+  background: var(--bg);
+}
+
+.config-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* === TABLE === */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--card-border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th {
+  text-align: left;
+  padding: 12px 16px;
+  background: var(--bg);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text3);
+  border-bottom: 1px solid var(--card-border);
+}
+
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+tr:last-child td { border-bottom: none; }
+
+tr:hover td { background: var(--bg); }
+
+.mono { font-family: monospace; font-size: 13px; }
+
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tag-green { background: var(--green-soft); color: var(--green); }
+.tag-red { background: var(--danger-soft); color: var(--danger); }
+.tag-blue { background: var(--blue-soft); color: var(--blue); }
+
+/* === TOAST === */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  padding: 14px 20px;
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  border-left: 4px solid var(--green);
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 400px;
+  animation: slideIn 0.3s ease;
+}
+
+.toast.error { border-left-color: var(--danger); }
+.toast.info { border-left-color: var(--blue); }
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* === LOADING === */
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(250,247,242,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9998;
+  backdrop-filter: blur(4px);
+}
+
+.loading-overlay .spinner {
+  width: 40px; height: 40px;
+  border-width: 3px;
+  border-color: var(--card-border);
+  border-top-color: var(--accent);
+}
+
+/* === EMPTY STATE === */
+.empty-state {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--text3);
+}
+
+.empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+.empty-state .title { font-size: 18px; font-weight: 600; color: var(--text2); margin-bottom: 8px; }
+
+/* === CONNECT PROMPT === */
+.connect-prompt {
+  text-align: center;
+  padding: 80px 24px;
+}
+
+.connect-prompt .icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+}
+
+.connect-prompt .title {
+  font-family: 'Instrument Serif', serif;
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+.connect-prompt .desc {
+  color: var(--text2);
+  margin-bottom: 24px;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  .header { padding: 0 16px; }
+  .nav-tabs { padding: 12px 16px 0; overflow-x: auto; }
+  .main { padding: 0 16px 48px; }
+  .tab-content { padding: 20px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+  .dividend-row { flex-direction: column; gap: 12px; align-items: flex-start; }
+  .dividend-amount { text-align: left; margin-right: 0; }
+}
+</style>
+</head>
+<body>
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">F</div>
+    <div class="logo-text">Feed <em>Protocol</em></div>
+  </div>
+  <button class="wallet-btn" id="walletBtn" onclick="connectWallet()">
+    <span id="walletBtnContent">Connect Wallet</span>
+  </button>
+</header>
+
+<!-- NAV -->
+<div class="nav-tabs" id="navTabs">
+  <button class="nav-tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+  <button class="nav-tab" data-tab="claim" onclick="switchTab('claim')">Claim Dividends</button>
+  <button class="nav-tab" data-tab="owner" id="ownerTab" onclick="switchTab('owner')" style="display:none">Owner Panel</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- DASHBOARD TAB -->
+  <div class="tab-content active" id="tab-dashboard">
+    <div id="dashboardContent">
+      <div class="connect-prompt">
+        <div class="icon">🔗</div>
+        <div class="title">Connect your wallet</div>
+        <div class="desc">Connect to view your FEED holdings and dividends</div>
+        <button class="btn btn-primary" onclick="connectWallet()">Connect Wallet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLAIM TAB -->
+  <div class="tab-content" id="tab-claim">
+    <div id="claimContent">
+      <div class="connect-prompt">
+        <div class="icon">💰</div>
+        <div class="title">Claim your dividends</div>
+        <div class="desc">Connect wallet to see and claim available dividends</div>
+        <button class="btn btn-primary" onclick="connectWallet()">Connect Wallet</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OWNER TAB -->
+  <div class="tab-content" id="tab-owner">
+    <div id="ownerContent"></div>
+  </div>
+
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+<script>
+// === CONTRACT CONFIG ===
+const CONTRACTS = {
+  dividendHub: '0xcc06722d393c3Eb54Cd55f86c4E49b0DDcEB86C8',
+  launchpad: '0xd8B0F2A189178A21939bcD74C39dB86dA0a29F07',
+  factory: '0x1DA2EA5a076E6d61dE95a0B98cba1D14dB07e8A1',
+  feedToken: '0x98508DA82F9a8D6Cb1C3c8Af4940B59b63bc68cf',
+};
+
+const DIVIDEND_TOKENS = [
+  { name: 'ETH', symbol: 'ETH', address: '0x0000000000000000000000000000000000000000', icon: 'eth', decimals: 18 },
+  { name: 'SHIB', symbol: 'SHIB', address: '0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE', icon: 'shib', decimals: 18 },
+  { name: 'BONE', symbol: 'BONE', address: '0x9813037ee2218799597d83D4a5B6F3b6778218d9', icon: 'bone', decimals: 18 },
+];
+
+const OWNER_ADDR = '0xf94f02057e08de2f2658f69467adda79cb61389a';
+
+// === ABI DEFINITIONS ===
+const ABI = {
+  feedToken: [
+    'function balanceOf(address) view returns (uint256)',
+    'function totalSupply() view returns (uint256)',
+    'function owner() view returns (address)',
+    'function dividendHub() view returns (address)',
+    'function isBlacklisted(address) view returns (bool)',
+    'function setDividendBlacklist(address, bool)',
+    'function setDividendBlacklistBatch(address[], bool)',
+    'function transferOwnership(address)',
+  ],
+  dividendHub: [
+    'function feedToken() view returns (address)',
+    'function launchpad() view returns (address)',
+    'function platform() view returns (address)',
+    'function totalShares() view returns (uint256)',
+    'function shares(address) view returns (uint256)',
+    'function dividendTokenCount() view returns (uint256)',
+    'function dividendTokens(uint256) view returns (address)',
+    'function isRegisteredDivToken(address) view returns (bool)',
+    'function sourceTokenCount() view returns (uint256)',
+    'function withdrawableDividendOf(address, address) view returns (uint256)',
+    'function accumulativeDividendOf(address, address) view returns (uint256)',
+    'function claim(address) returns (uint256)',
+    'function syncAccount(address)',
+  ],
+  launchpad: [
+    'function owner() view returns (address)',
+    'function factory() view returns (address)',
+    'function dividendHub() view returns (address)',
+    'function minBuybackEth() view returns (uint256)',
+    'function dividendBlacklist(address) view returns (bool)',
+    'function buybackPoolConfig(address) view returns (bool configured, uint8 dex, uint24 fee, int24 tickSpacing, address hooks)',
+    'function transferOwnership(address)',
+    'function setFactory(address)',
+    'function setDividendHub(address)',
+    'function setPlatform(address)',
+    'function setMinBuybackEth(uint256)',
+    'function setDividendBlacklist(address, bool)',
+    'function setDividendBlacklistBatch(address[], bool)',
+    'function setBuybackPool(address, uint8, uint24, int24, address)',
+    'function removeBuybackPool(address)',
+    'function rescueERC20(address, address)',
+  ],
+  factory: [
+    'function owner() view returns (address)',
+    'function launchpad() view returns (address)',
+    'function feedToken() view returns (address)',
+    'function publicLaunchEnabled() view returns (bool)',
+    'function launchWhitelist(address) view returns (bool)',
+    'function totalLaunches() view returns (uint256)',
+    'function transferOwnership(address)',
+    'function setPublicLaunchEnabled(bool)',
+    'function setLaunchWhitelist(address, bool)',
+    'function setLaunchWhitelistBatch(address[], bool)',
+  ],
+};
+
+// === STATE ===
+let provider = null;
+let signer = null;
+let userAddress = null;
+let isOwner = false;
+let contracts = {};
+
+// === HELPERS ===
+function fmtAddr(a) { return a ? a.slice(0,6) + '...' + a.slice(-4) : '—'; }
+function fmtNum(n, d=4) {
+  if (!n) return '0';
+  const f = parseFloat(ethers.formatUnits(n, d > 4 ? 18 : d));
+  if (f > 1e9) return (f/1e9).toFixed(2) + 'B';
+  if (f > 1e6) return (f/1e6).toFixed(2) + 'M';
+  if (f > 1e3) return (f/1e3).toFixed(2) + 'K';
+  return f.toFixed(d);
+}
+function fmtFull(n, dec=18) {
+  if (!n) return '0';
+  return parseFloat(ethers.formatUnits(n, dec)).toLocaleString('en-US', {maximumFractionDigits: 4});
+}
+
+function toast(msg, type='success') {
+  const c = document.getElementById('toastContainer');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 5000);
+}
+
+async function txWrap(promise, successMsg) {
+  try {
+    const tx = await promise;
+    toast('Transaction submitted...', 'info');
+    await tx.wait();
+    toast(successMsg || 'Transaction confirmed!');
+    return tx;
+  } catch(e) {
+    const msg = e.reason || e.message || 'Transaction failed';
+    toast(msg, 'error');
+    throw e;
+  }
+}
+
+// === TAB SWITCHING ===
+function switchTab(tab) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  if (tab === 'claim' && userAddress) loadClaimData();
+  if (tab === 'owner' && userAddress && isOwner) loadOwnerData();
+}
+
+// === WALLET CONNECTION ===
+async function connectWallet() {
+  if (!window.ethereum) {
+    toast('Please install MetaMask or another Web3 wallet', 'error');
+    return;
+  }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    // Check network
+    const network = await provider.getNetwork();
+    if (network.chainId !== 1n) {
+      toast('Please switch to Ethereum Mainnet', 'error');
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x1' }]
+        });
+      } catch(e) {}
+    }
+
+    // Init contracts
+    contracts.feed = new ethers.Contract(CONTRACTS.feedToken, ABI.feedToken, signer);
+    contracts.hub = new ethers.Contract(CONTRACTS.dividendHub, ABI.dividendHub, signer);
+    contracts.launchpad = new ethers.Contract(CONTRACTS.launchpad, ABI.launchpad, signer);
+    contracts.factory = new ethers.Contract(CONTRACTS.factory, ABI.factory, signer);
+
+    // Check owner
+    const factoryOwner = await contracts.factory.owner();
+    const launchpadOwner = await contracts.launchpad.owner();
+    const feedOwner = await contracts.feed.owner();
+    isOwner = userAddress.toLowerCase() === OWNER_ADDR.toLowerCase();
+
+    // Update UI
+    updateWalletUI();
+    await loadDashboard();
+    if (isOwner) {
+      document.getElementById('ownerTab').style.display = '';
+    }
+
+    toast('Wallet connected: ' + fmtAddr(userAddress));
+  } catch(e) {
+    toast('Connection failed: ' + (e.message || e), 'error');
+  }
+}
+
+function updateWalletUI() {
+  const btn = document.getElementById('walletBtn');
+  const content = document.getElementById('walletBtnContent');
+  btn.classList.add('connected');
+  content.innerHTML = `<span class="wallet-dot"></span> ${fmtAddr(userAddress)}`;
+}
+
+// === DASHBOARD ===
+async function loadDashboard() {
+  const feed = contracts.feed;
+  const hub = contracts.hub;
+
+  const [balance, totalSupply, shares, totalShares, isBlacklisted] = await Promise.all([
+    feed.balanceOf(userAddress),
+    feed.totalSupply(),
+    hub.shares(userAddress),
+    hub.totalShares(),
+    feed.isBlacklisted(userAddress),
+  ]);
+
+  const minBalance = ethers.parseUnits('100000', 18);
+  const eligible = !isBlacklisted && balance >= minBalance;
+
+  document.getElementById('dashboardContent').innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card accent">
+        <div class="stat-label">Your FEED Balance</div>
+        <div class="stat-value">${fmtFull(balance)}</div>
+        <div class="stat-sub">${((parseFloat(ethers.formatEther(balance)) / 1e7) * 100).toFixed(4)}% of supply</div>
+      </div>
+      <div class="stat-card ${eligible ? 'green' : ''}">
+        <div class="stat-label">Dividend Status</div>
+        <div class="stat-value small">${eligible ? '✅ Eligible' : '❌ Not Eligible'}</div>
+        <div class="stat-sub">${isBlacklisted ? 'Blacklisted' : balance < minBalance ? 'Min 100K FEED required' : 'Earning dividends'}</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-label">Your Shares</div>
+        <div class="stat-value">${fmtFull(shares)}</div>
+        <div class="stat-sub">${totalShares > 0n ? ((parseFloat(ethers.formatEther(shares)) / parseFloat(ethers.formatEther(totalShares))) * 100).toFixed(4) + '% of total' : 'No total shares'}</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-label">Total Shares (All Holders)</div>
+        <div class="stat-value">${fmtFull(totalShares)}</div>
+        <div class="stat-sub">Across all eligible FEED holders</div>
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span class="icon" style="background:var(--gold-soft)">📊</span>
+      Protocol Overview
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">FEED Total Supply</div>
+        <div class="stat-value">${fmtFull(totalSupply)}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Min Balance for Dividends</div>
+        <div class="stat-value small">100,000 FEED</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Public Launch</div>
+        <div class="stat-value small" id="publicLaunchStatus">Loading...</div>
+      </div>
+    </div>
+  `;
+
+  // Load additional info
+  try {
+    const pl = await contracts.factory.publicLaunchEnabled();
+    document.getElementById('publicLaunchStatus').textContent = pl ? 'Enabled' : 'Disabled (Whitelist Only)';
+  } catch(e) {}
+}
+
+// === CLAIM DIVIDENDS ===
+async function loadClaimData() {
+  const hub = contracts.hub;
+  let rows = '';
+
+  for (const token of DIVIDEND_TOKENS) {
+    try {
+      const [withdrawable, accumulative] = await Promise.all([
+        hub.withdrawableDividendOf(userAddress, token.address),
+        hub.accumulativeDividendOf(userAddress, token.address),
+      ]);
+
+      const wStr = fmtFull(withdrawable, token.decimals);
+      const aStr = fmtFull(accumulative, token.decimals);
+      const hasClaim = withdrawable > 0n;
+
+      rows += `
+        <div class="dividend-row">
+          <div class="dividend-info">
+            <div class="dividend-icon ${token.icon}">${token.symbol[0]}</div>
+            <div>
+              <div class="dividend-name">${token.name}</div>
+              <div class="dividend-addr">${token.address === '0x0000000000000000000000000000000000000000' ? 'Native ETH' : fmtAddr(token.address)}</div>
+            </div>
+          </div>
+          <div class="dividend-amount">
+            <div class="value">${wStr}</div>
+            <div class="label">Claimable · ${aStr} total earned</div>
+          </div>
+          <button class="btn ${hasClaim ? 'btn-green' : 'btn-secondary'}" ${hasClaim ? '' : 'disabled'}
+            onclick="claimDividend('${token.address}', '${token.symbol}')">
+            ${hasClaim ? '💰 Claim' : 'Nothing to claim'}
+          </button>
+        </div>
+      `;
+    } catch(e) {
+      rows += `
+        <div class="dividend-row">
+          <div class="dividend-info">
+            <div class="dividend-icon ${token.icon}">${token.symbol[0]}</div>
+            <div>
+              <div class="dividend-name">${token.name}</div>
+              <div class="dividend-addr">Error loading</div>
+            </div>
+          </div>
+          <button class="btn btn-secondary" disabled>—</button>
+        </div>
+      `;
+    }
+  }
+
+  document.getElementById('claimContent').innerHTML = `
+    <div class="section-title">
+      <span class="icon" style="background:var(--green-soft)">💰</span>
+      Your Dividends
+    </div>
+    <p style="color:var(--text2); margin-bottom:20px; font-size:14px;">
+      As a FEED holder, you earn dividends from protocol fees. Claim them anytime.
+    </p>
+    <div class="dividend-list">${rows}</div>
+    <div style="margin-top:20px; text-align:center;">
+      <button class="btn btn-secondary" onclick="loadClaimData()">🔄 Refresh</button>
+    </div>
+  `;
+}
+
+async function claimDividend(tokenAddr, symbol) {
+  try {
+    await txWrap(
+      contracts.hub.claim(tokenAddr),
+      `Claimed ${symbol} dividends successfully!`
+    );
+    loadClaimData();
+    loadDashboard();
+  } catch(e) {}
+}
+
+// === OWNER PANEL ===
+async function loadOwnerData() {
+  if (!isOwner) return;
+
+  const [factoryOwner, launchpadOwner, feedOwner, publicLaunch, minBuyback, platform, totalLaunches] = await Promise.all([
+    contracts.factory.owner(),
+    contracts.launchpad.owner(),
+    contracts.feed.owner(),
+    contracts.factory.publicLaunchEnabled(),
+    contracts.launchpad.minBuybackEth(),
+    contracts.hub.platform(),
+    contracts.factory.totalLaunches(),
+  ]);
+
+  document.getElementById('ownerContent').innerHTML = `
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:24px;">
+      <div>
+        <h2 style="font-family:'Instrument Serif',serif; font-size:24px;">Owner Panel</h2>
+        <p style="color:var(--text2); font-size:14px;">Manage protocol settings and permissions</p>
+      </div>
+      <div class="owner-badge">👑 Owner</div>
+    </div>
+
+    <!-- Protocol Status -->
+    <div class="owner-section">
+      <div class="owner-section-title">📋 Protocol Status</div>
+      <div class="config-grid" style="margin-top:12px;">
+        <div class="config-card">
+          <div class="config-card-title">Factory</div>
+          <div style="font-size:13px; color:var(--text2);">
+            <div>Owner: <span class="mono">${fmtAddr(factoryOwner)}</span></div>
+            <div>Public Launch: <span class="tag ${publicLaunch ? 'tag-green' : 'tag-red'}">${publicLaunch ? 'ON' : 'OFF'}</span></div>
+            <div>Total Launches: <strong>${totalLaunches.toString()}</strong></div>
+          </div>
+        </div>
+        <div class="config-card">
+          <div class="config-card-title">Launchpad</div>
+          <div style="font-size:13px; color:var(--text2);">
+            <div>Owner: <span class="mono">${fmtAddr(launchpadOwner)}</span></div>
+            <div>Min Buyback: <strong>${ethers.formatEther(minBuyback)} ETH</strong></div>
+          </div>
+        </div>
+        <div class="config-card">
+          <div class="config-card-title">DividendHub</div>
+          <div style="font-size:13px; color:var(--text2);">
+            <div>Platform: <span class="mono">${fmtAddr(platform)}</span></div>
+            <div>Feed Owner: <span class="mono">${fmtAddr(feedOwner)}</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Whitelist Management -->
+    <div class="owner-section">
+      <div class="owner-section-header">
+        <div class="owner-section-title">📝 Launch Whitelist</div>
+      </div>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <input class="form-input" id="wlAddress" placeholder="0x...">
+        </div>
+        <div class="form-group" style="display:flex; align-items:flex-end; gap:8px;">
+          <button class="btn btn-green btn-sm" onclick="setWhitelist(true)">Add ✓</button>
+          <button class="btn btn-danger btn-sm" onclick="setWhitelist(false)">Remove ✗</button>
+          <button class="btn btn-secondary btn-sm" onclick="checkWhitelist()">Check</button>
+        </div>
+      </div>
+      <div id="wlResult" style="font-size:13px; color:var(--text2);"></div>
+    </div>
+
+    <!-- Dividend Blacklist -->
+    <div class="owner-section">
+      <div class="owner-section-header">
+        <div class="owner-section-title">🚫 Dividend Blacklist (Launchpad)</div>
+      </div>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <input class="form-input" id="blAddress" placeholder="0x...">
+        </div>
+        <div class="form-group" style="display:flex; align-items:flex-end; gap:8px;">
+          <button class="btn btn-danger btn-sm" onclick="setLaunchpadBlacklist(true)">Blacklist</button>
+          <button class="btn btn-green btn-sm" onclick="setLaunchpadBlacklist(false)">Unblacklist</button>
+          <button class="btn btn-secondary btn-sm" onclick="checkLaunchpadBlacklist()">Check</button>
+        </div>
+      </div>
+      <div id="blResult" style="font-size:13px; color:var(--text2);"></div>
+    </div>
+
+    <!-- FEED Dividend Blacklist -->
+    <div class="owner-section">
+      <div class="owner-section-header">
+        <div class="owner-section-title">🚫 FEED Token Blacklist</div>
+      </div>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label class="form-label">Address</label>
+          <input class="form-input" id="feedBlAddress" placeholder="0x...">
+        </div>
+        <div class="form-group" style="display:flex; align-items:flex-end; gap:8px;">
+          <button class="btn btn-danger btn-sm" onclick="setFeedBlacklist(true)">Blacklist</button>
+          <button class="btn btn-green btn-sm" onclick="setFeedBlacklist(false)">Unblacklist</button>
+          <button class="btn btn-secondary btn-sm" onclick="checkFeedBlacklist()">Check</button>
+        </div>
+      </div>
+      <div id="feedBlResult" style="font-size:13px; color:var(--text2);"></div>
+    </div>
+
+    <!-- Buyback Pool Config -->
+    <div class="owner-section">
+      <div class="owner-section-header">
+        <div class="owner-section-title">🔄 Buyback Pool Configuration</div>
+      </div>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label class="form-label">Dividend Token Address</label>
+          <input class="form-input" id="bpToken" placeholder="0x...">
+        </div>
+        <div class="form-group">
+          <label class="form-label">DEX Version</label>
+          <select class="form-select" id="bpDex">
+            <option value="0">V2 (Uniswap V2)</option>
+            <option value="1">V3 (Uniswap V3)</option>
+            <option value="2">V4 (Uniswap V4)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group">
+          <label class="form-label">Fee Tier (V3/V4 only)</label>
+          <select class="form-select" id="bpFee">
+            <option value="0">N/A (V2)</option>
+            <option value="100">0.01%</option>
+            <option value="500">0.05%</option>
+            <option value="3000" selected>0.3%</option>
+            <option value="10000">1%</option>
+          </select>
+        </div>
+        <div class="form-group" style="display:flex; align-items:flex-end; gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="setBuybackPool()">Set Pool</button>
+          <button class="btn btn-danger btn-sm" onclick="removeBuybackPool()">Remove</button>
+          <button class="btn btn-secondary btn-sm" onclick="checkBuybackPool()">Check</button>
+        </div>
+      </div>
+      <div id="bpResult" style="font-size:13px; color:var(--text2);"></div>
+    </div>
+
+    <!-- Settings -->
+    <div class="owner-section">
+      <div class="owner-section-title">⚙️ Settings</div>
+      <div class="config-grid">
+        <div class="config-card">
+          <div class="config-card-title">Min Buyback ETH</div>
+          <div class="form-group">
+            <input class="form-input" id="minBuybackInput" placeholder="0.001" type="number" step="0.001">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="setMinBuyback()">Update</button>
+        </div>
+        <div class="config-card">
+          <div class="config-card-title">Public Launch</div>
+          <p style="font-size:13px; color:var(--text2); margin-bottom:12px;">Allow anyone to launch tokens (not just whitelisted)</p>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-green btn-sm" onclick="setPublicLaunch(true)">Enable</button>
+            <button class="btn btn-danger btn-sm" onclick="setPublicLaunch(false)">Disable</button>
+          </div>
+        </div>
+        <div class="config-card">
+          <div class="config-card-title">Platform Address</div>
+          <div class="form-group">
+            <input class="form-input" id="platformInput" placeholder="0x..." value="${platform}">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="setPlatform()">Update</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transfer Ownership -->
+    <div class="owner-section">
+      <div class="owner-section-title" style="color:var(--danger);">⚠️ Transfer Ownership</div>
+      <p style="font-size:13px; color:var(--text2); margin-bottom:12px;">
+        Transfer ownership of all contracts to a new address. This action is irreversible.
+      </p>
+      <div class="form-row">
+        <div class="form-group">
+          <input class="form-input" id="newOwnerAddr" placeholder="New owner address 0x...">
+        </div>
+        <div class="form-group" style="display:flex; align-items:flex-end;">
+          <button class="btn btn-danger" onclick="transferAllOwnership()">Transfer All Ownership</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rescue ERC20 -->
+    <div class="owner-section">
+      <div class="owner-section-title">🆘 Rescue ERC20</div>
+      <p style="font-size:13px; color:var(--text2); margin-bottom:12px;">
+        Recover tokens sent to the Launchpad by mistake (cannot rescue launched tokens).
+      </p>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Token Address</label>
+          <input class="form-input" id="rescueTokenAddr" placeholder="0x...">
+        </div>
+        <div class="form-group" style="display:flex; align-items:flex-end;">
+          <button class="btn btn-primary" onclick="rescueERC20()">Rescue Tokens</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// === OWNER ACTIONS ===
+async function setWhitelist(add) {
+  const addr = document.getElementById('wlAddress').value.trim();
+  if (!ethers.isAddress(addr)) return toast('Invalid address', 'error');
+  try {
+    await txWrap(
+      contracts.factory.setLaunchWhitelist(addr, add),
+      add ? 'Added to whitelist' : 'Removed from whitelist'
+    );
+  } catch(e) {}
+}
+
+async function checkWhitelist() {
+  const addr = document.getElementById('wlAddress').value.trim();
+  if (!ethers.isAddress(addr)) return toast('Invalid address', 'error');
+  const wl = await contracts.factory.launchWhitelist(addr);
+  document.getElementById('wlResult').innerHTML = `<strong>${fmtAddr(addr)}</strong>: ${wl ? '<span class="tag tag-green">Whitelisted ✓</span>' : '<span class="tag tag-red">Not whitelisted</span>'}`;
+}
+
+async function setLaunchpadBlacklist(add) {
+  const addr = document.getElementById('blAddress').value.trim();
+  if (!ethers.isAddress(addr)) return toast('Invalid address', 'error');
+  try {
+    await txWrap(
+      contracts.launchpad.setDividendBlacklist(addr, add),
+      add ? 'Blacklisted on Launchpad' : 'Removed from Launchpad blacklist'
+    );
+  } catch(e) {}
+}
+
+async function checkLaunchpadBlacklist() {
+  const addr = document.getElementById('blAddress').value.trim();
+  if (!ethers.isAddress(addr)) return toast('Invalid address', 'error');
+  const bl = await contracts.launchpad.dividendBlacklist(addr);
+  document.getElementById('blResult').innerHTML = `<strong>${fmtAddr(addr)}</strong>: ${bl ? '<span class="tag tag-red">Blacklisted 🚫</span>' : '<span class="tag tag-green">Not blacklisted ✓</span>'}`;
+}
+
+async function setFeedBlacklist(add) {
+  const addr = document.getElementById('feedBlAddress').value.trim();
+  if (!ethers.isAddress(addr)) return toast('Invalid address', 'error');
+  try {
+    await txWrap(
+      contracts.feed.setDividendBlacklist(addr, add),
+      add ? 'Blacklisted on FEED Token' : 'Removed from FEED blacklist'
+    );
+  } catch(e) {}
+}
+
+async function checkFeedBlacklist() {
+  const addr = document.getElementById('feedBlAddress').value.trim();
+  if (!ethers.isAddress(addr)) return toast('Invalid address', 'error');
+  const bl = await contracts.feed.isBlacklisted(addr);
+  document.getElementById('feedBlResult').innerHTML = `<strong>${fmtAddr(addr)}</strong>: ${bl ? '<span class="tag tag-red">Blacklisted 🚫</span>' : '<span class="tag tag-green">Not blacklisted ✓</span>'}`;
+}
+
+async function setBuybackPool() {
+  const token = document.getElementById('bpToken').value.trim();
+  const dex = parseInt(document.getElementById('bpDex').value);
+  const fee = parseInt(document.getElementById('bpFee').value);
+  if (!ethers.isAddress(token)) return toast('Invalid token address', 'error');
+  try {
+    await txWrap(
+      contracts.launchpad.setBuybackPool(token, dex, fee, 0, ethers.ZeroAddress),
+      'Buyback pool configured'
+    );
+  } catch(e) {}
+}
+
+async function removeBuybackPool() {
+  const token = document.getElementById('bpToken').value.trim();
+  if (!ethers.isAddress(token)) return toast('Invalid token address', 'error');
+  try {
+    await txWrap(
+      contracts.launchpad.removeBuybackPool(token),
+      'Buyback pool removed'
+    );
+  } catch(e) {}
+}
+
+async function checkBuybackPool() {
+  const token = document.getElementById('bpToken').value.trim();
+  if (!ethers.isAddress(token)) return toast('Invalid token address', 'error');
+  const config = await contracts.launchpad.buybackPoolConfig(token);
+  const dexNames = ['V2', 'V3', 'V4'];
+  if (config.configured) {
+    document.getElementById('bpResult').innerHTML = `
+      <span class="tag tag-green">Configured ✓</span>
+      DEX: <strong>${dexNames[config.dex]}</strong> · Fee: <strong>${config.fee}</strong>
+    `;
+  } else {
+    document.getElementById('bpResult').innerHTML = `<span class="tag tag-red">Not configured</span>`;
+  }
+}
+
+async function setMinBuyback() {
+  const val = document.getElementById('minBuybackInput').value;
+  if (!val || parseFloat(val) <= 0) return toast('Invalid amount', 'error');
+  try {
+    const wei = ethers.parseEther(val);
+    await txWrap(
+      contracts.launchpad.setMinBuybackEth(wei),
+      `Min buyback set to ${val} ETH`
+    );
+  } catch(e) {}
+}
+
+async function setPublicLaunch(enable) {
+  try {
+    await txWrap(
+      contracts.factory.setPublicLaunchEnabled(enable),
+      `Public launch ${enable ? 'enabled' : 'disabled'}`
+    );
+    loadOwnerData();
+  } catch(e) {}
+}
+
+async function setPlatform() {
+  const addr = document.getElementById('platformInput').value.trim();
+  if (!ethers.isAddress(addr)) return toast('Invalid address', 'error');
+  try {
+    await txWrap(
+      contracts.launchpad.setPlatform(addr),
+      'Platform address updated'
+    );
+  } catch(e) {}
+}
+
+async function transferAllOwnership() {
+  const addr = document.getElementById('newOwnerAddr').value.trim();
+  if (!ethers.isAddress(addr)) return toast('Invalid address', 'error');
+  if (!confirm(`Transfer ALL ownership (Factory, Launchpad, FeedToken) to ${addr}? This cannot be undone.`)) return;
+  try {
+    await txWrap(contracts.factory.transferOwnership(addr), 'TokenFactory ownership transferred');
+    await txWrap(contracts.launchpad.transferOwnership(addr), 'FeedLaunchpad ownership transferred');
+    await txWrap(contracts.feed.transferOwnership(addr), 'FeedToken ownership transferred');
+    toast('All ownership transferred!', 'success');
+    isOwner = false;
+    document.getElementById('ownerTab').style.display = 'none';
+    switchTab('dashboard');
+  } catch(e) {}
+}
+
+async function rescueERC20() {
+  const addr = document.getElementById('rescueTokenAddr').value.trim();
+  if (!ethers.isAddress(addr)) return toast('Invalid address', 'error');
+  if (!confirm(`Rescue tokens at ${addr} from Launchpad to your address?`)) return;
+  try {
+    await txWrap(
+      contracts.launchpad.rescueERC20(addr, userAddress),
+      'Tokens rescued'
+    );
+  } catch(e) {}
+}
+
+// === AUTO-REFRESH ON ACCOUNT/CHAIN CHANGE ===
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', () => location.reload());
+  window.ethereum.on('chainChanged', () => location.reload());
+}
+</script>
+</body>
+</html>
