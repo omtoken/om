@@ -112,10 +112,28 @@
 
   <!-- Owner Tab -->
   <div id="panel-owner" class="hidden">
+    <!-- Approve NFT -->
+    <div class="card">
+      <h2 class="text-base font-semibold text-gray-900 mb-4">授权 NFT</h2>
+      <p class="text-sm text-gray-500 mb-4">存入前需先授权 NFT 给 Lock 合约。填写 NFT 合约地址和 Token ID。</p>
+      <div class="space-y-3">
+        <div>
+          <label class="label">NFT 合约地址</label>
+          <input id="approveNFTContract" type="text" class="input-field" placeholder="Uniswap V3 NFT Position Manager 地址">
+        </div>
+        <div>
+          <label class="label">Token ID</label>
+          <input id="approveTokenId" type="text" class="input-field" placeholder="输入 NFT Token ID">
+        </div>
+        <button onclick="approveNFT()" class="btn-primary">授权</button>
+      </div>
+      <div id="approveStatus"></div>
+    </div>
+
     <!-- Deposit -->
     <div class="card">
       <h2 class="text-base font-semibold text-gray-900 mb-4">存入 NFT</h2>
-      <p class="text-sm text-gray-500 mb-4">将 Uniswap V3 流动性 NFT 存入合约进行锁定。需先将 NFT approve 给本合约。</p>
+      <p class="text-sm text-gray-500 mb-4">将 Uniswap V3 流动性 NFT 存入合约进行锁定。需先完成上方授权。</p>
       <div class="flex gap-3">
         <div class="flex-1">
           <label class="label">Token ID</label>
@@ -465,6 +483,41 @@ async function loadLockedNFTs() {
 }
 
 // ============ 写操作 ============
+async function approveNFT() {
+  const nftContract = document.getElementById('approveNFTContract').value.trim();
+  const tokenId = document.getElementById('approveTokenId').value.trim();
+  if (!nftContract || !tokenId) return showStatus('approveStatus', '请填写完整', 'error');
+  const id = parseTokenId(tokenId);
+  if (id === null) return showStatus('approveStatus', 'Token ID 格式无效', 'error');
+
+  if (!signer) {
+    showStatus('approveStatus', '请先连接钱包', 'error');
+    return;
+  }
+
+  const el = document.getElementById('approveStatus');
+  try {
+    el.innerHTML = '<div class="status-bar status-info"><span class="spinner"></span> 正在授权...</div>';
+    addLog('授权 NFT: ' + nftContract + ' Token #' + tokenId);
+
+    const nft = new ethers.Contract(nftContract, [
+      {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"approve","outputs":[],"stateMutability":"nonpayable","type":"function"}
+    ], signer);
+
+    const tx = await nft.approve(CONTRACT_ADDR, id);
+    el.innerHTML = '<div class="status-bar status-info">交易已提交，等待确认... <a href="' + EXPLORER_URL + '/tx/' + tx.hash + '" target="_blank" class="underline">查看</a></div>';
+    addLog('TX: ' + tx.hash);
+
+    const receipt = await tx.wait();
+    el.innerHTML = '<div class="status-bar status-success">授权成功! <a href="' + EXPLORER_URL + '/tx/' + receipt.hash + '" target="_blank" class="underline">查看</a></div>';
+    addLog('授权完成, block=' + receipt.blockNumber);
+  } catch (err) {
+    const msg = err.reason || err.message || '未知错误';
+    el.innerHTML = '<div class="status-bar status-error">授权失败: ' + msg + '</div>';
+    addLog('授权失败: ' + msg);
+  }
+}
+
 async function depositNFT() {
   const tokenId = document.getElementById('depositTokenId').value.trim();
   if (!tokenId) return showStatus('depositStatus', '请输入 Token ID', 'error');
