@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UniswapV3 NFT Lock - Robinhood Chain</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.1/dist/ethers.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  body { font-family: 'Inter', sans-serif; }
+  .tab-active { border-bottom: 2px solid #6366f1; color: #6366f1; font-weight: 600; }
+  .card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 24px; margin-bottom: 16px; }
+  .btn-primary { background: #6366f1; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 500; transition: background 0.2s; }
+  .btn-primary:hover { background: #4f46e5; }
+  .btn-primary:disabled { background: #a5b4fc; cursor: not-allowed; }
+  .btn-danger { background: #ef4444; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 500; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-secondary { background: #f1f5f9; color: #334155; border: 1px solid #e2e8f0; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 500; }
+  .btn-secondary:hover { background: #e2e8f0; }
+  .input-field { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; transition: border 0.2s; }
+  .input-field:focus { border-color: #6366f1; }
+  .label { font-size: 13px; font-weight: 500; color: #64748b; margin-bottom: 6px; display: block; }
+  .status-bar { padding: 8px 16px; border-radius: 8px; font-size: 13px; margin-top: 12px; }
+  .status-success { background: #ecfdf5; color: #065f46; }
+  .status-error { background: #fef2f2; color: #991b1b; }
+  .status-info { background: #eff6ff; color: #1e40af; }
+  .nft-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: #ecfdf5; color: #065f46; }
+  .badge-yellow { background: #fffbeb; color: #92400e; }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #1e40af; border-top-color: transparent; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 6px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none; }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- Header -->
+<header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+  <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">V3</div>
+      <div>
+        <h1 class="text-lg font-bold text-gray-900">UniswapV3 NFT Lock</h1>
+        <p class="text-xs text-gray-500">Robinhood Chain 主网</p>
+      </div>
+    </div>
+    <button id="connectBtn" onclick="connectWallet()" class="btn-primary text-sm">连接钱包</button>
+  </div>
+</header>
+
+<!-- Wallet Info -->
+<div id="walletInfo" class="hidden max-w-4xl mx-auto px-4 mt-4">
+  <div class="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center justify-between text-sm">
+    <div class="flex items-center gap-2">
+      <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+      <span class="text-gray-600">已连接:</span>
+      <span id="walletAddr" class="font-mono font-medium text-gray-900"></span>
+    </div>
+    <div class="flex items-center gap-4">
+      <span id="balanceDisplay" class="text-gray-500"></span>
+      <span id="ownerBadge" class="badge badge-yellow hidden">Owner</span>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<main class="max-w-4xl mx-auto px-4 py-6">
+  <!-- Tabs -->
+  <div class="flex border-b border-gray-200 mb-6">
+    <button onclick="switchTab('user')" id="tab-user" class="px-5 py-3 text-sm tab-active">用户视图</button>
+    <button onclick="switchTab('owner')" id="tab-owner" class="px-5 py-3 text-sm text-gray-500 hover:text-gray-700">Owner 管理</button>
+  </div>
+
+  <!-- User Tab -->
+  <div id="panel-user">
+    <!-- Contract Info -->
+    <div class="card">
+      <h2 class="text-base font-semibold text-gray-900 mb-4">合约信息</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <div>
+          <span class="label">合约地址</span>
+          <p class="font-mono text-gray-700 break-all">0xDbdb8318DeA980ae6423eE53c362C0e7629a3606</p>
+        </div>
+        <div>
+          <span class="label">费用收集者</span>
+          <p id="feeCollectorAddr" class="font-mono text-gray-700 break-all">加载中...</p>
+        </div>
+        <div>
+          <span class="label">Owner</span>
+          <p id="ownerAddr" class="font-mono text-gray-700 break-all">加载中...</p>
+        </div>
+        <div>
+          <span class="label">已锁定 NFT 数量</span>
+          <p id="lockedCount" class="text-2xl font-bold text-indigo-600">-</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Locked NFTs -->
+    <div class="card">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-semibold text-gray-900">已锁定的 NFT 列表</h2>
+        <button onclick="loadLockedNFTs()" class="btn-secondary text-xs py-2 px-3">刷新</button>
+      </div>
+      <div id="nftList">
+        <p class="text-gray-400 text-sm">点击"刷新"加载数据</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Owner Tab -->
+  <div id="panel-owner" class="hidden">
+    <!-- Deposit -->
+    <div class="card">
+      <h2 class="text-base font-semibold text-gray-900 mb-4">存入 NFT</h2>
+      <p class="text-sm text-gray-500 mb-4">将 Uniswap V3 流动性 NFT 存入合约进行锁定。需先将 NFT approve 给本合约。</p>
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <label class="label">Token ID</label>
+          <input id="depositTokenId" type="text" class="input-field" placeholder="输入 NFT Token ID">
+        </div>
+        <div class="flex items-end">
+          <button onclick="depositNFT()" class="btn-primary">存入</button>
+        </div>
+      </div>
+      <div id="depositStatus"></div>
+    </div>
+
+    <!-- Withdraw -->
+    <div class="card">
+      <h2 class="text-base font-semibold text-gray-900 mb-4">提取 NFT</h2>
+      <p class="text-sm text-gray-500 mb-4">从合约中提取已锁定的 NFT。</p>
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <label class="label">Token ID</label>
+          <input id="withdrawTokenId" type="text" class="input-field" placeholder="输入 NFT Token ID">
+        </div>
+        <div class="flex items-end">
+          <button onclick="withdrawNFT()" class="btn-primary">提取</button>
+        </div>
+      </div>
+      <div id="withdrawStatus"></div>
+    </div>
+
+    <!-- Collect Fees -->
+    <div class="card">
+      <h2 class="text-base font-semibold text-gray-900 mb-4">收取手续费</h2>
+      <p class="text-sm text-gray-500 mb-4">收取已锁定 NFT 产生的交易手续费，费用将发送到 feeCollector 地址。</p>
+      <div class="space-y-3">
+        <div>
+          <label class="label">单个收取 - Token ID</label>
+          <div class="flex gap-3">
+            <input id="collectTokenId" type="text" class="input-field" placeholder="输入 NFT Token ID">
+            <button onclick="collectFees()" class="btn-primary whitespace-nowrap">收取</button>
+          </div>
+        </div>
+        <div class="border-t border-gray-100 pt-3">
+          <label class="label">批量收取 - Token IDs（逗号分隔）</label>
+          <div class="flex gap-3">
+            <input id="collectBatchIds" type="text" class="input-field" placeholder="例如: 123, 456, 789">
+            <button onclick="collectFeesBatch()" class="btn-primary whitespace-nowrap">批量收取</button>
+          </div>
+        </div>
+      </div>
+      <div id="collectStatus"></div>
+    </div>
+
+    <!-- Admin Settings -->
+    <div class="card">
+      <h2 class="text-base font-semibold text-gray-900 mb-4">管理设置</h2>
+      <div class="space-y-4">
+        <div>
+          <label class="label">修改费用收集者地址</label>
+          <div class="flex gap-3">
+            <input id="newFeeCollector" type="text" class="input-field" placeholder="输入新地址 0x...">
+            <button onclick="setFeeCollector()" class="btn-primary whitespace-nowrap">修改</button>
+          </div>
+          <div id="setFeeCollectorStatus"></div>
+        </div>
+        <div class="border-t border-gray-100 pt-4">
+          <label class="label">转移 Ownership</label>
+          <div class="flex gap-3">
+            <input id="newOwner" type="text" class="input-field" placeholder="输入新 Owner 地址 0x...">
+            <button onclick="transferOwnership()" class="btn-primary whitespace-nowrap">转移</button>
+          </div>
+          <div id="transferOwnerStatus"></div>
+        </div>
+        <div class="border-t border-gray-100 pt-4">
+          <label class="label text-red-500">放弃 Ownership（不可逆）</label>
+          <button onclick="renounceOwnership()" class="btn-danger">放弃 Ownership</button>
+          <div id="renounceStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rescue -->
+    <div class="card">
+      <h2 class="text-base font-semibold text-gray-900 mb-4">紧急救援</h2>
+      <p class="text-sm text-gray-500 mb-4">救援误转入合约的资产。</p>
+      <div class="space-y-4">
+        <div>
+          <label class="label">救援 ERC20 代币</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input id="rescueERC20Token" type="text" class="input-field" placeholder="代币合约地址 0x...">
+            <div class="flex gap-2">
+              <input id="rescueERC20To" type="text" class="input-field" placeholder="接收地址 0x...">
+              <button onclick="rescueERC20()" class="btn-primary whitespace-nowrap">救援</button>
+            </div>
+          </div>
+          <div id="rescueERC20Status"></div>
+        </div>
+        <div class="border-t border-gray-100 pt-4">
+          <label class="label">救援 ETH</label>
+          <div class="flex gap-3">
+            <input id="rescueETHTo" type="text" class="input-field" placeholder="接收地址 0x...">
+            <button onclick="rescueETH()" class="btn-primary whitespace-nowrap">救援 ETH</button>
+          </div>
+          <div id="rescueETHStatus"></div>
+        </div>
+        <div class="border-t border-gray-100 pt-4">
+          <label class="label">救援已跟踪 NFT</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input id="rescueNFTId" type="text" class="input-field" placeholder="Token ID">
+            <div class="flex gap-2">
+              <input id="rescueNFTTo" type="text" class="input-field" placeholder="接收地址 0x...">
+              <button onclick="rescueNFT()" class="btn-primary whitespace-nowrap">救援</button>
+            </div>
+          </div>
+          <div id="rescueNFTStatus"></div>
+        </div>
+        <div class="border-t border-gray-100 pt-4">
+          <label class="label">救援未跟踪 NFT</label>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <input id="rescueUntrackedId" type="text" class="input-field" placeholder="Token ID">
+            <div class="flex gap-2">
+              <input id="rescueUntrackedTo" type="text" class="input-field" placeholder="接收地址 0x...">
+              <button onclick="rescueUntrackedNFT()" class="btn-primary whitespace-nowrap">救援</button>
+            </div>
+          </div>
+          <div id="rescueUntrackedStatus"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Log Panel -->
+<div class="max-w-4xl mx-auto px-4 pb-8">
+  <div class="card">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-sm font-semibold text-gray-700">操作日志</h3>
+      <button onclick="clearLog()" class="text-xs text-gray-400 hover:text-gray-600">清空</button>
+    </div>
+    <div id="logPanel" class="text-xs font-mono text-gray-500 max-h-48 overflow-y-auto space-y-1">
+      <p class="text-gray-400">等待操作...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ 合约配置 ============
+const CONTRACT_ADDR = '0xDbdb8318DeA980ae6423eE53c362C0e7629a3606';
+const RPC_URL = 'https://rpc.mainnet.chain.robinhood.com';
+const CHAIN_ID = '0x1237'; // Robinhood Chain mainnet
+const CHAIN_ID_DECIMAL = 4663;
+const EXPLORER_URL = 'https://robinhoodchain.blockscout.com';
+
+const ABI = [
+  {"inputs":[{"internalType":"address","name":"feeCollector_","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},
+  {"inputs":[],"name":"AlreadyLocked","type":"error"},
+  {"inputs":[],"name":"EthSendFailed","type":"error"},
+  {"inputs":[],"name":"NotLocked","type":"error"},
+  {"inputs":[],"name":"OnlyOwner","type":"error"},
+  {"inputs":[],"name":"Reentrancy","type":"error"},
+  {"inputs":[],"name":"TransferFailed","type":"error"},
+  {"inputs":[],"name":"ZeroAddress","type":"error"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"Deposited","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"oldCollector","type":"address"},{"indexed":true,"internalType":"address","name":"newCollector","type":"address"}],"name":"FeeCollectorUpdated","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amount0","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"amount1","type":"uint256"}],"name":"FeesCollected","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"},{"indexed":true,"internalType":"address","name":"to","type":"address"}],"name":"NFTRescued","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"}],"name":"OwnershipRenounced","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"previousOwner","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"Withdrawn","type":"event"},
+  {"inputs":[],"name":"NFT_POS_MGR","outputs":[{"internalType":"contract INonfungiblePositionManager","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"allLockedTokenIds","outputs":[{"internalType":"uint256[]","name":"","type":"uint256[]"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"collectFees","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256[]","name":"tokenIds","type":"uint256[]"}],"name":"collectFeesBatch","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"deposit","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[],"name":"feeCollector","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"isLocked","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"lockedCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"lockedTokenIds","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"},{"internalType":"bytes","name":"","type":"bytes"}],"name":"onERC721Received","outputs":[{"internalType":"bytes4","name":"","type":"bytes4"}],"stateMutability":"pure","type":"function"},
+  {"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"renounceOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"address","name":"to","type":"address"}],"name":"rescueERC20","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"to","type":"address"}],"name":"rescueETH","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"address","name":"to","type":"address"}],"name":"rescueNFT","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"},{"internalType":"address","name":"to","type":"address"}],"name":"rescueUntrackedNFT","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"newCollector","type":"address"}],"name":"setFeeCollector","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"uint256","name":"tokenId","type":"uint256"}],"name":"withdraw","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"stateMutability":"payable","type":"receive"}
+];
+
+// ============ 全局状态 ============
+let provider = null;
+let signer = null;
+let contract = null;
+let readContract = null;
+let userAddress = null;
+let isOwner = false;
+
+// 页面加载时初始化只读 provider，无需钱包即可读取合约
+(function initReadOnly() {
+  const rpcProvider = new ethers.JsonRpcProvider(RPC_URL);
+  readContract = new ethers.Contract(CONTRACT_ADDR, ABI, rpcProvider);
+  loadContractInfo();
+})();
+
+// ============ 钱包连接 ============
+async function connectWallet() {
+  if (!window.ethereum) {
+    alert('未检测到钱包，请安装 MetaMask 或其他 Web3 钱包');
+    addLog('错误: 未检测到 MetaMask');
+    return;
+  }
+  try {
+    addLog('正在连接钱包...');
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    // 检查并切换网络
+    const network = await provider.getNetwork();
+    if (Number(network.chainId) !== CHAIN_ID_DECIMAL) {
+      addLog('正在切换到 Robinhood Chain 主网...');
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: ethers.toQuantity(CHAIN_ID_DECIMAL) }]
+        });
+      } catch (switchErr) {
+        if (switchErr.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: ethers.toQuantity(CHAIN_ID_DECIMAL),
+              chainName: 'Robinhood Chain',
+              rpcUrls: [RPC_URL],
+              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+              blockExplorerUrls: [EXPLORER_URL]
+            }]
+          });
+          // 重新获取 provider/signer
+          provider = new ethers.BrowserProvider(window.ethereum);
+          signer = await provider.getSigner();
+        } else {
+          throw switchErr;
+        }
+      }
+    }
+
+    contract = new ethers.Contract(CONTRACT_ADDR, ABI, signer);
+    readContract = new ethers.Contract(CONTRACT_ADDR, ABI, provider);
+
+    // UI 更新
+    document.getElementById('connectBtn').textContent = '已连接';
+    document.getElementById('walletInfo').classList.remove('hidden');
+    document.getElementById('walletAddr').textContent = shortAddr(userAddress);
+
+    // 余额
+    const balance = await provider.getBalance(userAddress);
+    document.getElementById('balanceDisplay').textContent = ethers.formatEther(balance) + ' ETH';
+
+    // 检查是否是 owner
+    const owner = await readContract.owner();
+    document.getElementById('ownerAddr').textContent = owner;
+    isOwner = (owner.toLowerCase() === userAddress.toLowerCase());
+    if (isOwner) {
+      document.getElementById('ownerBadge').classList.remove('hidden');
+    }
+
+    addLog('钱包已连接: ' + userAddress);
+    addLog('Owner: ' + owner + (isOwner ? ' (当前用户)' : ''));
+
+    // 加载合约信息
+    await loadContractInfo();
+    await loadLockedNFTs();
+
+    // 监听账户/网络变化
+    window.ethereum.on('accountsChanged', () => location.reload());
+    window.ethereum.on('chainChanged', () => location.reload());
+
+  } catch (err) {
+    addLog('连接失败: ' + err.message);
+  }
+}
+
+// ============ Tab 切换 ============
+function switchTab(tab) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => {
+    el.classList.remove('tab-active');
+    el.classList.add('text-gray-500');
+  });
+  document.getElementById('tab-' + tab).classList.add('tab-active');
+  document.getElementById('tab-' + tab).classList.remove('text-gray-500');
+
+  document.getElementById('panel-user').classList.add('hidden');
+  document.getElementById('panel-owner').classList.add('hidden');
+  document.getElementById('panel-' + tab).classList.remove('hidden');
+
+  if (tab === 'owner' && !isOwner) {
+    addLog('提示: 当前钱包不是 Owner，写操作将会 revert');
+  }
+}
+
+// ============ 读取合约信息 ============
+async function loadContractInfo() {
+  try {
+    const [fc, count, ownerVal] = await Promise.all([
+      readContract.feeCollector(),
+      readContract.lockedCount(),
+      readContract.owner()
+    ]);
+    document.getElementById('feeCollectorAddr').textContent = fc;
+    document.getElementById('lockedCount').textContent = count.toString();
+    document.getElementById('ownerAddr').textContent = ownerVal;
+    addLog('合约信息加载完成: feeCollector=' + shortAddr(fc) + ', lockedCount=' + count);
+  } catch (err) {
+    addLog('加载合约信息失败: ' + err.message);
+  }
+}
+
+async function loadLockedNFTs() {
+  const container = document.getElementById('nftList');
+  container.innerHTML = '<p class="text-gray-400 text-sm">加载中...</p>';
+  try {
+    const ids = await readContract.allLockedTokenIds();
+    const n = ids.length;
+    if (n === 0) {
+      container.innerHTML = '<p class="text-gray-400 text-sm">暂无已锁定的 NFT</p>';
+      return;
+    }
+    let html = '';
+    for (let i = 0; i < n; i++) {
+      const tokenId = ids[i].toString();
+      html += `<div class="nft-item">
+        <div>
+          <span class="text-sm font-medium text-gray-900">Token #${tokenId}</span>
+          <span class="badge badge-green ml-2">已锁定</span>
+        </div>
+        <a href="${EXPLORER_URL}/token/${CONTRACT_ADDR}/instance/${tokenId}" target="_blank" class="text-xs text-indigo-500 hover:underline">查看详情</a>
+      </div>`;
+    }
+    container.innerHTML = html;
+    addLog('已加载 ' + n + ' 个锁定的 NFT');
+  } catch (err) {
+    container.innerHTML = '<p class="text-red-500 text-sm">加载失败: ' + err.message + '</p>';
+    addLog('加载 NFT 列表失败: ' + err.message);
+  }
+}
+
+// ============ 写操作 ============
+async function depositNFT() {
+  const tokenId = document.getElementById('depositTokenId').value.trim();
+  if (!tokenId) return showStatus('depositStatus', '请输入 Token ID', 'error');
+  const id = parseTokenId(tokenId);
+  if (id === null) return showStatus('depositStatus', 'Token ID 格式无效，请输入数字', 'error');
+  await writeOp('deposit', [id], 'depositStatus', '存入 NFT #' + tokenId);
+}
+
+async function withdrawNFT() {
+  const tokenId = document.getElementById('withdrawTokenId').value.trim();
+  if (!tokenId) return showStatus('withdrawStatus', '请输入 Token ID', 'error');
+  const id = parseTokenId(tokenId);
+  if (id === null) return showStatus('withdrawStatus', 'Token ID 格式无效，请输入数字', 'error');
+  await writeOp('withdraw', [id], 'withdrawStatus', '提取 NFT #' + tokenId);
+}
+
+async function collectFees() {
+  const tokenId = document.getElementById('collectTokenId').value.trim();
+  if (!tokenId) return showStatus('collectStatus', '请输入 Token ID', 'error');
+  const id = parseTokenId(tokenId);
+  if (id === null) return showStatus('collectStatus', 'Token ID 格式无效，请输入数字', 'error');
+  await writeOp('collectFees', [id], 'collectStatus', '收取 NFT #' + tokenId + ' 手续费');
+}
+
+async function collectFeesBatch() {
+  const raw = document.getElementById('collectBatchIds').value.trim();
+  if (!raw) return showStatus('collectStatus', '请输入 Token IDs', 'error');
+  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+  const ids = [];
+  for (const p of parts) {
+    const id = parseTokenId(p);
+    if (id === null) return showStatus('collectStatus', 'Token ID "' + p + '" 格式无效', 'error');
+    ids.push(id);
+  }
+  if (ids.length === 0) return showStatus('collectStatus', '请输入至少一个 Token ID', 'error');
+  await writeOp('collectFeesBatch', [ids], 'collectStatus', '批量收取 ' + ids.length + ' 个 NFT 手续费');
+}
+
+async function setFeeCollector() {
+  const addr = document.getElementById('newFeeCollector').value.trim();
+  if (!addr) return showStatus('setFeeCollectorStatus', '请输入新地址', 'error');
+  await writeOp('setFeeCollector', [addr], 'setFeeCollectorStatus', '修改 feeCollector 为 ' + shortAddr(addr));
+}
+
+async function transferOwnership() {
+  const addr = document.getElementById('newOwner').value.trim();
+  if (!addr) return showStatus('transferOwnerStatus', '请输入新 Owner 地址', 'error');
+  if (!confirm('确认将 Ownership 转移到 ' + addr + ' ？')) return;
+  await writeOp('transferOwnership', [addr], 'transferOwnerStatus', '转移 Ownership 到 ' + shortAddr(addr));
+}
+
+async function renounceOwnership() {
+  if (!confirm('确定要放弃 Ownership 吗？此操作不可逆！')) return;
+  if (!confirm('再次确认：放弃后合约将无 Owner，所有 onlyOwner 操作将永久不可用！')) return;
+  await writeOp('renounceOwnership', [], 'renounceStatus', '放弃 Ownership');
+}
+
+async function rescueERC20() {
+  const token = document.getElementById('rescueERC20Token').value.trim();
+  const to = document.getElementById('rescueERC20To').value.trim();
+  if (!token || !to) return showStatus('rescueERC20Status', '请填写完整', 'error');
+  await writeOp('rescueERC20', [token, to], 'rescueERC20Status', '救援 ERC20 ' + shortAddr(token));
+}
+
+async function rescueETH() {
+  const to = document.getElementById('rescueETHTo').value.trim();
+  if (!to) return showStatus('rescueETHStatus', '请输入接收地址', 'error');
+  await writeOp('rescueETH', [to], 'rescueETHStatus', '救援 ETH 到 ' + shortAddr(to));
+}
+
+async function rescueNFT() {
+  const id = document.getElementById('rescueNFTId').value.trim();
+  const to = document.getElementById('rescueNFTTo').value.trim();
+  if (!id || !to) return showStatus('rescueNFTStatus', '请填写完整', 'error');
+  const tokenId = parseTokenId(id);
+  if (tokenId === null) return showStatus('rescueNFTStatus', 'Token ID 格式无效', 'error');
+  await writeOp('rescueNFT', [tokenId, to], 'rescueNFTStatus', '救援 NFT #' + id);
+}
+
+async function rescueUntrackedNFT() {
+  const id = document.getElementById('rescueUntrackedId').value.trim();
+  const to = document.getElementById('rescueUntrackedTo').value.trim();
+  if (!id || !to) return showStatus('rescueUntrackedStatus', '请填写完整', 'error');
+  const tokenId = parseTokenId(id);
+  if (tokenId === null) return showStatus('rescueUntrackedStatus', 'Token ID 格式无效', 'error');
+  await writeOp('rescueUntrackedNFT', [tokenId, to], 'rescueUntrackedStatus', '救援未跟踪 NFT #' + id);
+}
+
+// ============ 通用写操作 ============
+async function writeOp(method, args, statusEl, desc) {
+  if (!signer) {
+    showStatus(statusEl, '请先连接钱包', 'error');
+    return;
+  }
+  const el = document.getElementById(statusEl);
+  try {
+    el.innerHTML = '<div class="status-bar status-info"><span class="spinner"></span> 正在发送交易: ' + desc + '</div>';
+    addLog('发送交易: ' + desc);
+    const tx = await contract[method](...args);
+    el.innerHTML = '<div class="status-bar status-info">交易已提交，等待确认... <a href="' + EXPLORER_URL + '/tx/' + tx.hash + '" target="_blank" class="underline">查看</a></div>';
+    addLog('TX: ' + tx.hash);
+    const receipt = await tx.wait();
+    el.innerHTML = '<div class="status-bar status-success">交易成功! Gas: ' + receipt.gasUsed.toString() + ' <a href="' + EXPLORER_URL + '/tx/' + receipt.hash + '" target="_blank" class="underline">查看</a></div>';
+    addLog('交易已确认, block=' + receipt.blockNumber);
+    // 刷新信息
+    await loadContractInfo();
+  } catch (err) {
+    const msg = err.reason || err.message || '未知错误';
+    el.innerHTML = '<div class="status-bar status-error">交易失败: ' + msg + '</div>';
+    addLog('交易失败: ' + msg);
+  }
+}
+
+// ============ 工具函数 ============
+function shortAddr(addr) {
+  if (!addr) return '';
+  return addr.slice(0, 6) + '...' + addr.slice(-4);
+}
+
+function parseTokenId(raw) {
+  try {
+    return BigInt(raw.trim());
+  } catch {
+    return null;
+  }
+}
+
+function showStatus(elId, msg, type) {
+  const el = document.getElementById(elId);
+  el.innerHTML = '<div class="status-bar status-' + type + '">' + msg + '</div>';
+}
+
+function addLog(msg) {
+  const panel = document.getElementById('logPanel');
+  const time = new Date().toLocaleTimeString('zh-CN');
+  const line = document.createElement('div');
+  line.textContent = '[' + time + '] ' + msg;
+  panel.appendChild(line);
+  panel.scrollTop = panel.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('logPanel').innerHTML = '<p class="text-gray-400">日志已清空</p>';
+}
+</script>
+</body>
+</html>
