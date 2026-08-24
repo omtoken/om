@@ -166,7 +166,7 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
     </div>
     <div class="nav-group">
       <div class="nav-group-title">财务操作</div>
-      <div class="nav-item" data-section="fees"><span class="icon">💰</span>平台手续费</div>
+      <div class="nav-item" data-section="fees"><span class="icon">💰</span>手续费管理</div>
     </div>
     <div class="nav-group">
       <div class="nav-group-title">代币工厂</div>
@@ -197,10 +197,11 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
 
   <!-- ===== DASHBOARD ===== -->
   <div class="section active" id="sec-dashboard">
-    <p class="section-desc">连接钱包后，系统将自动检测当前地址是否为合约 Owner。所有操作均需 Owner 权限。</p>
+    <p class="section-desc">这里是总览页面，一眼看清合约当前的状态。连接钱包后，系统自动检测你是不是管理员（Owner）。</p>
     <div class="card-grid cols-2">
       <div class="card">
         <div class="card-header"><div class="card-icon gold">◈</div><div><div class="card-title">合约状态</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">一眼看清 Launchpad 合约的核心信息：谁是管理员、钱打到哪、工厂地址、还有多少手续费没领。</p>
         <div class="read-panel" id="dashStatus">
           <div class="read-row"><span class="read-label">Launchpad Owner</span><span class="read-value" id="rd-owner">-</span></div>
           <div class="read-row"><span class="read-label">平台接收地址</span><span class="read-value" id="rd-platform">-</span></div>
@@ -211,6 +212,7 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon blue">🏭</div><div><div class="card-title">工厂状态</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">一眼看清代币工厂的状态：谁是管理员、是否公开、已经发了多少个币。</p>
         <div class="read-panel" id="dashFactory">
           <div class="read-row"><span class="read-label">Factory Owner</span><span class="read-value" id="rd-factoryOwner">-</span></div>
           <div class="read-row"><span class="read-label">公开 Launch</span><span class="read-value" id="rd-publicLaunch">-</span></div>
@@ -222,15 +224,17 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
 
   <!-- ===== OWNERSHIP ===== -->
   <div class="section" id="sec-ownership">
-    <p class="section-desc">转移合约所有权。转移后当前地址将失去所有 Owner 权限，请谨慎操作。Launchpad 和 Factory 的所有权需要分别转移。</p>
+    <p class="section-desc">把合约的"管理员钥匙"交给别人。一旦转出去，你就不是管理员了，所有管理功能都用不了。Launchpad 和 Factory 是两个独立的合约，需要分别转。</p>
     <div class="card-grid cols-2">
       <div class="card">
         <div class="card-header"><div class="card-icon gold">🔑</div><div><div class="card-title">转移 Launchpad 所有权</div><div class="card-subtitle">ShibLaunchpad.transferOwnership</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">把 Launchpad 合约的管理员权限转给别人。转走后你就管不了黑名单、手续费这些了。</p>
         <div class="field"><label class="field-label">新 Owner 地址</label><input class="input" id="lp-newOwner" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-red" onclick="lpTransferOwner()">确认转移</button></div>
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon gold">🔑</div><div><div class="card-title">转移 Factory 所有权</div><div class="card-subtitle">TokenFactory.transferOwnership</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">把代币工厂的管理员权限转给别人。转走后你就管不了白名单、紧急提取这些了。</p>
         <div class="field"><label class="field-label">新 Owner 地址</label><input class="input" id="fac-newOwner" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-red" onclick="facTransferOwner()">确认转移</button></div>
       </div>
@@ -239,20 +243,23 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
 
   <!-- ===== ROLES ===== -->
   <div class="section" id="sec-roles">
-    <p class="section-desc">配置平台接收地址、Factory 合约地址、以及代币创建者地址。</p>
+    <p class="section-desc">改一些关键配置：钱打到哪里、用哪个工厂发币、某个代币的创建者是谁。</p>
     <div class="card-grid cols-2">
       <div class="card">
         <div class="card-header"><div class="card-icon blue">💼</div><div><div class="card-title">设置平台接收地址</div><div class="card-subtitle">ShibLaunchpad.setPlatformRecipient</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">改一下平台收钱用的钱包地址。30% 的手续费、黑名单用户的分红，都会打到这个地址。</p>
         <div class="field"><label class="field-label">新接收地址</label><input class="input" id="lp-newRecipient" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-gold" onclick="lpSetPlatformRecipient()">更新</button></div>
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon blue">🏭</div><div><div class="card-title">设置 Factory 地址</div><div class="card-subtitle">ShibLaunchpad.setFactory</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">告诉 Launchpad 用哪个工厂合约来发币。一般部署时已经设好了，除非你换了新的工厂合约才需要改。</p>
         <div class="field"><label class="field-label">新 Factory 地址</label><input class="input" id="lp-newFactory" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-gold" onclick="lpSetFactory()">更新</button></div>
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon purple">👤</div><div><div class="card-title">设置代币创建者</div><div class="card-subtitle">ShibLaunchpad.setCreator</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">改某个代币的"创建者"。创建者能收到这个代币 100% 的代币手续费，还能领取发射失败的 ETH 退款。</p>
         <div class="field"><label class="field-label">代币地址</label><input class="input" id="lp-setCreatorToken" placeholder="代币合约地址 0x..."></div>
         <div class="field"><label class="field-label">新创建者地址</label><input class="input" id="lp-setCreatorAddr" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-gold" onclick="lpSetCreator()">更新</button></div>
@@ -262,10 +269,11 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
 
   <!-- ===== BLACKLIST ===== -->
   <div class="section" id="sec-blacklist">
-    <p class="section-desc">管理分红黑名单。被加入黑名单的地址仍可正常转账代币，但无法领取分红，其未领取分红将被回收至平台接收地址。</p>
+    <p class="section-desc">黑名单只管分红，不管转账。被拉黑的人还能正常买卖代币，但领不到分红，而且他们那部分没领的分红会被回收给你（平台钱包）。</p>
     <div class="card-grid cols-2">
       <div class="card">
         <div class="card-header"><div class="card-icon red">🚫</div><div><div class="card-title">单个地址操作</div><div class="card-subtitle">ShibLaunchpad.setDividendBlacklist</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">把一个地址加入或移出黑名单。加入后他就领不到分红了，没领的分红会被回收给你。</p>
         <div class="field"><label class="field-label">地址</label><input class="input" id="bl-address" placeholder="0x..."></div>
         <div class="field"><label class="field-label">操作</label>
           <select class="select" id="bl-action"><option value="true">加入黑名单</option><option value="false">移出黑名单</option></select>
@@ -274,6 +282,7 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon red">📋</div><div><div class="card-title">批量操作</div><div class="card-subtitle">ShibLaunchpad.setDividendBlacklistBatch · 最多500个</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">一次性处理多个地址，每行填一个地址，最多 500 个。适合批量拉黑或批量解封。</p>
         <div class="field"><label class="field-label">地址列表（每行一个）</label><textarea class="input" id="bl-batch" rows="5" placeholder="0xaaa...&#10;0xbbb...&#10;0xccc..." style="resize:vertical;font-family:var(--font-mono);font-size:12px;line-height:1.6"></textarea></div>
         <div class="field"><label class="field-label">操作</label>
           <select class="select" id="bl-batch-action"><option value="true">批量加入黑名单</option><option value="false">批量移出黑名单</option></select>
@@ -282,12 +291,14 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon purple">🔗</div><div><div class="card-title">推送黑名单到 Tracker</div><div class="card-subtitle">ShibLaunchpad.pushBlacklistToTracker · <span class="tag tag-warn">静默调用</span></div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">把黑名单状态同步到某个代币的分红追踪器。正常情况下系统会自动同步，这个只在追踪器数据不一致时才需要用。</p>
         <div class="field"><label class="field-label">代币地址</label><input class="input" id="bl-pushToken" placeholder="代币合约地址 0x..."></div>
         <div class="field"><label class="field-label">用户地址</label><input class="input" id="bl-pushAddr" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-blue" onclick="blPushToTracker()">推送</button></div>
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon green">🔍</div><div><div class="card-title">查询黑名单状态</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">查一下某个地址是不是在黑名单里。只读操作，不花钱，不发消息。</p>
         <div class="field"><label class="field-label">查询地址</label><input class="input" id="bl-queryAddr" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-outline" onclick="blQuery()">查询</button></div>
         <div class="read-panel" id="bl-queryResult" style="margin-top:14px;display:none">
@@ -299,24 +310,33 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
 
   <!-- ===== FEES ===== -->
   <div class="section" id="sec-fees">
-    <p class="section-desc">领取累积的平台手续费。手续费以 ETH 形式发送到平台接收地址。</p>
+    <p class="section-desc">手续费相关操作。池子里交易产生的手续费，30% 归平台，70% 用来回购 SHIB 分红。这里可以领平台那部分，也可以一键处理所有手续费。</p>
     <div class="card-grid cols-2">
       <div class="card">
         <div class="card-header"><div class="card-icon gold">💰</div><div><div class="card-title">领取平台手续费</div><div class="card-subtitle">ShibLaunchpad.claimPlatformFee · <span class="tag tag-safe">任何人可调用</span></div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">把合约里攒着的平台手续费 ETH 提到你的平台钱包。点一下就能看到当前有多少可以领。</p>
         <div class="read-panel">
           <div class="read-row"><span class="read-label">待领取 ETH</span><span class="read-value" id="fee-pending">-</span></div>
         </div>
         <div class="btn-row"><button class="btn btn-gold" onclick="claimPlatformFee()">领取</button></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-icon green">⚡</div><div><div class="card-title">一键处理所有手续费</div><div class="card-subtitle">ShibLaunchpad.processAll · <span class="tag tag-safe">任何人可调用</span></div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">一步搞定三件事：收取池子手续费 → 用 ETH 回购 SHIB（1/7 销毁，6/7 分红）→ 把代币手续费转给创建者。填代币地址就行。</p>
+        <div class="field"><label class="field-label">代币地址</label><input class="input" id="proc-token" placeholder="代币合约地址 0x..."></div>
+        <div class="field"><label class="field-label">最小回购数量（可选）</label><input class="input" id="proc-minOut" placeholder="0 = 不限"></div>
+        <div class="btn-row"><button class="btn btn-gold" onclick="processAll()">一键处理</button></div>
       </div>
     </div>
   </div>
 
   <!-- ===== FACTORY ===== -->
   <div class="section" id="sec-factory">
-    <p class="section-desc">管理代币工厂的发射权限和白名单。</p>
+    <p class="section-desc">管理谁能通过你的平台发币。可以设置成"谁都能发"，也可以设置成"只有白名单里的人才能发"。</p>
     <div class="card-grid cols-2">
       <div class="card">
         <div class="card-header"><div class="card-icon blue">🔓</div><div><div class="card-title">公开 Launch 开关</div><div class="card-subtitle">TokenFactory.setPublicLaunchEnabled</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">打开的话，任何人都能通过你的平台发币。关掉的话，只有白名单里的人才能发。建议关掉，避免垃圾币。</p>
         <div class="field"><label class="field-label">状态</label>
           <select class="select" id="fac-publicLaunch"><option value="true">开启（任何人可发射）</option><option value="false">关闭（仅白名单可发射）</option></select>
         </div>
@@ -324,6 +344,7 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon purple">👤</div><div><div class="card-title">单个白名单操作</div><div class="card-subtitle">TokenFactory.setLaunchWhitelist</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">把某个地址加入或移出白名单。在白名单里的人才能通过你的平台发币。</p>
         <div class="field"><label class="field-label">地址</label><input class="input" id="fac-wlAddr" placeholder="0x..."></div>
         <div class="field"><label class="field-label">操作</label>
           <select class="select" id="fac-wlAction"><option value="true">加入白名单</option><option value="false">移出白名单</option></select>
@@ -332,6 +353,7 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon purple">📋</div><div><div class="card-title">批量白名单操作</div><div class="card-subtitle">TokenFactory.setLaunchWhitelistBatch</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">一次性处理多个白名单地址，每行填一个。适合批量添加合作伙伴或批量移除权限。</p>
         <div class="field"><label class="field-label">地址列表（每行一个）</label><textarea class="input" id="fac-wlBatch" rows="5" placeholder="0xaaa...&#10;0xbbb..." style="resize:vertical;font-family:var(--font-mono);font-size:12px;line-height:1.6"></textarea></div>
         <div class="field"><label class="field-label">操作</label>
           <select class="select" id="fac-wlBatchAction"><option value="true">批量加入白名单</option><option value="false">批量移出白名单</option></select>
@@ -340,6 +362,7 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon green">🔍</div><div><div class="card-title">查询白名单状态</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">查一下某个地址是不是在白名单里，能不能发币。只读操作，不花钱。</p>
         <div class="field"><label class="field-label">查询地址</label><input class="input" id="fac-wlQuery" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-outline" onclick="facQueryWhitelist()">查询</button></div>
         <div class="read-panel" id="fac-wlResult" style="margin-top:14px;display:none">
@@ -352,10 +375,11 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
 
   <!-- ===== RESCUE ===== -->
   <div class="section" id="sec-rescue">
-    <p class="section-desc">救援误转到 Launchpad 合约的 ERC20 代币。仅限未发射的代币（已发射的代币池子已创建，无法救援）。</p>
+    <p class="section-desc">如果有人不小心把代币直接转到 Launchpad 合约里了，用这个功能可以救出来。注意：只能救还没发币的代币，已经发币的代币池子已经建好了，救不了。</p>
     <div class="card-grid cols-2">
       <div class="card">
         <div class="card-header"><div class="card-icon green">🛟</div><div><div class="card-title">救援 ERC20 代币</div><div class="card-subtitle">ShibLaunchpad.rescueERC20</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">把误转到 Launchpad 合约的代币救出来，转到你指定的地址。填代币合约地址和接收地址就行。</p>
         <div class="field"><label class="field-label">代币合约地址</label><input class="input" id="rescue-token" placeholder="0x..."></div>
         <div class="field"><label class="field-label">接收地址</label><input class="input" id="rescue-to" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-red" onclick="rescueERC20()">执行救援</button></div>
@@ -365,15 +389,17 @@ body{font-family:var(--font-body);background:var(--bg-deep);color:var(--text);mi
 
   <!-- ===== WITHDRAW ===== -->
   <div class="section" id="sec-withdraw">
-    <p class="section-desc">从 Factory 合约紧急提取 ETH 或代币。<span class="tag tag-danger">高危操作</span></p>
+    <p class="section-desc">从代币工厂合约里把 ETH 或代币提出来。正常情况下 Factory 里不应该有钱，这是出问题了才用的。 <span class="tag tag-danger">高危操作</span></p>
     <div class="card-grid cols-2">
       <div class="card">
         <div class="card-header"><div class="card-icon red">⚠️</div><div><div class="card-title">提取 Factory 全部 ETH</div><div class="card-subtitle">TokenFactory.withdrawAllETH</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">把 Factory 合约里所有的 ETH 都提走。填一个接收地址就行。</p>
         <div class="field"><label class="field-label">接收地址</label><input class="input" id="wd-eth-to" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-red" onclick="facWithdrawETH()">提取 ETH</button></div>
       </div>
       <div class="card">
         <div class="card-header"><div class="card-icon red">⚠️</div><div><div class="card-title">提取 Factory 全部代币</div><div class="card-subtitle">TokenFactory.withdrawAllToken</div></div></div>
+        <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">把 Factory 合约里某个代币的全部余额都提走。填代币地址和接收地址。</p>
         <div class="field"><label class="field-label">代币合约地址</label><input class="input" id="wd-token-addr" placeholder="0x..."></div>
         <div class="field"><label class="field-label">接收地址</label><input class="input" id="wd-token-to" placeholder="0x..."></div>
         <div class="btn-row"><button class="btn btn-red" onclick="facWithdrawToken()">提取代币</button></div>
@@ -409,6 +435,7 @@ const LP_ABI = [
   'function pushBlacklistToTracker(address,address)',
   'function rescueERC20(address,address)',
   'function claimPlatformFee() returns (uint256)',
+  'function processAll(address,uint256) returns (uint256,uint256)',
   'function pendingEth(address) view returns (uint256)',
   'function creatorOf(address) view returns (address)'
 ];
@@ -447,7 +474,7 @@ document.querySelectorAll('.nav-item').forEach(el => {
     const titles = {
       dashboard:'控制<span>面板</span>',ownership:'所有权<span>转移</span>',
       roles:'角色<span>配置</span>',blacklist:'分红<span>黑名单</span>',
-      fees:'平台<span>手续费</span>',factory:'工厂<span>管理</span>',
+      fees:'手续费<span>管理</span>',factory:'工厂<span>管理</span>',
       rescue:'ERC20 <span>救援</span>',withdraw:'紧急<span>提取</span>'
     };
     document.getElementById('pageTitle').innerHTML = titles[sec] || '';
@@ -669,6 +696,14 @@ async function blQuery() {
 async function claimPlatformFee() {
   if (!checkLpOwner()) return;
   await sendTx(lpContract.claimPlatformFee(), '平台手续费已领取');
+  await refreshDashboard();
+}
+
+async function processAll() {
+  const token = val('proc-token');
+  if (!token) return toast('请输入代币地址', 'error');
+  const minOut = val('proc-minOut') || '0';
+  await sendTx(lpContract.processAll(token, minOut), '手续费已处理完成');
   await refreshDashboard();
 }
 
