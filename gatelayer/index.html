@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WoofSwap 管理面板</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0c0e;
+  --bg2: #111216;
+  --bg3: #181a1f;
+  --border: #25272d;
+  --border2: #33363e;
+  --text: #d4d5da;
+  --text2: #8b8d96;
+  --text3: #5a5c64;
+  --accent: #e8a63b;
+  --accent2: #d4912a;
+  --green: #3ecf6a;
+  --red: #ef4444;
+  --blue: #5b9cf6;
+  --purple: #a78bfa;
+  --font: 'Noto Sans SC', 'JetBrains Mono', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+#app { max-width: 860px; margin: 0 auto; padding: 0 20px 60px; }
+header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px 0; border-bottom: 1px solid var(--border);
+}
+.logo {
+  font-family: var(--mono); font-size: 18px; font-weight: 700;
+  color: var(--accent); letter-spacing: 2px;
+}
+.logo span { color: var(--text3); font-weight: 400; }
+#wallet-area { display: flex; align-items: center; gap: 10px; }
+.btn {
+  font-family: var(--font); font-size: 13px; font-weight: 500;
+  border: 1px solid var(--border2); border-radius: 6px;
+  padding: 8px 16px; cursor: pointer; transition: all .15s;
+  background: var(--bg3); color: var(--text);
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-accent {
+  background: var(--accent); color: #000; border-color: var(--accent);
+  font-weight: 600;
+}
+.btn-accent:hover { background: var(--accent2); border-color: var(--accent2); color: #000; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-green { background: var(--green); color: #000; border-color: var(--green); font-weight: 600; }
+.btn-green:hover { opacity: .85; color: #000; }
+.btn-red { background: transparent; color: var(--red); border-color: var(--red); }
+.btn-red:hover { background: var(--red); color: #fff; }
+.addr {
+  font-family: var(--mono); font-size: 12px; color: var(--text2);
+  background: var(--bg3); padding: 6px 10px; border-radius: 4px;
+  border: 1px solid var(--border);
+}
+nav#tabs {
+  display: flex; gap: 2px; margin-top: 20px;
+  border-bottom: 1px solid var(--border); padding-bottom: 0;
+}
+.tab {
+  font-family: var(--font); font-size: 13px; font-weight: 500;
+  padding: 10px 20px; cursor: pointer; border: none;
+  background: transparent; color: var(--text3);
+  border-bottom: 2px solid transparent; transition: all .15s;
+}
+.tab:hover { color: var(--text2); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+main { padding-top: 24px; }
+.section {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 20px; margin-bottom: 16px;
+}
+.section-title {
+  font-size: 14px; font-weight: 600; color: var(--accent);
+  margin-bottom: 4px; display: flex; align-items: center; gap: 8px;
+}
+.section-desc {
+  font-size: 12px; color: var(--text3); margin-bottom: 16px;
+  line-height: 1.7; padding: 8px 12px; background: var(--bg);
+  border-radius: 4px; border-left: 3px solid var(--accent);
+}
+.field { margin-bottom: 14px; }
+.field label {
+  display: block; font-size: 12px; color: var(--text2);
+  margin-bottom: 4px; font-weight: 500;
+}
+.field .hint { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.field input, .field select {
+  width: 100%; background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 5px; padding: 9px 12px; color: var(--text);
+  font-family: var(--mono); font-size: 13px; transition: border-color .15s;
+}
+.field input:focus, .field select:focus {
+  outline: none; border-color: var(--accent);
+}
+.field input::placeholder { color: var(--text3); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.status-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  margin-bottom: 16px;
+}
+.status-item {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 12px;
+}
+.status-label { font-size: 11px; color: var(--text3); margin-bottom: 4px; }
+.status-value {
+  font-family: var(--mono); font-size: 12px; color: var(--blue);
+  word-break: break-all;
+}
+.status-value.green { color: var(--green); }
+.status-value.accent { color: var(--accent); }
+.badge {
+  display: inline-block; font-size: 10px; font-weight: 600;
+  padding: 2px 8px; border-radius: 3px; text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.badge-on { background: rgba(62,207,106,.15); color: var(--green); }
+.badge-off { background: rgba(239,68,68,.15); color: var(--red); }
+.divider { border-top: 1px solid var(--border); margin: 16px 0; }
+.action-row { display: flex; gap: 8px; align-items: flex-end; margin-top: 14px; }
+#toast-container {
+  position: fixed; bottom: 20px; right: 20px; z-index: 999;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 12px 16px; font-size: 13px;
+  max-width: 380px; animation: slideIn .25s ease;
+  box-shadow: 0 4px 20px rgba(0,0,0,.5);
+}
+.toast.success { border-left: 3px solid var(--green); }
+.toast.error { border-left: 3px solid var(--red); }
+.toast.info { border-left: 3px solid var(--blue); }
+.toast a { color: var(--blue); text-decoration: none; word-break: break-all; }
+.toast a:hover { text-decoration: underline; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+.loading { color: var(--text3); font-size: 13px; padding: 40px 0; text-align: center; }
+.warn-box {
+  background: rgba(232,166,59,.08); border: 1px solid rgba(232,166,59,.25);
+  border-radius: 6px; padding: 12px; font-size: 12px; color: var(--accent);
+  margin-bottom: 16px; line-height: 1.7;
+}
+@media (max-width: 600px) {
+  .row2, .status-grid { grid-template-columns: 1fr; }
+  .tab { padding: 8px 12px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="header">
+    <div class="logo">WOOF<span>ADMIN</span></div>
+    <div id="wallet-area"></div>
+  </header>
+  <nav id="tabs"></nav>
+  <main id="content"></main>
+  <div id="toast-container"></div>
+</div>
+<script>
+// ═══════════ CONFIG ═══════════
+const CFG = {
+  rpc: 'https://gatelayer-mainnet.gatenode.cc',
+  chainId: '0x2760', // 10088
+  chainName: 'Gate Layer Mainnet',
+  currency: 'GT',
+  explorer: 'https://www.gatescan.org/gatelayer',
+  contracts: {
+    FeeDistributor: '0x51AE2DE744c6DcDB38Db1893FC468E65D9e9C4FF',
+    TokenFactory: '0x5bC1A3691E68173e9C3E347173200BAe5e5641a6',
+  }
+};
+
+const ABI = {
+  FeeDistributor: [
+    'function owner() view returns (address)',
+    'function platformRecipient() view returns (address)',
+    'function creatorRecipient(address) view returns (address)',
+    'function creatorInitialized(address) view returns (bool)',
+    'function authorizedCollectors(address) view returns (bool)',
+    'function setPlatformRecipient(address) external',
+    'function setCreatorRecipient(address token, address recipient) external',
+    'function setAuthorizedCollector(address collector, bool authorized) external',
+    'function transferOwnership(address newOwner) external',
+    'function rescueToken(address token, address to, uint256 amount) external',
+    'function rescueETH(address to, uint256 amount) external',
+  ],
+  TokenFactory: [
+    'function owner() view returns (address)',
+    'function publicLaunchEnabled() view returns (bool)',
+    'function launchWhitelist(address) view returns (bool)',
+    'function canAddressLaunch(address) view returns (bool)',
+    'function totalLaunches() view returns (uint256)',
+    'function setPublicLaunchEnabled(bool) external',
+    'function setLaunchWhitelist(address account, bool allowed) external',
+    'function setLaunchWhitelistBatch(address[] accounts, bool allowed) external',
+    'function transferOwnership(address newOwner) external',
+    'function withdrawAllETH(address payable recipient) external',
+    'function withdrawAllToken(address token, address recipient) external',
+  ]
+};
+
+let provider = null, signer = null, userAddr = null;
+let cFee = null, cFactory = null;
+let currentTab = 'status';
+
+// ═══════════ WALLET ═══════════
+async function connectWallet() {
+  if (!window.ethereum) { toast('请安装 MetaMask', 'error'); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner();
+    userAddr = await signer.getAddress();
+
+    const net = await provider.getNetwork();
+    if (net.chainId !== 10088n) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: CFG.chainId }]
+        });
+      } catch (e) {
+        if (e.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: CFG.chainId, chainName: CFG.chainName,
+              nativeCurrency: { name: 'GT', symbol: 'GT', decimals: 18 },
+              rpcUrls: [CFG.rpc], blockExplorerUrls: [CFG.explorer]
+            }]
+          });
+        }
+      }
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      userAddr = await signer.getAddress();
+    }
+
+    cFee = new ethers.Contract(CFG.contracts.FeeDistributor, ABI.FeeDistributor, signer);
+    cFactory = new ethers.Contract(CFG.contracts.TokenFactory, ABI.TokenFactory, signer);
+
+    renderHeader();
+    renderTab();
+    toast('钱包已连接', 'success');
+  } catch (e) { toast('连接失败: ' + (e.message || e), 'error'); }
+}
+
+window.ethereum?.on('accountsChanged', () => { location.reload(); });
+window.ethereum?.on('chainChanged', () => { location.reload(); });
+
+// ═══════════ HELPERS ═══════════
+function shortAddr(a) { return a ? a.slice(0,6) + '...' + a.slice(-4) : '—'; }
+function txLink(hash) { return CFG.explorer + '/tx/' + hash; }
+
+async function runTx(label, fn) {
+  try {
+    toast(label + ' 提交中...', 'info');
+    const tx = await fn();
+    toast(label + ' 等待确认...', 'info');
+    const r = await tx.wait();
+    toast(label + ' 成功! ', 'success', txLink(r.hash));
+    setTimeout(() => renderTab(), 1000);
+    return r;
+  } catch (e) {
+    const msg = e.reason || e.data?.message || e.message || '未知错误';
+    toast(label + ' 失败: ' + msg, 'error');
+  }
+}
+
+function toast(msg, type, link) {
+  const c = document.getElementById('toast-container');
+  const d = document.createElement('div');
+  d.className = 'toast ' + (type || 'info');
+  d.innerHTML = link ? msg + ' <a href="'+link+'" target="_blank">查看交易</a>' : msg;
+  c.appendChild(d);
+  setTimeout(() => { d.style.opacity = '0'; setTimeout(() => d.remove(), 300); }, 5000);
+}
+
+// ═══════════ RENDER ═══════════
+function renderHeader() {
+  const wa = document.getElementById('wallet-area');
+  if (userAddr) {
+    wa.innerHTML = '<span class="addr">' + shortAddr(userAddr) + '</span>';
+  } else {
+    wa.innerHTML = '<button class="btn btn-accent" onclick="connectWallet()">连接钱包</button>';
+  }
+}
+
+function renderTabs() {
+  const tabs = [
+    { id: 'status', label: '合约状态' },
+    { id: 'fee', label: 'FeeDistributor' },
+    { id: 'factory', label: 'TokenFactory' },
+  ];
+  const nav = document.getElementById('tabs');
+  nav.innerHTML = tabs.map(t =>
+    '<button class="tab' + (currentTab === t.id ? ' active' : '') +
+    '" onclick="switchTab(\'' + t.id + '\')">' + t.label + '</button>'
+  ).join('');
+}
+
+function switchTab(id) { currentTab = id; renderTabs(); renderTab(); }
+
+async function renderTab() {
+  const c = document.getElementById('content');
+  if (!signer) {
+    c.innerHTML = '<div class="loading">请先连接钱包</div>';
+    return;
+  }
+  if (currentTab === 'status') await renderStatus(c);
+  else if (currentTab === 'fee') await renderFee(c);
+  else if (currentTab === 'factory') await renderFactory(c);
+}
+
+// ═══════════ TAB: STATUS ═══════════
+async function renderStatus(c) {
+  c.innerHTML = '<div class="loading">加载中...</div>';
+  try {
+    const [fdOwner, fdPlat, tfOwner, pubEnabled, totalL] = await Promise.all([
+      cFee.owner(),
+      cFee.platformRecipient(),
+      cFactory.owner(),
+      cFactory.publicLaunchEnabled(),
+      cFactory.totalLaunches(),
+    ]);
+    const isOwner = userAddr.toLowerCase() === fdOwner.toLowerCase() ||
+                    userAddr.toLowerCase() === tfOwner.toLowerCase();
+
+    c.innerHTML = `
+      ${!isOwner ? '<div class="warn-box">⚠ 当前连接地址不是任一合约的 owner，写入操作会失败。请切换到 owner 地址。</div>' : ''}
+      <div class="section">
+        <div class="section-title">FeeDistributor <span style="font-size:11px;color:var(--text3);font-weight:400">手续费分配合约</span></div>
+        <div class="status-grid" style="margin-top:12px">
+          <div class="status-item">
+            <div class="status-label">Owner (管理者)</div>
+            <div class="status-value">${fdOwner}</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">Platform Recipient (平台收款地址)</div>
+            <div class="status-value accent">${fdPlat}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text3)">
+          这个合约负责收手续费。WGT 侧的手续费全打给「平台收款地址」，Token 侧的手续费打给各个代币的 creator。
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">TokenFactory <span style="font-size:11px;color:var(--text3);font-weight:400">发币工厂合约</span></div>
+        <div class="status-grid" style="margin-top:12px">
+          <div class="status-item">
+            <div class="status-label">Owner (管理者)</div>
+            <div class="status-value">${tfOwner}</div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">公开发射</div>
+            <div class="status-value">
+              <span class="badge ${pubEnabled ? 'badge-on' : 'badge-off'}">${pubEnabled ? '开启' : '关闭'}</span>
+              ${pubEnabled ? ' — 任何人都能发币' : ' — 只有白名单地址能发币'}
+            </div>
+          </div>
+          <div class="status-item">
+            <div class="status-label">已发射代币数</div>
+            <div class="status-value green">${totalL.toString()}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--text3)">
+          这个合约负责一键发币+建池子。Owner 可以控制谁能发币、提取合约里卡住的资金。
+        </div>
+      </div>
+    `;
+  } catch (e) { c.innerHTML = '<div class="loading">加载失败: ' + e.message + '</div>'; }
+}
+
+// ═══════════ TAB: FEEDISTRIBUTOR ═══════════
+async function renderFee(c) {
+  c.innerHTML = `
+    <div class="section">
+      <div class="section-title">修改平台收款地址</div>
+      <div class="section-desc">
+        设置后，所有交易产生的 WGT 侧手续费都会打到这个新地址。只有 owner 能改。
+      </div>
+      <div class="field">
+        <label>新平台收款地址</label>
+        <input id="fd-plat-addr" placeholder="0x..." />
+      </div>
+      <button class="btn btn-accent" onclick="setPlatformRecipient()">确认修改</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">设置代币手续费接收人</div>
+      <div class="section-desc">
+        每个代币的「Token 侧手续费」可以指定一个接收地址。比如某个代币的 creator 想换人收手续费，
+        或者想把手续费打到销毁地址，就在这里设置。只有 owner 能改。
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>代币地址</label>
+          <input id="fd-cr-token" placeholder="0x..." />
+        </div>
+        <div class="field">
+          <label>新接收地址</label>
+          <input id="fd-cr-addr" placeholder="0x..." />
+        </div>
+      </div>
+      <button class="btn btn-accent" onclick="setCreatorRecipient()">确认设置</button>
+      <div style="margin-top:12px">
+        <div class="field">
+          <label>查询某个代币当前的手续费接收人</label>
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <input id="fd-cr-query" placeholder="代币地址 0x..." style="flex:1" />
+            <button class="btn btn-sm" onclick="queryCreatorRecipient()">查询</button>
+          </div>
+        </div>
+        <div id="fd-cr-result" style="font-size:12px;color:var(--text2);margin-top:4px"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">授权/取消授权手续费收集者</div>
+      <div class="section-desc">
+        只有被授权的地址才能触发手续费收取（目前只有 LiquidityLocker 合约被授权）。
+        一般不需要改，除非你部署了新的 Locker 合约。只有 owner 能操作。
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>收集者地址</label>
+          <input id="fd-ac-addr" placeholder="0x..." />
+        </div>
+        <div class="field">
+          <label>操作</label>
+          <select id="fd-ac-bool">
+            <option value="true">授权 (开启)</option>
+            <option value="false">取消授权 (关闭)</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-accent" onclick="setAuthorizedCollector()">确认</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">救援卡住的资产</div>
+      <div class="section-desc">
+        如果有代币或 GT 不小心转到了 FeeDistributor 合约里（不是手续费，是误操作），
+        可以用这个功能把它们救出来。只有 owner 能操作。
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:8px">救援代币 (ERC20)</div>
+      <div class="row2">
+        <div class="field">
+          <label>代币地址</label>
+          <input id="fd-rt-token" placeholder="0x..." />
+        </div>
+        <div class="field">
+          <label>接收地址</label>
+          <input id="fd-rt-to" placeholder="0x..." />
+        </div>
+      </div>
+      <div class="field">
+        <label>数量 (wei 格式，留空=全部余额，需先查询)</label>
+        <input id="fd-rt-amt" placeholder="留空则需手动填写" />
+        <div class="hint">如果不确定数量，可以先查代币合约的 balanceOf(FeeDistributor)</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm" onclick="queryFeeTokenBalance()">查询余额</button>
+        <button class="btn btn-accent" onclick="rescueTokenFD()">救援</button>
+      </div>
+      <div id="fd-rt-result" style="font-size:12px;color:var(--text2);margin-top:4px"></div>
+
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:8px">救援 GT (原生币)</div>
+      <div class="row2">
+        <div class="field">
+          <label>接收地址</label>
+          <input id="fd-re-to" placeholder="0x..." />
+        </div>
+        <div class="field">
+          <label>数量 (GT，留空=全部余额)</label>
+          <input id="fd-re-amt" placeholder="例如 0.1" />
+        </div>
+      </div>
+      <button class="btn btn-accent" onclick="rescueETHFD()">救援 GT</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title" style="color:var(--red)">转让 Owner</div>
+      <div class="section-desc">
+        把 FeeDistributor 合约的管理权转给另一个地址。转让后当前地址将失去所有管理权限，
+        无法再修改任何设置。操作不可逆（除非新 owner 转回来）。
+      </div>
+      <div class="field">
+        <label>新 Owner 地址</label>
+        <input id="fd-own-addr" placeholder="0x..." />
+      </div>
+      <button class="btn btn-red" onclick="transferOwnershipFD()">确认转让 Owner</button>
+    </div>
+  `;
+}
+
+// ═══════════ TAB: TOKENFACTORY ═══════════
+async function renderFactory(c) {
+  c.innerHTML = `
+    <div class="section">
+      <div class="section-title">开关公开发射</div>
+      <div class="section-desc">
+        <b>开启</b>：任何人都可以通过这个合约发币+建池子。<br>
+        <b>关闭</b>：只有白名单里的地址才能发币。<br>
+        如果你想控制谁能发币，就关掉公开发射，然后用下面的白名单功能管理。
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-green" onclick="togglePublicLaunch(true)">开启公开发射</button>
+        <button class="btn btn-red" onclick="togglePublicLaunch(false)">关闭公开发射</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">白名单管理</div>
+      <div class="section-desc">
+        当公开发射关闭时，只有白名单里的地址能发币。你可以在这里添加或移除地址。
+        支持单个操作和批量操作。只有 owner 能改。
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:8px">单个地址</div>
+      <div class="row2">
+        <div class="field">
+          <label>地址</label>
+          <input id="tf-wl-addr" placeholder="0x..." />
+        </div>
+        <div class="field">
+          <label>操作</label>
+          <select id="tf-wl-bool">
+            <option value="true">加入白名单</option>
+            <option value="false">移出白名单</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-accent" onclick="setWhitelist()">确认</button>
+
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:8px">批量操作</div>
+      <div class="field">
+        <label>地址列表（每行一个，或用逗号分隔）</label>
+        <input id="tf-wlb-addrs" placeholder="0xaaa...&#10;0xbbb...&#10;0xccc..." />
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-green" onclick="batchWhitelist(true)">批量加入</button>
+        <button class="btn btn-red" onclick="batchWhitelist(false)">批量移出</button>
+      </div>
+
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:8px">查询</div>
+      <div class="field">
+        <label>查询地址是否能发币</label>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <input id="tf-wl-query" placeholder="0x..." style="flex:1" />
+          <button class="btn btn-sm" onclick="queryWhitelist()">查询</button>
+        </div>
+      </div>
+      <div id="tf-wl-result" style="font-size:12px;color:var(--text2);margin-top:4px"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">提取合约内资产</div>
+      <div class="section-desc">
+        如果合约里卡了 GT 或代币（比如发币过程中多出来的），owner 可以把它们全部提取到指定地址。
+        注意：是<b>全部余额</b>，不能指定数量。只有 owner 能操作。
+      </div>
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:8px">提取所有 GT</div>
+      <div class="field">
+        <label>接收地址</label>
+        <input id="tf-we-to" placeholder="0x..." />
+      </div>
+      <button class="btn btn-accent" onclick="withdrawETH()">提取全部 GT</button>
+
+      <div class="divider"></div>
+      <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:8px">提取代币</div>
+      <div class="row2">
+        <div class="field">
+          <label>代币地址</label>
+          <input id="tf-wt-token" placeholder="0x..." />
+        </div>
+        <div class="field">
+          <label>接收地址</label>
+          <input id="tf-wt-to" placeholder="0x..." />
+        </div>
+      </div>
+      <button class="btn btn-accent" onclick="withdrawToken()">提取全部代币</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title" style="color:var(--red)">转让 Owner</div>
+      <div class="section-desc">
+        把 TokenFactory 合约的管理权转给另一个地址。转让后当前地址将失去所有管理权限。
+        操作不可逆（除非新 owner 转回来）。
+      </div>
+      <div class="field">
+        <label>新 Owner 地址</label>
+        <input id="tf-own-addr" placeholder="0x..." />
+      </div>
+      <button class="btn btn-red" onclick="transferOwnershipTF()">确认转让 Owner</button>
+    </div>
+  `;
+}
+
+// ═══════════ ACTIONS: FEEDISTRIBUTOR ═══════════
+async function setPlatformRecipient() {
+  const addr = document.getElementById('fd-plat-addr').value.trim();
+  if (!addr) return toast('请输入地址', 'error');
+  await runTx('修改平台收款地址', () => cFee.setPlatformRecipient(addr));
+}
+
+async function setCreatorRecipient() {
+  const token = document.getElementById('fd-cr-token').value.trim();
+  const addr = document.getElementById('fd-cr-addr').value.trim();
+  if (!token || !addr) return toast('请填写完整', 'error');
+  await runTx('设置代币手续费接收人', () => cFee.setCreatorRecipient(token, addr));
+}
+
+async function queryCreatorRecipient() {
+  const token = document.getElementById('fd-cr-query').value.trim();
+  if (!token) return toast('请输入代币地址', 'error');
+  try {
+    const r = await cFee.creatorRecipient(token);
+    const init = await cFee.creatorInitialized(token);
+    document.getElementById('fd-cr-result').innerHTML =
+      '接收人: <b style="color:var(--blue)">' + r + '</b>' +
+      (init ? ' <span class="badge badge-on">已初始化</span>' : ' <span class="badge badge-off">未初始化</span>');
+  } catch (e) { document.getElementById('fd-cr-result').textContent = '查询失败: ' + e.message; }
+}
+
+async function setAuthorizedCollector() {
+  const addr = document.getElementById('fd-ac-addr').value.trim();
+  const val = document.getElementById('fd-ac-bool').value === 'true';
+  if (!addr) return toast('请输入地址', 'error');
+  await runTx(val ? '授权收集者' : '取消授权收集者', () => cFee.setAuthorizedCollector(addr, val));
+}
+
+async function queryFeeTokenBalance() {
+  const token = document.getElementById('fd-rt-token').value.trim();
+  if (!token) return toast('请输入代币地址', 'error');
+  try {
+    const erc20 = new ethers.Contract(token, ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'], provider);
+    const [bal, dec] = await Promise.all([erc20.balanceOf(CFG.contracts.FeeDistributor), erc20.decimals().catch(() => 18)]);
+    document.getElementById('fd-rt-result').innerHTML =
+      'FeeDistributor 余额: <b style="color:var(--blue)">' + ethers.formatUnits(bal, dec) + '</b> (raw: ' + bal.toString() + ')';
+    document.getElementById('fd-rt-amt').value = bal.toString();
+  } catch (e) { document.getElementById('fd-rt-result').textContent = '查询失败: ' + e.message; }
+}
+
+async function rescueTokenFD() {
+  const token = document.getElementById('fd-rt-token').value.trim();
+  const to = document.getElementById('fd-rt-to').value.trim();
+  const amt = document.getElementById('fd-rt-amt').value.trim();
+  if (!token || !to || !amt) return toast('请填写完整', 'error');
+  await runTx('救援代币', () => cFee.rescueToken(token, to, amt));
+}
+
+async function rescueETHFD() {
+  const to = document.getElementById('fd-re-to').value.trim();
+  if (!to) return toast('请填写接收地址', 'error');
+  const amtStr = document.getElementById('fd-re-amt').value.trim();
+  let amt;
+  if (!amtStr) {
+    try {
+      const bal = await provider.getBalance(CFG.contracts.FeeDistributor);
+      amt = bal;
+      toast('FeeDistributor GT 余额: ' + ethers.formatEther(bal), 'info');
+    } catch (e) { return toast('查询余额失败: ' + e.message, 'error'); }
+  } else {
+    amt = ethers.parseEther(amtStr);
+  }
+  await runTx('救援 GT', () => cFee.rescueETH(to, amt));
+}
+
+async function transferOwnershipFD() {
+  const addr = document.getElementById('fd-own-addr').value.trim();
+  if (!addr) return toast('请输入地址', 'error');
+  if (!confirm('确认转让 FeeDistributor 的 Owner？转让后当前地址将失去管理权限！')) return;
+  await runTx('转让 FeeDistributor Owner', () => cFee.transferOwnership(addr));
+}
+
+// ═══════════ ACTIONS: TOKENFACTORY ═══════════
+async function togglePublicLaunch(val) {
+  await runTx(val ? '开启公开发射' : '关闭公开发射', () => cFactory.setPublicLaunchEnabled(val));
+}
+
+async function setWhitelist() {
+  const addr = document.getElementById('tf-wl-addr').value.trim();
+  const val = document.getElementById('tf-wl-bool').value === 'true';
+  if (!addr) return toast('请输入地址', 'error');
+  await runTx(val ? '加入白名单' : '移出白名单', () => cFactory.setLaunchWhitelist(addr, val));
+}
+
+async function batchWhitelist(val) {
+  const raw = document.getElementById('tf-wlb-addrs').value.trim();
+  if (!raw) return toast('请输入地址列表', 'error');
+  const addrs = raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+  if (addrs.length === 0) return toast('没有有效地址', 'error');
+  if (!confirm('确认' + (val ? '批量加入' : '批量移出') + ' ' + addrs.length + ' 个地址？')) return;
+  await runTx('批量设置白名单 (' + addrs.length + '个)', () => cFactory.setLaunchWhitelistBatch(addrs, val));
+}
+
+async function queryWhitelist() {
+  const addr = document.getElementById('tf-wl-query').value.trim();
+  if (!addr) return toast('请输入地址', 'error');
+  try {
+    const [wl, can] = await Promise.all([
+      cFactory.launchWhitelist(addr),
+      cFactory.canAddressLaunch(addr),
+    ]);
+    const pub = await cFactory.publicLaunchEnabled();
+    document.getElementById('tf-wl-result').innerHTML =
+      '白名单: <b style="color:' + (wl ? 'var(--green)' : 'var(--red)') + '">' + (wl ? '是' : '否') + '</b>' +
+      ' | 能发币: <b style="color:' + (can ? 'var(--green)' : 'var(--red)') + '">' + (can ? '是' : '否') + '</b>' +
+      (pub ? ' <span style="color:var(--text3)">(公开发射已开启，白名单不影响)</span>' : '');
+  } catch (e) { document.getElementById('tf-wl-result').textContent = '查询失败: ' + e.message; }
+}
+
+async function withdrawETH() {
+  const to = document.getElementById('tf-we-to').value.trim();
+  if (!to) return toast('请输入接收地址', 'error');
+  await runTx('提取全部 GT', () => cFactory.withdrawAllETH(to));
+}
+
+async function withdrawToken() {
+  const token = document.getElementById('tf-wt-token').value.trim();
+  const to = document.getElementById('tf-wt-to').value.trim();
+  if (!token || !to) return toast('请填写完整', 'error');
+  await runTx('提取代币', () => cFactory.withdrawAllToken(token, to));
+}
+
+async function transferOwnershipTF() {
+  const addr = document.getElementById('tf-own-addr').value.trim();
+  if (!addr) return toast('请输入地址', 'error');
+  if (!confirm('确认转让 TokenFactory 的 Owner？转让后当前地址将失去管理权限！')) return;
+  await runTx('转让 TokenFactory Owner', () => cFactory.transferOwnership(addr));
+}
+
+// ═══════════ INIT ═══════════
+function loadEthers() {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/ethers@6.13.1/dist/ethers.umd.min.js';
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+(async () => {
+  await loadEthers();
+  renderHeader();
+  renderTabs();
+  document.getElementById('content').innerHTML = '<div class="loading">请连接钱包查看合约状态</div>';
+})();
+</script>
+</body>
+</html>
