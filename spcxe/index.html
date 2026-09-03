@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Launchpad V4 管理面板</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.1/dist/ethers.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f4f6fb; --surface: #ffffff; --surface2: #f0f3fa;
+  --border: #d8dfe9; --border-focus: #4a7cff;
+  --text: #1a2236; --text2: #556380; --text3: #8896ad;
+  --accent: #4a7cff; --accent-hover: #3562e0; --accent-bg: #eaf0ff;
+  --success: #16a34a; --success-bg: #ecfdf5;
+  --warn: #d97706; --warn-bg: #fffbeb;
+  --danger: #dc2626; --danger-bg: #fef2f2;
+  --radius: 10px; --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  --shadow-lg: 0 4px 24px rgba(0,0,0,0.08);
+}
+body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Header */
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+.header-left { display: flex; align-items: center; gap: 12px; }
+.logo { width: 36px; height: 36px; background: linear-gradient(135deg, #4a7cff 0%, #7c5cff 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 16px; }
+.header h1 { font-size: 18px; font-weight: 600; color: var(--text); }
+.header h1 span { color: var(--text3); font-weight: 400; font-size: 13px; margin-left: 8px; }
+.wallet-btn { padding: 9px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--accent); background: var(--accent-bg); color: var(--accent); transition: all 0.15s; }
+.wallet-btn:hover { background: var(--accent); color: #fff; }
+.wallet-btn.connected { background: var(--success-bg); border-color: var(--success); color: var(--success); cursor: default; }
+.wallet-info { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text2); }
+.wallet-info .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+.owner-badge { background: var(--warn-bg); color: var(--warn); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+.not-owner-badge { background: var(--danger-bg); color: var(--danger); padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; padding: 16px 32px 0; background: var(--surface); border-bottom: 1px solid var(--border); }
+.tab { padding: 10px 20px; border-radius: 8px 8px 0 0; font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text2); border: none; background: transparent; transition: all 0.15s; border-bottom: 2px solid transparent; }
+.tab:hover { color: var(--text); background: var(--surface2); }
+.tab.active { color: var(--accent); background: var(--accent-bg); border-bottom-color: var(--accent); }
+
+/* Content */
+.content { max-width: 1100px; margin: 0 auto; padding: 24px 32px; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+.card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.card-desc { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.6; }
+.card-section { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 16px; }
+
+/* Form */
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 5px; }
+.form-hint { font-size: 12px; color: var(--text3); margin-top: 3px; }
+.form-input { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: 'JetBrains Mono', monospace; color: var(--text); background: var(--surface); transition: border-color 0.15s; }
+.form-input:focus { outline: none; border-color: var(--border-focus); box-shadow: 0 0 0 3px rgba(74,124,255,0.1); }
+.form-input::placeholder { color: var(--text3); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+/* Buttons */
+.btn { padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { opacity: 0.9; }
+.btn-warn { background: var(--warn); color: #fff; }
+.btn-warn:hover { opacity: 0.9; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { opacity: 0.9; }
+.btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text2); }
+.btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Status / Log */
+.log-box { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: var(--text2); max-height: 180px; overflow-y: auto; margin-top: 12px; line-height: 1.7; word-break: break-all; }
+.log-box .log-ok { color: var(--success); }
+.log-box .log-err { color: var(--danger); }
+.log-box .log-info { color: var(--accent); }
+
+/* Info grid */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.info-item { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px 14px; }
+.info-item .label { font-size: 12px; color: var(--text3); margin-bottom: 4px; }
+.info-item .value { font-size: 14px; font-weight: 500; color: var(--text); word-break: break-all; }
+
+/* Alert */
+.alert { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; line-height: 1.6; }
+.alert-info { background: var(--accent-bg); color: #2952cc; border: 1px solid #c5d7ff; }
+.alert-warn { background: var(--warn-bg); color: #92400e; border: 1px solid #fde68a; }
+
+/* Checkbox */
+.check-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.check-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+.check-row label { font-size: 13px; color: var(--text); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header { padding: 12px 16px; }
+  .tabs { padding: 12px 16px 0; overflow-x: auto; }
+  .content { padding: 16px; }
+  .form-row, .form-row-3, .info-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">L4</div>
+    <h1>Launchpad V4 管理面板 <span>以太坊主网</span></h1>
+  </div>
+  <div id="walletArea">
+    <button class="wallet-btn" id="connectBtn" onclick="connectWallet()">连接钱包</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs" id="tabBar">
+  <button class="tab active" data-tab="overview">概览</button>
+  <button class="tab" data-tab="launchpad">Launchpad 管理</button>
+  <button class="tab" data-tab="factory">TokenFactory 管理</button>
+  <button class="tab" data-tab="fees">手续费管理</button>
+  <button class="tab" data-tab="query">查询工具</button>
+</div>
+
+<div class="content">
+
+<!-- ========== 概览 ========== -->
+<div class="tab-panel active" id="panel-overview">
+  <div class="alert alert-info">这是 Launchpad V4 的 Owner 管理面板。连接钱包后，如果当前地址是 Owner，所有管理功能将可用。每个功能都有大白话说明，不用担心看不懂。</div>
+
+  <div class="card">
+    <div class="card-title">合约地址</div>
+    <div class="card-desc">已部署在以太坊主网，两个合约都已开源验证。</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <div class="label">Launchpad 合约</div>
+        <div class="value mono">0x8b31F9892Cc6f435ba07126A653C88a5AAb9845d</div>
+      </div>
+      <div class="info-item">
+        <div class="label">TokenFactory 合约</div>
+        <div class="value mono">0x3dB0F19B4D921968ad69B812baA05Bd7Df48E1b9</div>
+      </div>
+      <div class="info-item">
+        <div class="label">WETH</div>
+        <div class="value mono">0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2</div>
+      </div>
+      <div class="info-item">
+        <div class="label">Uniswap V3 Factory</div>
+        <div class="value mono">0x1F98431c8aD98523631AE4a59f267346ea31F984</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">实时状态 <button class="btn btn-outline" style="margin-left:auto;font-size:12px;padding:4px 12px;" onclick="refreshOverview()">刷新</button></div>
+    <div class="card-desc">连接钱包后自动读取合约状态。</div>
+    <div class="info-grid" id="overviewGrid">
+      <div class="info-item"><div class="label">Launchpad Owner</div><div class="value mono" id="ov-launchpadOwner">-</div></div>
+      <div class="info-item"><div class="label">TokenFactory Owner</div><div class="value mono" id="ov-factoryOwner">-</div></div>
+      <div class="info-item"><div class="label">平台收款地址</div><div class="value mono" id="ov-platformRecipient">-</div></div>
+      <div class="info-item"><div class="label">绑定的 Factory</div><div class="value mono" id="ov-factory">-</div></div>
+      <div class="info-item"><div class="label">公开创建 (TokenFactory)</div><div class="value" id="ov-publicLaunch">-</div></div>
+      <div class="info-item"><div class="label">待领取平台 ETH</div><div class="value mono" id="ov-pendingEth">-</div></div>
+      <div class="info-item"><div class="label">白名单配对币数量</div><div class="value" id="ov-whitelistLen">-</div></div>
+      <div class="info-item"><div class="label">已发射代币数量</div><div class="value" id="ov-totalLaunches">-</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">你的钱包</div>
+    <div id="walletStatus" style="font-size:14px;color:var(--text2);">未连接钱包</div>
+  </div>
+</div>
+
+<!-- ========== Launchpad 管理 ========== -->
+<div class="tab-panel" id="panel-launchpad">
+
+  <!-- 转移所有权 -->
+  <div class="card">
+    <div class="card-title">转移 Launchpad 所有权</div>
+    <div class="card-desc">把 Launchpad 合约的 Owner 权限转给另一个地址。转走后你就不是 Owner 了，所有管理功能都不能用了。谨慎操作！</div>
+    <div class="form-group">
+      <label class="form-label">新 Owner 地址</label>
+      <input class="form-input" id="lp-transferOwner" placeholder="0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-danger" onclick="lpTransferOwnership()">确认转移</button></div>
+    <div class="log-box" id="log-lp-transferOwner" style="display:none;"></div>
+  </div>
+
+  <!-- 设置 Factory -->
+  <div class="card">
+    <div class="card-title">设置 TokenFactory 地址</div>
+    <div class="card-desc">告诉 Launchpad 去哪个 TokenFactory 拿代币。一般只设一次，除非你部署了新的 Factory。</div>
+    <div class="form-group">
+      <label class="form-label">新的 Factory 地址</label>
+      <input class="form-input" id="lp-setFactory" placeholder="0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="lpSetFactory()">设置 Factory</button></div>
+    <div class="log-box" id="log-lp-setFactory" style="display:none;"></div>
+  </div>
+
+  <!-- 设置平台收款地址 -->
+  <div class="card">
+    <div class="card-title">修改平台收款地址</div>
+    <div class="card-desc">手续费（ETH 和配对币）会发到这个地址。改了之后新的手续费就去新地址了，已经累积的不受影响。</div>
+    <div class="form-group">
+      <label class="form-label">新的收款地址</label>
+      <input class="form-input" id="lp-setRecipient" placeholder="0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="lpSetPlatformRecipient()">修改收款地址</button></div>
+    <div class="log-box" id="log-lp-setRecipient" style="display:none;"></div>
+  </div>
+
+  <!-- 修改代币创建者 -->
+  <div class="card">
+    <div class="card-title">修改代币创建者</div>
+    <div class="card-desc">某个已发射代币的"创建者"地址可以领取新币手续费。如果创建者地址搞错了或者要换人，用这个改。只有已经发射的代币才能改。</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">代币地址</label>
+        <input class="form-input" id="lp-setCreator-token" placeholder="0x..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">新的创建者地址</label>
+        <input class="form-input" id="lp-setCreator-new" placeholder="0x..." />
+      </div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="lpSetCreator()">修改创建者</button></div>
+    <div class="log-box" id="log-lp-setCreator" style="display:none;"></div>
+  </div>
+
+  <!-- 白名单管理 -->
+  <div class="card">
+    <div class="card-title">添加/更新配对币白名单（单个）</div>
+    <div class="card-desc">想让某个 ERC20 代币作为配对币来发币？先把它加到白名单里，设好初始价格参数。每个配对币只需要设一次，之后用这个配对币发币时合约会自动读取。</div>
+    <div class="form-group">
+      <label class="form-label">配对币地址</label>
+      <input class="form-input" id="lp-wl-token" placeholder="0x..." />
+    </div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label class="form-label">sqrtPriceX96</label>
+        <input class="form-input" id="lp-wl-sqrt" placeholder="如 12435124293985229781491184" />
+        <div class="form-hint">初始价格的数学表达</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">tickLower</label>
+        <input class="form-input" id="lp-wl-tickLow" placeholder="如 -175200" />
+        <div class="form-hint">价格区间底部</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">tickUpper</label>
+        <input class="form-input" id="lp-wl-tickHigh" placeholder="如 0" />
+        <div class="form-hint">价格区间顶部</div>
+      </div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="lpSetPairTokenWhitelist()">添加到白名单</button></div>
+    <div class="log-box" id="log-lp-whitelist" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">批量添加/更新白名单</div>
+    <div class="card-desc">一次加多个配对币。每行一个，用逗号分隔参数：配对币地址, sqrtPriceX96, tickLower, tickUpper</div>
+    <div class="form-group">
+      <label class="form-label">白名单数据（每行一个）</label>
+      <textarea class="form-input" id="lp-wlBatch" rows="4" placeholder="0xToken1, 12345..., -175200, 0&#10;0xToken2, 67890..., -887220, 0" style="resize:vertical;font-family:'JetBrains Mono',monospace;font-size:12px;"></textarea>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="lpSetPairTokenWhitelistBatch()">批量添加</button></div>
+    <div class="log-box" id="log-lp-whitelistBatch" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">移除配对币白名单</div>
+    <div class="card-desc">把某个配对币从白名单里删掉。已经用这个配对币发的币不受影响，只是以后不能再用它发新币了。</div>
+    <div class="form-group">
+      <label class="form-label">要移除的配对币地址</label>
+      <input class="form-input" id="lp-rmPair" placeholder="0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-warn" onclick="lpRemovePairToken()">移除</button></div>
+    <div class="log-box" id="log-lp-rmPair" style="display:none;"></div>
+  </div>
+
+  <!-- 救援 ERC20 -->
+  <div class="card">
+    <div class="card-title">救援 ERC20 代币</div>
+    <div class="card-desc">如果有 ERC20 代币不小心打到 Launchpad 合约里了，用这个把它们救出来。注意：会自动扣除待领取的手续费部分，不会把该给创建者和平台的钱弄走。</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">代币地址</label>
+        <input class="form-input" id="lp-rescue-token" placeholder="0x..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">接收地址</label>
+        <input class="form-input" id="lp-rescue-to" placeholder="0x..." />
+      </div>
+    </div>
+    <div class="btn-group"><button class="btn btn-warn" onclick="lpRescueERC20()">救援代币</button></div>
+    <div class="log-box" id="log-lp-rescue" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ========== TokenFactory 管理 ========== -->
+<div class="tab-panel" id="panel-factory">
+
+  <div class="card">
+    <div class="card-title">转移 TokenFactory 所有权</div>
+    <div class="card-desc">跟 Launchpad 一样，把 Factory 的 Owner 转给别人。转走后你就管不了 Factory 了。</div>
+    <div class="form-group">
+      <label class="form-label">新 Owner 地址</label>
+      <input class="form-input" id="tf-transferOwner" placeholder="0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-danger" onclick="tfTransferOwnership()">确认转移</button></div>
+    <div class="log-box" id="log-tf-transferOwner" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">开关公开创建</div>
+    <div class="card-desc">打开后，任何人都可以通过 Factory 发币。关闭后，只有白名单里的地址才能发币。目前状态是关闭的（只有白名单）。</div>
+    <div class="btn-group">
+      <button class="btn btn-success" onclick="tfSetPublicLaunch(true)">开启公开创建</button>
+      <button class="btn btn-danger" onclick="tfSetPublicLaunch(false)">关闭公开创建</button>
+    </div>
+    <div class="log-box" id="log-tf-publicLaunch" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">设置发币白名单（单个）</div>
+    <div class="card-desc">允许或禁止某个地址通过 Factory 发币。公开创建关闭时，只有白名单地址才能发币。</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">地址</label>
+        <input class="form-input" id="tf-wl-addr" placeholder="0x..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">操作</label>
+        <select class="form-input" id="tf-wl-allowed">
+          <option value="true">允许 (加入白名单)</option>
+          <option value="false">禁止 (移出白名单)</option>
+        </select>
+      </div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="tfSetLaunchWhitelist()">设置</button></div>
+    <div class="log-box" id="log-tf-whitelist" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">批量设置发币白名单</div>
+    <div class="card-desc">一次设置多个地址。每行一个地址，然后选择是允许还是禁止。</div>
+    <div class="form-group">
+      <label class="form-label">地址列表（每行一个）</label>
+      <textarea class="form-input" id="tf-wlBatch-addrs" rows="4" placeholder="0xAddr1&#10;0xAddr2&#10;0xAddr3" style="resize:vertical;"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">操作</label>
+      <select class="form-input" id="tf-wlBatch-allowed">
+        <option value="true">全部允许</option>
+        <option value="false">全部禁止</option>
+      </select>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="tfSetLaunchWhitelistBatch()">批量设置</button></div>
+    <div class="log-box" id="log-tf-whitelistBatch" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">提取 Factory 里的代币</div>
+    <div class="card-desc">如果有代币卡在 TokenFactory 合约里（比如发币时多出来的），用这个提走。</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">代币地址</label>
+        <input class="form-input" id="tf-withdraw-token" placeholder="0x..." />
+      </div>
+      <div class="form-group">
+        <label class="form-label">接收地址</label>
+        <input class="form-input" id="tf-withdraw-to" placeholder="0x..." />
+      </div>
+    </div>
+    <div class="btn-group"><button class="btn btn-warn" onclick="tfWithdrawAllToken()">提取</button></div>
+    <div class="log-box" id="log-tf-withdraw" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ========== 手续费管理 ========== -->
+<div class="tab-panel" id="panel-fees">
+
+  <div class="alert alert-warn">手续费机制说明：交易手续费分三种 —— ETH/WETH 手续费直接到平台；配对币手续费直接到平台（失败则累积）；新币手续费累积给创建者，需要手动领取。</div>
+
+  <div class="card">
+    <div class="card-title">收集池子手续费 (collectFees)</div>
+    <div class="card-desc">从某个代币的 Uniswap V3 池子里把累积的手续费收回来。ETH/WETH 和配对币会发给平台，新币手续费会累积到创建者账上。任何人都可以调，不限 Owner。</div>
+    <div class="form-group">
+      <label class="form-label">代币地址</label>
+      <input class="form-input" id="fee-collect-token" placeholder="已发射的代币地址 0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="feeCollectFees()">收集手续费</button></div>
+    <div class="log-box" id="log-fee-collect" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">一键分配手续费 (distributeFees)</div>
+    <div class="card-desc">跟 collectFees 类似，但更彻底 —— 不仅收回手续费，还会立刻把创建者的新币手续费也发给他。一步到位，省得创建者再手动领。任何人都可以调。</div>
+    <div class="form-group">
+      <label class="form-label">代币地址</label>
+      <input class="form-input" id="fee-distribute-token" placeholder="已发射的代币地址 0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-success" onclick="feeDistributeFees()">一键分配</button></div>
+    <div class="log-box" id="log-fee-distribute" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">领取累积的平台 ETH</div>
+    <div class="card-desc">如果之前收手续费时平台地址接收 ETH 失败了（比如地址是合约不支持接收 ETH），ETH 会累积在这里。用这个按钮把累积的 ETH 领走。任何人都可以调，ETH 会发到平台收款地址。</div>
+    <div class="btn-group"><button class="btn btn-success" onclick="feeClaimPlatformFee()">领取平台 ETH</button></div>
+    <div class="log-box" id="log-fee-claimEth" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">领取平台配对币手续费（单个）</div>
+    <div class="card-desc">配对币手续费如果之前直接转账失败了，会累积在这里。输入对应的代币地址，把累积的配对币手续费领走。任何人都可以调。</div>
+    <div class="form-group">
+      <label class="form-label">代币地址（已发射的代币，不是配对币）</label>
+      <input class="form-input" id="fee-claimPair-token" placeholder="已发射的代币地址 0x..." />
+      <div class="form-hint">输入代币地址后，合约会自动找到对应的配对币并领取累积的手续费</div>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="feeClaimPlatformPairTokens()">领取配对币手续费</button></div>
+    <div class="log-box" id="log-fee-claimPair" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">批量领取平台配对币手续费</div>
+    <div class="card-desc">一次领多个代币的配对币手续费。每行一个代币地址。如果多个代币配对币相同，会自动去重，不会重复领。</div>
+    <div class="form-group">
+      <label class="form-label">代币地址列表（每行一个）</label>
+      <textarea class="form-input" id="fee-claimPairBatch" rows="4" placeholder="0xToken1&#10;0xToken2&#10;0xToken3" style="resize:vertical;"></textarea>
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="feeClaimPlatformPairTokensBatch()">批量领取</button></div>
+    <div class="log-box" id="log-fee-claimPairBatch" style="display:none;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">创建者领取新代币手续费</div>
+    <div class="card-desc">创建者通过这个按钮领取某个代币累积的手续费（新币）。任何人都可以调，但新币会发到创建者地址，不是调用者。相当于帮创建者操作一下。</div>
+    <div class="form-group">
+      <label class="form-label">代币地址</label>
+      <input class="form-input" id="fee-claimCreator-token" placeholder="已发射的代币地址 0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-success" onclick="feeClaimCreatorNewTokens()">创建者领取</button></div>
+    <div class="log-box" id="log-fee-claimCreator" style="display:none;"></div>
+  </div>
+</div>
+
+<!-- ========== 查询工具 ========== -->
+<div class="tab-panel" id="panel-query">
+
+  <div class="card">
+    <div class="card-title">查询代币信息</div>
+    <div class="card-desc">输入已发射的代币地址，查看它在 Launchpad 里的所有信息：创建者、配对币、NFT Position ID、累积的创建者手续费等。</div>
+    <div class="form-group">
+      <label class="form-label">代币地址</label>
+      <input class="form-input" id="q-tokenInfo" placeholder="0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="queryTokenInfo()">查询</button></div>
+    <div id="q-tokenInfo-result" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">查询配对币白名单状态</div>
+    <div class="card-desc">看看某个配对币是不是在白名单里，以及它的价格参数。</div>
+    <div class="form-group">
+      <label class="form-label">配对币地址</label>
+      <input class="form-input" id="q-pairConfig" placeholder="0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="queryPairConfig()">查询</button></div>
+    <div id="q-pairConfig-result" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">查询创建者待领取新币数量</div>
+    <div class="card-desc">看看某个代币的创建者有多少新币手续费可以领。</div>
+    <div class="form-group">
+      <label class="form-label">代币地址</label>
+      <input class="form-input" id="q-creatorPending" placeholder="0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="queryCreatorPending()">查询</button></div>
+    <div id="q-creatorPending-result" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">预测代币地址</div>
+    <div class="card-desc">发币前用这个测试不同 salt，确保生成的代币地址小于配对币地址。这是发币成功的关键！如果地址大于配对币，池子会出问题。</div>
+    <div class="form-row-3">
+      <div class="form-group">
+        <label class="form-label">代币名称 (name)</label>
+        <input class="form-input" id="q-predict-name" placeholder="如 MyToken" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">代币符号 (symbol)</label>
+        <input class="form-input" id="q-predict-symbol" placeholder="如 MTK" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Salt</label>
+        <input class="form-input" id="q-predict-salt" placeholder="如 FORK_V4_2" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">配对币地址（用来比较大小）</label>
+      <input class="form-input" id="q-predict-pair" placeholder="0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="queryPredictAddress()">预测地址</button></div>
+    <div id="q-predict-result" style="margin-top:12px;"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">查询地址能否发币</div>
+    <div class="card-desc">检查某个地址是否有权限通过 TokenFactory 发币（公开创建开启则所有人都可以，否则需要白名单）。</div>
+    <div class="form-group">
+      <label class="form-label">地址</label>
+      <input class="form-input" id="q-canLaunch" placeholder="0x..." />
+    </div>
+    <div class="btn-group"><button class="btn btn-primary" onclick="queryCanLaunch()">查询</button></div>
+    <div id="q-canLaunch-result" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+</div><!-- end .content -->
+<script>
+// ===== Contract Addresses =====
+const LAUNCHPAD_ADDR = '0x8b31F9892Cc6f435ba07126A653C88a5AAb9845d';
+const FACTORY_ADDR  = '0x3dB0F19B4D921968ad69B812baA05Bd7Df48E1b9';
+const WETH_ADDR     = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+
+// ===== Minimal ABIs =====
+const LAUNCHPAD_ABI = [
+  'function owner() view returns (address)',
+  'function factory() view returns (address)',
+  'function platformRecipient() view returns (address)',
+  'function platformPendingEth() view returns (uint256)',
+  'function whitelistLength() view returns (uint256)',
+  'function whitelistSlice(uint256,uint256) view returns (address[])',
+  'function tokenInfo(address) view returns (bool launched, address creator, address pairToken, uint24 poolFee, uint256 tokenId, uint256 creatorNewTokens)',
+  'function pairConfig(address) view returns (bool whitelisted, uint160 sqrtPriceX96, int24 tickLower, int24 tickUpper)',
+  'function creatorNewTokens(address) view returns (uint256)',
+  'function creatorOf(address) view returns (address)',
+  'function isPairTokenWhitelisted(address) view returns (bool)',
+  'function getPairConfig(address) view returns (bool whitelisted, uint160 sqrtPriceX96, int24 tickLower, int24 tickUpper)',
+  'function transferOwnership(address)',
+  'function setFactory(address)',
+  'function setPlatformRecipient(address)',
+  'function setCreator(address,address)',
+  'function setPairTokenWhitelist(address,uint160,int24,int24)',
+  'function setPairTokenWhitelistBatch(address[],uint160[],int24[],int24[])',
+  'function removePairToken(address)',
+  'function rescueERC20(address,address)',
+  'function collectFees(address)',
+  'function distributeFees(address)',
+  'function claimPlatformFee() returns (uint256)',
+  'function claimPlatformPairTokens(address) returns (uint256)',
+  'function claimPlatformPairTokensBatch(address[]) returns (uint256[])',
+  'function claimCreatorNewTokens(address) returns (uint256)',
+  'event OwnershipTransferred(address,address)',
+  'event FactoryUpdated(address,address)',
+  'event PlatformRecipientUpdated(address,address)',
+  'event CreatorUpdated(address,address,address)',
+  'event PairTokenWhitelisted(address,uint160,int24,int24)',
+  'event PairTokenRemoved(address)',
+  'event ERC20Rescued(address,address,uint256)',
+  'event FeesCollected(address,uint256,uint256,uint256)',
+  'event PlatformPairTokensPaid(address,address,uint256)',
+  'event CreatorNewTokensPaid(address,address,uint256)'
+];
+
+const FACTORY_ABI = [
+  'function owner() view returns (address)',
+  'function publicLaunchEnabled() view returns (bool)',
+  'function launchWhitelist(address) view returns (bool)',
+  'function nextLaunchId() view returns (uint256)',
+  'function totalLaunches() view returns (uint256)',
+  'function canAddressLaunch(address) view returns (bool)',
+  'function transferOwnership(address)',
+  'function setPublicLaunchEnabled(bool)',
+  'function setLaunchWhitelist(address,bool)',
+  'function setLaunchWhitelistBatch(address[],bool)',
+  'function withdrawAllToken(address,address) returns (uint256)',
+  'function predictTokenAddress(string,string,bytes32) view returns (address)',
+  'event OwnershipTransferred(address,address)',
+  'event PublicLaunchToggled(bool)',
+  'event LaunchWhitelistUpdated(address,bool)',
+  'event TokenWithdrawn(address,address,uint256)'
+];
+
+const ERC20_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function decimals() view returns (uint8)',
+  'function symbol() view returns (string)'
+];
+
+// ===== State =====
+let provider = null;
+let signer = null;
+let userAddress = null;
+let launchpadContract = null;
+let factoryContract = null;
+
+// ===== Tab switching =====
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ===== Logging =====
+function getLog(id) {
+  const el = document.getElementById(id);
+  el.style.display = 'block';
+  return el;
+}
+function logMsg(el, msg, type='info') {
+  const span = document.createElement('div');
+  span.className = 'log-' + type;
+  span.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  el.appendChild(span);
+  el.scrollTop = el.scrollHeight;
+}
+function clearLog(el) { el.innerHTML = ''; el.style.display = 'none'; }
+
+// ===== Wallet =====
+async function connectWallet() {
+  if (userAddress) return;
+  if (!window.ethereum) { alert('请安装 MetaMask 钱包！'); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
+
+    // Check chain
+    const network = await provider.getNetwork();
+    if (network.chainId !== 1n) {
+      try {
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x1' }] });
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+        userAddress = await signer.getAddress();
+      } catch(e) {
+        alert('请切换到以太坊主网！'); return;
+      }
+    }
+
+    launchpadContract = new ethers.Contract(LAUNCHPAD_ADDR, LAUNCHPAD_ABI, signer);
+    factoryContract = new ethers.Contract(FACTORY_ADDR, FACTORY_ABI, signer);
+
+    updateWalletUI();
+    refreshOverview();
+  } catch(e) {
+    console.error(e);
+    alert('连接失败: ' + e.message);
+  }
+}
+
+function updateWalletUI() {
+  const area = document.getElementById('walletArea');
+  const short = userAddress.slice(0,6) + '...' + userAddress.slice(-4);
+  area.innerHTML = `
+    <div class="wallet-info">
+      <span class="dot"></span>
+      <span class="mono">${short}</span>
+      <span id="ownerBadge"></span>
+    </div>`;
+  document.getElementById('walletStatus').innerHTML = `
+    <div style="margin-bottom:8px;">已连接: <span class="mono">${userAddress}</span></div>
+    <div id="ownerCheck" style="color:var(--text2);">检查 Owner 状态中...</div>`;
+  checkOwnerStatus();
+}
+
+async function checkOwnerStatus() {
+  try {
+    const readLp = new ethers.Contract(LAUNCHPAD_ADDR, LAUNCHPAD_ABI, provider);
+    const readTf = new ethers.Contract(FACTORY_ADDR, FACTORY_ABI, provider);
+    const [lpOwner, tfOwner] = await Promise.all([readLp.owner(), readTf.owner()]);
+    const isLpOwner = lpOwner.toLowerCase() === userAddress.toLowerCase();
+    const isTfOwner = tfOwner.toLowerCase() === userAddress.toLowerCase();
+    const badge = document.getElementById('ownerBadge');
+    if (isLpOwner || isTfOwner) {
+      badge.innerHTML = '<span class="owner-badge">Owner</span>';
+    } else {
+      badge.innerHTML = '<span class="not-owner-badge">非 Owner</span>';
+    }
+    let statusHtml = `<div style="margin-bottom:4px;">Launchpad Owner: ${isLpOwner ? '<span style="color:var(--success);font-weight:600;">是</span>' : '<span style="color:var(--danger);">否</span>'}</div>`;
+    statusHtml += `<div>TokenFactory Owner: ${isTfOwner ? '<span style="color:var(--success);font-weight:600;">是</span>' : '<span style="color:var(--danger);">否</span>'}</div>`;
+    document.getElementById('ownerCheck').innerHTML = statusHtml;
+  } catch(e) {
+    document.getElementById('ownerCheck').textContent = '检查失败: ' + e.message;
+  }
+}
+
+async function requireSigner() {
+  if (!signer) { alert('请先连接钱包！'); return false; }
+  return true;
+}
+
+async function sendTx(txPromise, logEl) {
+  try {
+    logMsg(logEl, '发送交易中...', 'info');
+    const tx = await txPromise;
+    logMsg(logEl, '交易已发送，等待确认... Tx: ' + tx.hash, 'info');
+    const receipt = await tx.wait();
+    logMsg(logEl, '交易已确认! Gas 消耗: ' + receipt.gasUsed.toString(), 'ok');
+    return receipt;
+  } catch(e) {
+    const reason = e.reason || e.shortMessage || e.message || '未知错误';
+    logMsg(logEl, '交易失败: ' + reason, 'err');
+    return null;
+  }
+}
+
+// ===== Overview =====
+async function refreshOverview() {
+  if (!provider) {
+    provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+  }
+  const readLp = new ethers.Contract(LAUNCHPAD_ADDR, LAUNCHPAD_ABI, provider);
+  const readTf = new ethers.Contract(FACTORY_ADDR, FACTORY_ABI, provider);
+  try {
+    const [owner, tfOwner, fac, recip, pendEth, wlLen, totalL, pubLaunch] = await Promise.all([
+      readLp.owner(), readTf.owner(), readLp.factory(), readLp.platformRecipient(),
+      readLp.platformPendingEth(), readLp.whitelistLength(), readTf.totalLaunches(), readTf.publicLaunchEnabled()
+    ]);
+    document.getElementById('ov-launchpadOwner').textContent = owner;
+    document.getElementById('ov-factoryOwner').textContent = tfOwner;
+    document.getElementById('ov-platformRecipient').textContent = recip;
+    document.getElementById('ov-factory').textContent = fac;
+    document.getElementById('ov-pendingEth').textContent = ethers.formatEther(pendEth) + ' ETH';
+    document.getElementById('ov-whitelistLen').textContent = wlLen.toString();
+    document.getElementById('ov-totalLaunches').textContent = totalL.toString();
+    document.getElementById('ov-publicLaunch').innerHTML = pubLaunch
+      ? '<span style="color:var(--success);font-weight:600;">已开启（任何人可发币）</span>'
+      : '<span style="color:var(--warn);font-weight:600;">已关闭（仅白名单）</span>';
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+// ===== Launchpad Admin =====
+async function lpTransferOwnership() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-lp-transferOwner'); clearLog(logEl);
+  const addr = document.getElementById('lp-transferOwner').value.trim();
+  if (!ethers.isAddress(addr)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  if (!confirm('确认转移 Launchpad 所有权到 ' + addr + '？这个操作不可逆！')) return;
+  await sendTx(launchpadContract.transferOwnership(addr), logEl);
+}
+
+async function lpSetFactory() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-lp-setFactory'); clearLog(logEl);
+  const addr = document.getElementById('lp-setFactory').value.trim();
+  if (!ethers.isAddress(addr)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(launchpadContract.setFactory(addr), logEl);
+}
+
+async function lpSetPlatformRecipient() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-lp-setRecipient'); clearLog(logEl);
+  const addr = document.getElementById('lp-setRecipient').value.trim();
+  if (!ethers.isAddress(addr)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(launchpadContract.setPlatformRecipient(addr), logEl);
+}
+
+async function lpSetCreator() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-lp-setCreator'); clearLog(logEl);
+  const token = document.getElementById('lp-setCreator-token').value.trim();
+  const newCreator = document.getElementById('lp-setCreator-new').value.trim();
+  if (!ethers.isAddress(token) || !ethers.isAddress(newCreator)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(launchpadContract.setCreator(token, newCreator), logEl);
+}
+
+async function lpSetPairTokenWhitelist() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-lp-whitelist'); clearLog(logEl);
+  const token = document.getElementById('lp-wl-token').value.trim();
+  const sqrt = document.getElementById('lp-wl-sqrt').value.trim();
+  const tickLow = document.getElementById('lp-wl-tickLow').value.trim();
+  const tickHigh = document.getElementById('lp-wl-tickHigh').value.trim();
+  if (!ethers.isAddress(token)) { logMsg(logEl, '配对币地址格式不对！', 'err'); return; }
+  if (!sqrt || !tickLow || !tickHigh) { logMsg(logEl, '所有参数都要填！', 'err'); return; }
+  await sendTx(launchpadContract.setPairTokenWhitelist(token, sqrt, parseInt(tickLow), parseInt(tickHigh)), logEl);
+}
+
+async function lpSetPairTokenWhitelistBatch() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-lp-whitelistBatch'); clearLog(logEl);
+  const raw = document.getElementById('lp-wlBatch').value.trim();
+  if (!raw) { logMsg(logEl, '请输入数据！', 'err'); return; }
+  const lines = raw.split('\n').filter(l => l.trim());
+  const tokens=[], sqrts=[], lows=[], highs=[];
+  for (const line of lines) {
+    const parts = line.split(',').map(s => s.trim());
+    if (parts.length < 4) { logMsg(logEl, '格式错误: ' + line, 'err'); return; }
+    tokens.push(parts[0]); sqrts.push(parts[1]); lows.push(parseInt(parts[2])); highs.push(parseInt(parts[3]));
+  }
+  await sendTx(launchpadContract.setPairTokenWhitelistBatch(tokens, sqrts, lows, highs), logEl);
+}
+
+async function lpRemovePairToken() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-lp-rmPair'); clearLog(logEl);
+  const addr = document.getElementById('lp-rmPair').value.trim();
+  if (!ethers.isAddress(addr)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(launchpadContract.removePairToken(addr), logEl);
+}
+
+async function lpRescueERC20() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-lp-rescue'); clearLog(logEl);
+  const token = document.getElementById('lp-rescue-token').value.trim();
+  const to = document.getElementById('lp-rescue-to').value.trim();
+  if (!ethers.isAddress(token) || !ethers.isAddress(to)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(launchpadContract.rescueERC20(token, to), logEl);
+}
+
+// ===== TokenFactory Admin =====
+async function tfTransferOwnership() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-tf-transferOwner'); clearLog(logEl);
+  const addr = document.getElementById('tf-transferOwner').value.trim();
+  if (!ethers.isAddress(addr)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  if (!confirm('确认转移 TokenFactory 所有权到 ' + addr + '？不可逆！')) return;
+  await sendTx(factoryContract.transferOwnership(addr), logEl);
+}
+
+async function tfSetPublicLaunch(enabled) {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-tf-publicLaunch'); clearLog(logEl);
+  const action = enabled ? '开启' : '关闭';
+  if (!confirm('确认' + action + '公开创建？')) return;
+  await sendTx(factoryContract.setPublicLaunchEnabled(enabled), logEl);
+}
+
+async function tfSetLaunchWhitelist() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-tf-whitelist'); clearLog(logEl);
+  const addr = document.getElementById('tf-wl-addr').value.trim();
+  const allowed = document.getElementById('tf-wl-allowed').value === 'true';
+  if (!ethers.isAddress(addr)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(factoryContract.setLaunchWhitelist(addr, allowed), logEl);
+}
+
+async function tfSetLaunchWhitelistBatch() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-tf-whitelistBatch'); clearLog(logEl);
+  const raw = document.getElementById('tf-wlBatch-addrs').value.trim();
+  if (!raw) { logMsg(logEl, '请输入地址！', 'err'); return; }
+  const addrs = raw.split('\n').map(s => s.trim()).filter(Boolean);
+  const allowed = document.getElementById('tf-wlBatch-allowed').value === 'true';
+  for (const a of addrs) { if (!ethers.isAddress(a)) { logMsg(logEl, '地址格式不对: ' + a, 'err'); return; } }
+  await sendTx(factoryContract.setLaunchWhitelistBatch(addrs, allowed), logEl);
+}
+
+async function tfWithdrawAllToken() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-tf-withdraw'); clearLog(logEl);
+  const token = document.getElementById('tf-withdraw-token').value.trim();
+  const to = document.getElementById('tf-withdraw-to').value.trim();
+  if (!ethers.isAddress(token) || !ethers.isAddress(to)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(factoryContract.withdrawAllToken(token, to), logEl);
+}
+
+// ===== Fee Management =====
+async function feeCollectFees() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-fee-collect'); clearLog(logEl);
+  const token = document.getElementById('fee-collect-token').value.trim();
+  if (!ethers.isAddress(token)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(launchpadContract.collectFees(token), logEl);
+}
+
+async function feeDistributeFees() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-fee-distribute'); clearLog(logEl);
+  const token = document.getElementById('fee-distribute-token').value.trim();
+  if (!ethers.isAddress(token)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(launchpadContract.distributeFees(token), logEl);
+}
+
+async function feeClaimPlatformFee() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-fee-claimEth'); clearLog(logEl);
+  await sendTx(launchpadContract.claimPlatformFee(), logEl);
+}
+
+async function feeClaimPlatformPairTokens() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-fee-claimPair'); clearLog(logEl);
+  const token = document.getElementById('fee-claimPair-token').value.trim();
+  if (!ethers.isAddress(token)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(launchpadContract.claimPlatformPairTokens(token), logEl);
+}
+
+async function feeClaimPlatformPairTokensBatch() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-fee-claimPairBatch'); clearLog(logEl);
+  const raw = document.getElementById('fee-claimPairBatch').value.trim();
+  if (!raw) { logMsg(logEl, '请输入地址！', 'err'); return; }
+  const addrs = raw.split('\n').map(s => s.trim()).filter(Boolean);
+  for (const a of addrs) { if (!ethers.isAddress(a)) { logMsg(logEl, '地址格式不对: ' + a, 'err'); return; } }
+  await sendTx(launchpadContract.claimPlatformPairTokensBatch(addrs), logEl);
+}
+
+async function feeClaimCreatorNewTokens() {
+  if (!await requireSigner()) return;
+  const logEl = getLog('log-fee-claimCreator'); clearLog(logEl);
+  const token = document.getElementById('fee-claimCreator-token').value.trim();
+  if (!ethers.isAddress(token)) { logMsg(logEl, '地址格式不对！', 'err'); return; }
+  await sendTx(launchpadContract.claimCreatorNewTokens(token), logEl);
+}
+
+// ===== Query Tools =====
+function renderResult(containerId, html) {
+  document.getElementById(containerId).innerHTML = html;
+}
+
+async function queryTokenInfo() {
+  const p = provider || new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+  const c = new ethers.Contract(LAUNCHPAD_ADDR, LAUNCHPAD_ABI, p);
+  const token = document.getElementById('q-tokenInfo').value.trim();
+  if (!ethers.isAddress(token)) { renderResult('q-tokenInfo-result', '<div class="alert alert-warn">地址格式不对</div>'); return; }
+  try {
+    const info = await c.tokenInfo(token);
+    let html = '<div class="info-grid">';
+    html += `<div class="info-item"><div class="label">是否已发射</div><div class="value">${info.launched ? '是' : '否'}</div></div>`;
+    html += `<div class="info-item"><div class="label">创建者</div><div class="value mono">${info.creator}</div></div>`;
+    html += `<div class="info-item"><div class="label">配对币</div><div class="value mono">${info.pairToken}</div></div>`;
+    html += `<div class="info-item"><div class="label">池子费率</div><div class="value">${info.poolFee} (${Number(info.poolFee)/10000}%)</div></div>`;
+    html += `<div class="info-item"><div class="label">NFT Position ID</div><div class="value mono">${info.tokenId.toString()}</div></div>`;
+    html += `<div class="info-item"><div class="label">创建者待领新币</div><div class="value mono">${ethers.formatEther(info.creatorNewTokens)}</div></div>`;
+    html += '</div>';
+    renderResult('q-tokenInfo-result', html);
+  } catch(e) { renderResult('q-tokenInfo-result', '<div class="alert alert-warn">查询失败: ' + e.message + '</div>'); }
+}
+
+async function queryPairConfig() {
+  const p = provider || new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+  const c = new ethers.Contract(LAUNCHPAD_ADDR, LAUNCHPAD_ABI, p);
+  const token = document.getElementById('q-pairConfig').value.trim();
+  if (!ethers.isAddress(token)) { renderResult('q-pairConfig-result', '<div class="alert alert-warn">地址格式不对</div>'); return; }
+  try {
+    const cfg = await c.getPairConfig(token);
+    let html = '<div class="info-grid">';
+    html += `<div class="info-item"><div class="label">是否在白名单</div><div class="value">${cfg.whitelisted ? '<span style="color:var(--success);font-weight:600;">是</span>' : '<span style="color:var(--danger);">否</span>'}</div></div>`;
+    html += `<div class="info-item"><div class="label">sqrtPriceX96</div><div class="value mono">${cfg.sqrtPriceX96.toString()}</div></div>`;
+    html += `<div class="info-item"><div class="label">tickLower</div><div class="value mono">${cfg.tickLower.toString()}</div></div>`;
+    html += `<div class="info-item"><div class="label">tickUpper</div><div class="value mono">${cfg.tickUpper.toString()}</div></div>`;
+    html += '</div>';
+    renderResult('q-pairConfig-result', html);
+  } catch(e) { renderResult('q-pairConfig-result', '<div class="alert alert-warn">查询失败: ' + e.message + '</div>'); }
+}
+
+async function queryCreatorPending() {
+  const p = provider || new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+  const c = new ethers.Contract(LAUNCHPAD_ADDR, LAUNCHPAD_ABI, p);
+  const token = document.getElementById('q-creatorPending').value.trim();
+  if (!ethers.isAddress(token)) { renderResult('q-creatorPending-result', '<div class="alert alert-warn">地址格式不对</div>'); return; }
+  try {
+    const amount = await c.creatorNewTokens(token);
+    const creator = await c.creatorOf(token);
+    let html = '<div class="info-grid">';
+    html += `<div class="info-item"><div class="label">创建者地址</div><div class="value mono">${creator}</div></div>`;
+    html += `<div class="info-item"><div class="label">待领取数量</div><div class="value mono">${ethers.formatEther(amount)} 代币</div></div>`;
+    html += '</div>';
+    renderResult('q-creatorPending-result', html);
+  } catch(e) { renderResult('q-creatorPending-result', '<div class="alert alert-warn">查询失败: ' + e.message + '</div>'); }
+}
+
+async function queryPredictAddress() {
+  const p = provider || new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+  const c = new ethers.Contract(FACTORY_ADDR, FACTORY_ABI, p);
+  const name = document.getElementById('q-predict-name').value.trim();
+  const symbol = document.getElementById('q-predict-symbol').value.trim();
+  const salt = document.getElementById('q-predict-salt').value.trim();
+  const pair = document.getElementById('q-predict-pair').value.trim();
+  if (!name || !symbol || !salt) { renderResult('q-predict-result', '<div class="alert alert-warn">名称、符号、salt 都要填</div>'); return; }
+  try {
+    const saltBytes32 = ethers.encodeBytes32String(salt);
+    const predicted = await c.predictTokenAddress(name, symbol, saltBytes32);
+    let compareHtml = '';
+    if (pair && ethers.isAddress(pair)) {
+      const predBig = BigInt(predicted);
+      const pairBig = BigInt(pair);
+      const ok = predBig < pairBig;
+      compareHtml = `<div class="info-item" style="grid-column:1/-1;">
+        <div class="label">与配对币比较</div>
+        <div class="value" style="font-size:16px;font-weight:700;color:${ok ? 'var(--success)' : 'var(--danger)'};">
+          ${ok ? '✅ 新币地址 < 配对币地址 — 可以用这个 salt' : '❌ 新币地址 > 配对币地址 — 换一个 salt！'}
+        </div>
+      </div>`;
+    }
+    let html = '<div class="info-grid">';
+    html += `<div class="info-item"><div class="label">预测的代币地址</div><div class="value mono">${predicted}</div></div>`;
+    html += `<div class="info-item"><div class="label">Salt (bytes32)</div><div class="value mono" style="font-size:11px;">${saltBytes32}</div></div>`;
+    html += compareHtml;
+    html += '</div>';
+    renderResult('q-predict-result', html);
+  } catch(e) { renderResult('q-predict-result', '<div class="alert alert-warn">查询失败: ' + e.message + '</div>'); }
+}
+
+async function queryCanLaunch() {
+  const p = provider || new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+  const c = new ethers.Contract(FACTORY_ADDR, FACTORY_ABI, p);
+  const addr = document.getElementById('q-canLaunch').value.trim();
+  if (!ethers.isAddress(addr)) { renderResult('q-canLaunch-result', '<div class="alert alert-warn">地址格式不对</div>'); return; }
+  try {
+    const can = await c.canAddressLaunch(addr);
+    let html = `<div class="info-item"><div class="label">能否发币</div><div class="value" style="font-size:16px;font-weight:700;color:${can ? 'var(--success)' : 'var(--danger)'};">${can ? '✅ 可以发币' : '❌ 不能发币'}</div></div>`;
+    renderResult('q-canLaunch-result', html);
+  } catch(e) { renderResult('q-canLaunch-result', '<div class="alert alert-warn">查询失败: ' + e.message + '</div>'); }
+}
+
+// Auto-init provider for queries
+if (!window.ethereum) {
+  provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com');
+}
+
+// Listen for account/chain changes
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', () => { location.reload(); });
+  window.ethereum.on('chainChanged', () => { location.reload(); });
+}
+</script>
+</body>
+</html>
