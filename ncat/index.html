@@ -292,20 +292,8 @@ async function loadData() {
     // 状态栏
     renderStatusBar(isCreator, isOwner, platformRecipient);
 
-    // 获取所有已知代币 + 扫描 Claimed/Credited 事件找更多
-    const tokensToCheck = new Set(Object.keys(CONFIG.knownTokens));
-    
-    // 扫描 Credited 事件找所有涉及当前用户的代币
-    const filter = escrow.filters.Credited(userAddress);
-    const creditedEvents = await escrow.queryFilter(filter, 0, 'latest');
-    creditedEvents.forEach(ev => tokensToCheck.add(ev.args[1].toLowerCase()));
-
-    // 也查 platformRecipient 的
-    if (platformRecipient.toLowerCase() !== userAddress.toLowerCase()) {
-      const filter2 = escrow.filters.Credited(platformRecipient);
-      const ev2 = await escrow.queryFilter(filter2, 0, 'latest');
-      ev2.forEach(ev => tokensToCheck.add(ev.args[1].toLowerCase()));
-    }
+    // 只检查已知代币（公共 RPC 不支持 eth_getLogs 大范围扫描）
+    const tokensToCheck = Object.keys(CONFIG.knownTokens);
 
     let html = '';
     let hasAnyFees = false;
