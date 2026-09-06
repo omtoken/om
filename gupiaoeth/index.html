@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Launch 合约 Owner 管理后台</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* === SKELETON CSS - will be filled === */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg-deep:#06080d;
+  --bg-card:#0c1017;
+  --bg-card-hover:#111822;
+  --border:#1a2235;
+  --border-glow:#2a3a5c;
+  --accent:#00e5ff;
+  --accent-dim:rgba(0,229,255,.12);
+  --accent2:#7c4dff;
+  --accent2-dim:rgba(124,77,255,.12);
+  --danger:#ff3d71;
+  --danger-dim:rgba(255,61,113,.1);
+  --success:#00e676;
+  --success-dim:rgba(0,230,118,.1);
+  --warn:#ffab00;
+  --warn-dim:rgba(255,171,0,.1);
+  --text-primary:#e8eaf6;
+  --text-secondary:#7986a0;
+  --text-muted:#4a5568;
+  --font-display:'Orbitron',sans-serif;
+  --font-body:'Noto Sans SC',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --radius:12px;
+  --radius-sm:8px;
+}
+html{font-size:14px;scroll-behavior:smooth}
+body{
+  font-family:var(--font-body);
+  background:var(--bg-deep);
+  color:var(--text-primary);
+  min-height:100vh;
+  overflow-x:hidden;
+  line-height:1.6;
+}
+/* Background grid effect */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% -20%, rgba(0,229,255,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(124,77,255,.05) 0%, transparent 50%),
+    linear-gradient(180deg, var(--bg-deep) 0%, #080c14 100%);
+  pointer-events:none;
+}
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;
+  background-image:
+    linear-gradient(rgba(0,229,255,.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,.03) 1px, transparent 1px);
+  background-size:60px 60px;
+  pointer-events:none;
+}
+.container{max-width:1200px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+/* HEADER */
+.header{
+  padding:28px 0 20px;
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+  background:rgba(6,8,13,.92);
+  backdrop-filter:blur(20px);
+}
+.header-inner{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.logo-section{display:flex;align-items:center;gap:14px}
+.logo-icon{
+  width:42px;height:42px;border-radius:10px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--font-display);font-weight:900;font-size:18px;color:#fff;
+  box-shadow:0 0 20px rgba(0,229,255,.3);
+}
+.logo-text h1{
+  font-family:var(--font-display);font-size:1.15rem;font-weight:700;
+  letter-spacing:2px;color:var(--text-primary);
+}
+.logo-text p{font-size:.75rem;color:var(--text-secondary);letter-spacing:1px;margin-top:2px}
+.header-right{display:flex;align-items:center;gap:12px}
+.network-badge{
+  display:flex;align-items:center;gap:6px;
+  padding:6px 14px;border-radius:20px;
+  background:var(--success-dim);border:1px solid rgba(0,230,118,.25);
+  font-size:.75rem;color:var(--success);font-weight:500;
+}
+.network-dot{width:7px;height:7px;border-radius:50%;background:var(--success);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.btn-connect{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 22px;border-radius:10px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;font-family:var(--font-body);font-weight:600;font-size:.85rem;
+  transition:all .25s;letter-spacing:.5px;
+}
+.btn-connect:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,229,255,.3)}
+.btn-connect.connected{
+  background:var(--bg-card);border:1px solid var(--border-glow);
+  font-family:var(--font-mono);font-size:.8rem;
+}
+.owner-badge{
+  display:none;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:6px;
+  background:var(--warn-dim);border:1px solid rgba(255,171,0,.25);
+  font-size:.7rem;color:var(--warn);font-weight:600;
+}
+.owner-badge.show{display:flex}
+
+/* TABS */
+.tabs-section{padding:24px 0 0}
+.tabs{
+  display:flex;gap:4px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:5px;
+  overflow-x:auto;
+}
+.tab{
+  flex:1;min-width:fit-content;
+  padding:12px 20px;border-radius:var(--radius-sm);border:none;cursor:pointer;
+  background:transparent;color:var(--text-secondary);
+  font-family:var(--font-body);font-weight:500;font-size:.85rem;
+  transition:all .2s;white-space:nowrap;
+  display:flex;align-items:center;gap:8px;justify-content:center;
+}
+.tab:hover{color:var(--text-primary);background:rgba(255,255,255,.03)}
+.tab.active{
+  background:linear-gradient(135deg,rgba(0,229,255,.12),rgba(124,77,255,.08));
+  color:var(--accent);border:1px solid rgba(0,229,255,.2);
+}
+.tab-icon{font-size:1.1rem}
+.tab-count{
+  font-size:.65rem;padding:2px 7px;border-radius:10px;
+  background:rgba(0,229,255,.15);color:var(--accent);font-weight:700;
+}
+
+/* CONTENT */
+.content{padding:24px 0 60px}
+.tab-panel{display:none;animation:fadeUp .35s ease}
+.tab-panel.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* Contract Info Banner */
+.contract-banner{
+  display:flex;align-items:center;gap:16px;
+  padding:18px 22px;border-radius:var(--radius);
+  background:var(--bg-card);border:1px solid var(--border);
+  margin-bottom:24px;
+}
+.contract-banner-icon{
+  width:48px;height:48px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;font-size:1.5rem;
+  flex-shrink:0;
+}
+.contract-banner-info{flex:1;min-width:0}
+.contract-banner-info h3{font-size:1rem;font-weight:700;margin-bottom:4px}
+.contract-banner-info .addr{
+  font-family:var(--font-mono);font-size:.78rem;color:var(--text-secondary);
+  word-break:break-all;
+}
+.contract-banner-info .addr a{color:var(--accent);text-decoration:none}
+.contract-banner-info .addr a:hover{text-decoration:underline}
+
+/* Function Cards */
+.func-grid{display:grid;grid-template-columns:1fr;gap:16px}
+.func-card{
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  transition:border-color .2s, box-shadow .2s;
+}
+.func-card:hover{border-color:var(--border-glow);box-shadow:0 4px 24px rgba(0,0,0,.3)}
+.func-card-header{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:20px 22px 14px;cursor:pointer;
+}
+.func-card-icon{
+  width:40px;height:40px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;flex-shrink:0;
+}
+.func-card-icon.config{background:var(--accent-dim);color:var(--accent)}
+.func-card-icon.register{background:var(--accent2-dim);color:var(--accent2)}
+.func-card-icon.danger{background:var(--danger-dim);color:var(--danger)}
+.func-card-icon.safe{background:var(--success-dim);color:var(--success)}
+.func-card-icon.warn{background:var(--warn-dim);color:var(--warn)}
+.func-card-meta{flex:1}
+.func-card-title{font-weight:700;font-size:.95rem;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.func-card-title code{
+  font-family:var(--font-mono);font-size:.7rem;
+  padding:2px 8px;border-radius:4px;
+  background:rgba(255,255,255,.05);color:var(--text-secondary);
+}
+.func-card-desc{font-size:.82rem;color:var(--text-secondary);line-height:1.65}
+.func-card-desc strong{color:var(--text-primary);font-weight:600}
+.func-card-body{padding:0 22px 20px;display:none}
+.func-card.open .func-card-body{display:block}
+.func-card.open{border-color:var(--border-glow)}
+.func-card-toggle{
+  font-size:.7rem;color:var(--text-muted);
+  transition:transform .2s;margin-left:auto;flex-shrink:0;
+  padding-top:4px;
+}
+.func-card.open .func-card-toggle{transform:rotate(180deg)}
+
+/* Form elements */
+.form-group{margin-bottom:14px}
+.form-label{
+  display:block;font-size:.78rem;font-weight:600;
+  color:var(--text-secondary);margin-bottom:6px;
+  letter-spacing:.5px;
+}
+.form-input{
+  width:100%;padding:10px 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg-deep);
+  color:var(--text-primary);font-family:var(--font-mono);font-size:.82rem;
+  transition:border-color .2s;
+}
+.form-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+.form-input::placeholder{color:var(--text-muted)}
+.form-hint{font-size:.72rem;color:var(--text-muted);margin-top:4px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.form-row{grid-template-columns:1fr}}
+
+.btn-exec{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 24px;border-radius:var(--radius-sm);border:none;cursor:pointer;
+  font-family:var(--font-body);font-weight:600;font-size:.82rem;
+  transition:all .2s;
+}
+.btn-exec.primary{
+  background:linear-gradient(135deg,var(--accent),#00b8d4);color:#000;
+}
+.btn-exec.primary:hover{box-shadow:0 4px 16px rgba(0,229,255,.3);transform:translateY(-1px)}
+.btn-exec.danger{background:var(--danger);color:#fff}
+.btn-exec.danger:hover{box-shadow:0 4px 16px rgba(255,61,113,.3)}
+.btn-exec.ghost{
+  background:transparent;border:1px solid var(--border);color:var(--text-secondary);
+}
+.btn-exec.ghost:hover{border-color:var(--text-secondary);color:var(--text-primary)}
+.btn-exec:disabled{opacity:.4;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+
+/* Status tags */
+.tag{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:.65rem;padding:2px 8px;border-radius:4px;font-weight:600;
+}
+.tag.done{background:var(--success-dim);color:var(--success)}
+.tag.warn{background:var(--warn-dim);color:var(--warn)}
+.tag.locked{background:rgba(255,61,113,.1);color:var(--danger)}
+
+/* Overview cards */
+.overview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:24px}
+.overview-card{
+  padding:18px;border-radius:var(--radius);
+  background:var(--bg-card);border:1px solid var(--border);
+}
+.overview-card-label{font-size:.72rem;color:var(--text-muted);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.overview-card-value{font-family:var(--font-mono);font-size:.9rem;color:var(--text-primary);word-break:break-all}
+.overview-card-value a{color:var(--accent);text-decoration:none}
+.overview-card-value a:hover{text-decoration:underline}
+
+/* Toast */
+.toast{
+  position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(80px);
+  padding:14px 28px;border-radius:var(--radius);
+  background:var(--bg-card);border:1px solid var(--border-glow);
+  color:var(--text-primary);font-size:.85rem;font-weight:500;
+  z-index:9999;opacity:0;transition:all .35s ease;
+  box-shadow:0 10px 40px rgba(0,0,0,.5);
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-glow)}
+
+/* Responsive */
+@media(max-width:768px){
+  .header-inner{flex-direction:column;align-items:flex-start}
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .tab{padding:10px 14px;font-size:.78rem}
+  .form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+<div class="container">
+<div class="header-inner">
+  <div class="logo-section">
+    <div class="logo-icon">LP</div>
+    <div class="logo-text">
+      <h1>OWNER 管理后台</h1>
+      <p>Launch Protocol · Ethereum Mainnet</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="network-badge"><span class="network-dot"></span>以太坊主网</div>
+    <div class="owner-badge" id="ownerBadge">⚠ 当前为 Owner</div>
+    <button class="btn-connect" id="btnConnect" onclick="connectWallet()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z"/></svg>
+      连接钱包
+    </button>
+  </div>
+</div>
+</div>
+</header>
+
+<!-- TABS -->
+<section class="tabs-section">
+<div class="container">
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('overview',this)">
+    <span class="tab-icon">📊</span> 总览
+  </button>
+  <button class="tab" onclick="switchTab('factory',this)">
+    <span class="tab-icon">🏭</span> LaunchFactory <span class="tab-count">10</span>
+  </button>
+  <button class="tab" onclick="switchTab('escrow',this)">
+    <span class="tab-icon">💰</span> FeeEscrow <span class="tab-count">3</span>
+  </button>
+  <button class="tab" onclick="switchTab('router',this)">
+    <span class="tab-icon">🔀</span> LaunchRouter <span class="tab-count">3</span>
+  </button>
+</div>
+</div>
+</section>
+
+<!-- CONTENT -->
+<section class="content">
+<div class="container">
+
+<!-- PLACEHOLDER: panels will be filled via Edit -->
+<div id="panel-overview" class="tab-panel active">
+  <div class="overview-grid">
+    <div class="overview-card">
+      <div class="overview-card-label">LaunchFactory 工厂合约</div>
+      <div class="overview-card-value"><a href="https://etherscan.io/address/0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb" target="_blank">0xC2e5...C3fb</a></div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-card-label">FeeEscrow 手续费托管</div>
+      <div class="overview-card-value"><a href="https://etherscan.io/address/0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058" target="_blank">0xb075...E058</a></div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-card-label">LaunchRouter 路由合约</div>
+      <div class="overview-card-value"><a href="https://etherscan.io/address/0x0139498eAEa8aB4934701aEE164091F416c8de98" target="_blank">0x0139...de98</a></div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-card-label">LaunchHook 钩子合约</div>
+      <div class="overview-card-value"><a href="https://etherscan.io/address/0x27A30e3082D5bbe959f75F26B4063E18855328cC" target="_blank">0x27A3...28cC</a></div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-card-label">当前 Owner 地址</div>
+      <div class="overview-card-value"><a href="https://etherscan.io/address/0x038C66BDA2e892559295599c32d2C5831a448385" target="_blank">0x038C...8385</a></div>
+    </div>
+    <div class="overview-card">
+      <div class="overview-card-label">Uniswap V4 PoolManager</div>
+      <div class="overview-card-value"><a href="https://etherscan.io/address/0x000000000004444c5dc75cb358380d2e3de08a90" target="_blank">0x0000...8a90</a></div>
+    </div>
+  </div>
+
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;margin-bottom:20px">
+    <h3 style="font-size:.95rem;margin-bottom:14px;display:flex;align-items:center;gap:8px">📋 已完成的部署配置</h3>
+    <div style="display:grid;gap:8px">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-deep);border-radius:var(--radius-sm)">
+        <span class="tag done">✅</span>
+        <span style="font-size:.82rem">Factory.setHook(Hook) — 钩子已绑定</span>
+        <a href="https://etherscan.io/tx/0xa8c487e28febef91e2fe8767a71ad8b1a0b82ada74928b34141061aaf857f352" target="_blank" style="margin-left:auto;font-size:.7rem;color:var(--accent);font-family:var(--font-mono)">TX ↗</a>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-deep);border-radius:var(--radius-sm)">
+        <span class="tag done">✅</span>
+        <span style="font-size:.82rem">FeeEscrow.setHook(Hook) — 钩子已绑定</span>
+        <a href="https://etherscan.io/tx/0xfcfb53cab6c82f883807da1bce40448aea1acc554bd779887966d33d1996157b" target="_blank" style="margin-left:auto;font-size:.7rem;color:var(--accent);font-family:var(--font-mono)">TX ↗</a>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-deep);border-radius:var(--radius-sm)">
+        <span class="tag done">✅</span>
+        <span style="font-size:.82rem">Factory.setRouter(Router) — 路由已设置</span>
+        <a href="https://etherscan.io/tx/0xf80c82ea3629d9df11c049dafe1a9adeb68535cb70d6638753211222494228a0" target="_blank" style="margin-left:auto;font-size:.7rem;color:var(--accent);font-family:var(--font-mono)">TX ↗</a>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-deep);border-radius:var(--radius-sm)">
+        <span class="tag done">✅</span>
+        <span style="font-size:.82rem">Factory.registerQuote(WETH) — WETH 已注册</span>
+        <a href="https://etherscan.io/tx/0xd2ae108a5eba2f1ae90dcaeb0dc9296b7f82bc0f589facb3fe95b987fbc6cb24" target="_blank" style="margin-left:auto;font-size:.7rem;color:var(--accent);font-family:var(--font-mono)">TX ↗</a>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg-deep);border-radius:var(--radius-sm)">
+        <span class="tag done">✅</span>
+        <span style="font-size:.82rem">Factory.setCreationFee(0) — 创建费已设为 0</span>
+        <a href="https://etherscan.io/tx/0x2af0a162b4e3bcb1e5ccbb7f194ba427b8dabe3d5113e35a41b4be4a1a0c5f6e" target="_blank" style="margin-left:auto;font-size:.7rem;color:var(--accent);font-family:var(--font-mono)">TX ↗</a>
+      </div>
+    </div>
+  </div>
+
+  <div style="background:var(--warn-dim);border:1px solid rgba(255,171,0,.2);border-radius:var(--radius);padding:18px 22px">
+    <h3 style="font-size:.9rem;color:var(--warn);margin-bottom:10px">⚠️ 重要提醒</h3>
+    <ul style="font-size:.82rem;color:var(--text-secondary);line-height:1.8;padding-left:18px">
+      <li><strong>setHook 不可逆</strong> — Factory 和 FeeEscrow 的 setHook 只能调用一次，已完成绑定</li>
+      <li><strong>建议更换 Owner</strong> — 当前所有合约的 owner 都是部署者 EOA，建议后续替换为多签钱包（如 Safe）</li>
+      <li><strong>priceSigner</strong> — 当前为部署者地址，生产环境应改为后端签名服务地址</li>
+      <li>所有 <code>onlyOwner</code> 函数只有 Owner 地址才能调用</li>
+    </ul>
+  </div>
+</div>
+<div id="panel-factory" class="tab-panel">
+  <!-- Contract Banner -->
+  <div class="contract-banner">
+    <div class="contract-banner-icon" style="background:linear-gradient(135deg,var(--accent-dim),var(--accent2-dim))">🏭</div>
+    <div class="contract-banner-info">
+      <h3>LaunchFactory — 代币发射工厂</h3>
+      <div class="addr"><a href="https://etherscan.io/address/0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb#code" target="_blank">0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb</a></div>
+    </div>
+    <span class="tag done">10 个管理功能</span>
+  </div>
+
+  <div class="func-grid">
+
+    <!-- 1. setHook -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon config">🔗</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">绑定 Hook 合约 <code>setHook(address)</code> <span class="tag locked">已锁定</span></div>
+          <div class="func-card-desc"><strong>大白话：</strong>把"钩子合约"绑定到工厂上。钩子合约负责在每次交易时自动收取手续费、防狙击等。这个操作<strong>只能调用一次</strong>，调用后就锁死了，不能改。已经完成了。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div style="padding:12px;background:var(--success-dim);border-radius:var(--radius-sm);border:1px solid rgba(0,230,118,.2);margin-bottom:14px">
+          <span style="font-size:.82rem;color:var(--success)">✅ 已完成 — Hook 已绑定为 0x27A3...28cC，此功能不可再用</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. setRouter -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon config">🔀</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">设置路由合约地址 <code>setRouter(address)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>告诉工厂"用哪个路由合约来帮用户做买卖操作"。路由合约是用户买入/卖出代币的入口，工厂需要知道它的地址才能在创建代币时自动帮创建者买入。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">路由合约地址</label>
+          <input class="form-input" id="factory-router-addr" placeholder="0x..." value="0x0139498eAEa8aB4934701aEE164091F416c8de98">
+          <div class="form-hint">当前已设置: 0x0139...de98</div>
+        </div>
+        <button class="btn-exec primary" onclick="execFactory('setRouter',['factory-router-addr'])">发送交易</button>
+      </div>
+    </div>
+
+    <!-- 3. registerQuote -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon register">📝</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">注册报价代币 <code>registerQuote(address)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>添加一种"可以用来交易的钱"。比如 WETH 已经注册了，用户就可以用 WETH 来买卖新创建的代币。如果你想支持其他代币（比如 USDC）作为交易对的钱，就在这里注册。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">要注册的代币地址</label>
+          <input class="form-input" id="factory-quote-addr" placeholder="0x... 比如 USDC 地址">
+          <div class="form-hint">合约会自动读取该代币的 decimals 和 symbol</div>
+        </div>
+        <button class="btn-exec primary" onclick="execFactory('registerQuote',['factory-quote-addr'])">发送交易</button>
+      </div>
+    </div>
+
+    <!-- 4. disableQuote -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon danger">🚫</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">禁用报价代币 <code>disableQuote(address)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>把某个已经注册的"钱"给关掉。关掉之后，新创建的代币就不能再用这种钱来交易了。但已经创建好的池子不受影响。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">要禁用的代币地址</label>
+          <input class="form-input" id="factory-disable-quote" placeholder="0x...">
+        </div>
+        <button class="btn-exec danger" onclick="execFactory('disableQuote',['factory-disable-quote'])">发送交易（不可恢复）</button>
+      </div>
+    </div>
+
+    <!-- 5. setCreationFee -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon warn">💎</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">设置创建费用 <code>setCreationFee(uint256)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>设置别人在你平台上创建新代币时要交多少"入场费"。这笔钱会直接转到国库地址。目前设的是 0（免费），你可以改成收费模式来赚钱。单位是 Wei（1 ETH = 10^18 Wei）。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">创建费用（单位：ETH）</label>
+          <input class="form-input" id="factory-fee-eth" placeholder="比如 0.001 表示 0.001 ETH">
+          <div class="form-hint">当前值: 0 ETH（免费）· 输入的是 ETH 数量，会自动转成 Wei</div>
+        </div>
+        <button class="btn-exec primary" onclick="execFactoryFee()">发送交易</button>
+      </div>
+    </div>
+
+    <!-- 6. setTreasury -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon config">🏦</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">设置国库地址 <code>setTreasury(address)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>设置"收钱口袋"的地址。用户创建代币时交的创建费会打到这个地址。可以改成任何地址，比如团队多签钱包、财务钱包等。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">新的国库地址</label>
+          <input class="form-input" id="factory-treasury" placeholder="0x...">
+          <div class="form-hint">当前国库: 0x038C...8385（部署者地址）</div>
+        </div>
+        <button class="btn-exec primary" onclick="execFactory('setTreasury',['factory-treasury'])">发送交易</button>
+      </div>
+    </div>
+
+    <!-- 7. setPriceSigner -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon config">🔑</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">设置价格签名者 <code>setPriceSigner(address)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>设置"谁来给代币报价签字"。创建代币时需要一个可信的后端服务来提供报价代币的美元价格并签名验证。这个地址就是那个签名服务的身份。当前是部署者地址，生产环境应该换成你的后端服务地址。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">新的签名者地址</label>
+          <input class="form-input" id="factory-signer" placeholder="0x...">
+          <div class="form-hint">当前签名者: 0x038C...8385（部署者地址）</div>
+        </div>
+        <button class="btn-exec primary" onclick="execFactory('setPriceSigner',['factory-signer'])">发送交易</button>
+      </div>
+    </div>
+
+    <!-- 8. setPaused -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon danger">⏸</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">暂停 / 恢复创建 <code>setPaused(bool)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>紧急开关！打开后，所有人都不能再创建新代币了。相当于"拉闸"。遇到紧急情况（比如发现漏洞）可以用这个暂停整个平台。关掉暂停后恢复正常。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div style="display:flex;gap:12px">
+          <button class="btn-exec danger" onclick="execFactoryPause(true)">⏸ 暂停（拉闸）</button>
+          <button class="btn-exec primary" onclick="execFactoryPause(false)">▶ 恢复（开闸）</button>
+        </div>
+        <div class="form-hint" style="margin-top:10px">当前状态: <strong style="color:var(--success)">未暂停</strong>（正常运行中）</div>
+      </div>
+    </div>
+
+    <!-- 9. setOpeningFdvUsd -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon warn">📈</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">设置默认开盘估值 <code>setOpeningFdvUsd(uint256)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>设置新代币创建时的"开盘市值"（美元）。比如现在设的是 4000 美元，意思是每个新创建的代币一上线，整个代币就值 4000 美元。这个数字决定了初始价格。不能设为 0。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">开盘 FDV（单位：USD，带 18 位精度）</label>
+          <input class="form-input" id="factory-fdv" placeholder="比如 4000000000000000000000 表示 4000 USD">
+          <div class="form-hint">当前值: 4,000 USD (4000e18) · 格式：实际美元金额 × 10^18</div>
+        </div>
+        <button class="btn-exec primary" onclick="execFactory('setOpeningFdvUsd',['factory-fdv'])">发送交易</button>
+      </div>
+    </div>
+
+    <!-- 10. transferOwnership (inherited) -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon danger">👑</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">转移 Owner 权限 <code>transferOwnership(address)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>把工厂合约的"老板权限"转给另一个地址。这是两步操作：你先发起转移，对方还需要手动"接受"才能生效。建议把权限转到多签钱包（如 Safe），这样更安全。注意：这个功能来自 Ownable2Step，所有合约都有。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">新 Owner 地址</label>
+          <input class="form-input" id="factory-new-owner" placeholder="0x... 建议填多签钱包地址">
+          <div class="form-hint">⚠️ 转移后需要新 Owner 调用 acceptOwnership() 才能生效</div>
+        </div>
+        <button class="btn-exec danger" onclick="execFactory('transferOwnership',['factory-new-owner'])">发起转移</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div id="panel-escrow" class="tab-panel">
+  <div class="contract-banner">
+    <div class="contract-banner-icon" style="background:linear-gradient(135deg,var(--success-dim),var(--accent-dim))">💰</div>
+    <div class="contract-banner-info">
+      <h3>FeeEscrow — 手续费托管合约</h3>
+      <div class="addr"><a href="https://etherscan.io/address/0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058#code" target="_blank">0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058</a></div>
+    </div>
+    <span class="tag done">3 个管理功能</span>
+  </div>
+
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin-bottom:20px">
+    <h3 style="font-size:.88rem;margin-bottom:8px">💡 这个合约是干嘛的？</h3>
+    <p style="font-size:.82rem;color:var(--text-secondary);line-height:1.7">
+      手续费托管合约就像一个"记账本 + 钱包"。每次用户买卖代币时，Hook 会自动收取手续费（1% 正常费 / 最高 99% 防狙击费），然后按 50/50 分成：一半记在代币创建者名下，一半记在平台名下。创建者和平台可以随时来"提取"自己那份钱。
+    </p>
+  </div>
+
+  <div class="func-grid">
+
+    <!-- 1. setHook -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon config">🔗</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">绑定 Hook 合约 <code>setHook(address)</code> <span class="tag locked">已锁定</span></div>
+          <div class="func-card-desc"><strong>大白话：</strong>跟工厂的 setHook 一样，把钩子合约绑定到这个托管合约上。绑定后，只有这个钩子才能往这里记账。同样<strong>只能调用一次</strong>，已经完成了。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div style="padding:12px;background:var(--success-dim);border-radius:var(--radius-sm);border:1px solid rgba(0,230,118,.2)">
+          <span style="font-size:.82rem;color:var(--success)">✅ 已完成 — Hook 已绑定为 0x27A3...28cC，此功能不可再用</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. setPlatformRecipient -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon config">🎯</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">设置平台收款地址 <code>setPlatformRecipient(address)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>设置"平台那份手续费打到哪个钱包"。每次交易手续费的 50% 会归平台，这个地址就是收钱的人。可以改成任何地址，比如公司钱包、多签等。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">新的平台收款地址</label>
+          <input class="form-input" id="escrow-recipient" placeholder="0x...">
+          <div class="form-hint">当前收款地址: 0x038C...8385（部署者地址）</div>
+        </div>
+        <button class="btn-exec primary" onclick="execEscrow('setPlatformRecipient',['escrow-recipient'])">发送交易</button>
+      </div>
+    </div>
+
+    <!-- 3. transferOwnership -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon danger">👑</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">转移 Owner 权限 <code>transferOwnership(address)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>把这个托管合约的老板权限转给别人。两步操作，对方需要手动接受。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">新 Owner 地址</label>
+          <input class="form-input" id="escrow-new-owner" placeholder="0x...">
+        </div>
+        <button class="btn-exec danger" onclick="execEscrow('transferOwnership',['escrow-new-owner'])">发起转移</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+<div id="panel-router" class="tab-panel">
+  <div class="contract-banner">
+    <div class="contract-banner-icon" style="background:linear-gradient(135deg,var(--accent2-dim),var(--danger-dim))">🔀</div>
+    <div class="contract-banner-info">
+      <h3>LaunchRouter — 交易路由合约</h3>
+      <div class="addr"><a href="https://etherscan.io/address/0x0139498eAEa8aB4934701aEE164091F416c8de98#code" target="_blank">0x0139498eAEa8aB4934701aEE164091F416c8de98</a></div>
+    </div>
+    <span class="tag done">3 个管理功能</span>
+  </div>
+
+  <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin-bottom:20px">
+    <h3 style="font-size:.88rem;margin-bottom:8px">💡 这个合约是干嘛的？</h3>
+    <p style="font-size:.82rem;color:var(--text-secondary);line-height:1.7">
+      路由合约是用户买卖代币的"入口"。用户通过它来买入/卖出新创建的代币。当用户用 ETH 买入时，路由会先把 ETH 换成 WETH，再通过 Uniswap V3 换成报价代币（如 NVDAon），最后才买入目标代币。这个"ETH → 报价代币"的兑换路径需要 Owner 提前配好。
+    </p>
+  </div>
+
+  <div class="func-grid">
+
+    <!-- 1. setEthRoute -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon register">🗺</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">设置 ETH 兑换路径 <code>setEthRoute(address, bytes)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>告诉路由合约"用 ETH 买某个报价代币时，走哪条路"。比如用户想用 ETH 买入一个以 NVDAon 计价的代币，路由需要知道怎么在 Uniswap V3 上把 WETH 换成 NVDAon。这个路径就是 Uniswap V3 的 path 编码。每种报价代币都需要单独设置一条路径。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">报价代币地址</label>
+          <input class="form-input" id="router-route-quote" placeholder="0x... 报价代币地址">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Uniswap V3 Path（hex 编码）</label>
+          <input class="form-input" id="router-route-path" placeholder="0x... 比如 WETH → USDC → NVDAon 的路径编码">
+          <div class="form-hint">格式为 Uniswap V3 的 path 编码：address + fee + address + fee + address...</div>
+        </div>
+        <button class="btn-exec primary" onclick="execRouterRoute()">发送交易</button>
+      </div>
+    </div>
+
+    <!-- 2. rescue -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon warn">🆘</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">紧急提取代币 <code>rescue(address, address)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>如果路由合约里不小心卡了某些代币（比如用户转错了、或者交易残留），Owner 可以把它们全部转到指定地址。相当于"清理钱包"，把不该留在那里的钱拿出来。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">要提取的代币地址</label>
+            <input class="form-input" id="router-rescue-token" placeholder="0x... 代币合约地址">
+          </div>
+          <div class="form-group">
+            <label class="form-label">接收地址</label>
+            <input class="form-input" id="router-rescue-to" placeholder="0x... 转到哪里">
+          </div>
+        </div>
+        <button class="btn-exec danger" onclick="execRouterRescue()">发送交易</button>
+      </div>
+    </div>
+
+    <!-- 3. transferOwnership -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon danger">👑</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">转移 Owner 权限 <code>transferOwnership(address)</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>把路由合约的老板权限转给别人。两步操作，对方需要手动接受。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div class="form-group">
+          <label class="form-label">新 Owner 地址</label>
+          <input class="form-input" id="router-new-owner" placeholder="0x...">
+        </div>
+        <button class="btn-exec danger" onclick="execRouter('transferOwnership',['router-new-owner'])">发起转移</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* === SKELETON JS - will be filled === */
+const OWNER_ADDR = '0x038C66BDA2e892559295599c32d2C5831a448385';
+const CONTRACTS = {
+  factory: '0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb',
+  escrow:  '0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058',
+  router:  '0x0139498eAEa8aB4934701aEE164091F416c8de98',
+  hook:    '0x27A30e3082D5bbe959f75F26B4063E18855328cC',
+};
+let userAddress = null;
+
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+function toggleCard(el) {
+  el.closest('.func-card').classList.toggle('open');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function connectWallet() {
+  if (!window.ethereum) { showToast('请安装 MetaMask 钱包'); return; }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    userAddress = accounts[0].toLowerCase();
+    const btn = document.getElementById('btnConnect');
+    btn.classList.add('connected');
+    btn.innerHTML = userAddress.slice(0,6) + '...' + userAddress.slice(-4);
+    if (userAddress === OWNER_ADDR.toLowerCase()) {
+      document.getElementById('ownerBadge').classList.add('show');
+    }
+    window.ethereum.on('accountsChanged', accs => {
+      userAddress = accs[0].toLowerCase();
+      btn.innerHTML = userAddress.slice(0,6) + '...' + userAddress.slice(-4);
+      document.getElementById('ownerBadge').classList.toggle('show', userAddress === OWNER_ADDR.toLowerCase());
+    });
+  } catch(e) { showToast('连接被拒绝'); }
+}
+
+function etherscan(addr) {
+  return 'https://etherscan.io/address/' + addr;
+}
+function etherscanTx(tx) {
+  return 'https://etherscan.io/tx/' + tx;
+}
+
+// ABI definitions
+const FACTORY_ABI = [
+  {name:'setHook',type:'function',inputs:[{name:'hook_',type:'address'}]},
+  {name:'setRouter',type:'function',inputs:[{name:'router_',type:'address'}]},
+  {name:'registerQuote',type:'function',inputs:[{name:'quote',type:'address'}]},
+  {name:'disableQuote',type:'function',inputs:[{name:'quote',type:'address'}]},
+  {name:'setCreationFee',type:'function',inputs:[{name:'fee',type:'uint256'}]},
+  {name:'setTreasury',type:'function',inputs:[{name:'treasury_',type:'address'}]},
+  {name:'setPriceSigner',type:'function',inputs:[{name:'signer',type:'address'}]},
+  {name:'setPaused',type:'function',inputs:[{name:'paused_',type:'bool'}]},
+  {name:'setOpeningFdvUsd',type:'function',inputs:[{name:'fdvUsd',type:'uint256'}]},
+  {name:'transferOwnership',type:'function',inputs:[{name:'newOwner',type:'address'}]},
+];
+const ESCROW_ABI = [
+  {name:'setHook',type:'function',inputs:[{name:'hook_',type:'address'}]},
+  {name:'setPlatformRecipient',type:'function',inputs:[{name:'recipient',type:'address'}]},
+  {name:'transferOwnership',type:'function',inputs:[{name:'newOwner',type:'address'}]},
+];
+const ROUTER_ABI = [
+  {name:'setEthRoute',type:'function',inputs:[{name:'quote',type:'address'},{name:'path',type:'bytes'}]},
+  {name:'rescue',type:'function',inputs:[{name:'token',type:'address'},{name:'to',type:'address'}]},
+  {name:'transferOwnership',type:'function',inputs:[{name:'newOwner',type:'address'}]},
+];
+
+function getAddr(inputId) {
+  const v = document.getElementById(inputId).value.trim();
+  if (!v) { showToast('请填写地址'); return null; }
+  if (!/^0x[0-9a-fA-F]{40}$/.test(v)) { showToast('地址格式不正确'); return null; }
+  return v;
+}
+
+async function sendTx(contractAddr, abiArr, funcName, args) {
+  if (!window.ethereum) { showToast('请先连接钱包'); return; }
+  try {
+    // Manual ABI encoding without ethers.js dependency
+    const funcSig = getFuncSig(funcName, abiArr);
+    const data = encodeFunctionData(funcSig, args);
+    const txHash = await window.ethereum.request({
+      method: 'eth_sendTransaction',
+      params: [{ from: userAddress, to: contractAddr, data: data }]
+    });
+    showToast('交易已发送!');
+    const url = 'https://etherscan.io/tx/' + txHash;
+    console.log('TX:', url);
+    window.open(url, '_blank');
+  } catch(e) {
+    showToast('交易失败: ' + (e.message || e));
+  }
+}
+
+function getFuncSig(name, abiArr) {
+  const item = abiArr.find(a => a.name === name);
+  if (!item) throw new Error('Function not found: ' + name);
+  return item;
+}
+
+// Simple ABI encoder (handles address, uint256, bool, bytes)
+function encodeFunctionData(funcSig, args) {
+  const selector = funcSelector(funcSig.name, funcSig.inputs.map(i=>i.type));
+  let encoded = selector;
+  // For simplicity, use dynamic encoding
+  const headParts = [];
+  const tailParts = [];
+  let headSize = funcSig.inputs.length * 32;
+  
+  funcSig.inputs.forEach((input, i) => {
+    const val = args[i];
+    if (input.type === 'address') {
+      headParts.push(padLeft(val.replace('0x',''), 64));
+    } else if (input.type === 'uint256') {
+      headParts.push(padLeft(BigInt(val).toString(16), 64));
+    } else if (input.type === 'bool') {
+      headParts.push(padLeft(val ? '1' : '0', 64));
+    } else if (input.type === 'bytes') {
+      // dynamic type
+      const offset = headSize + tailParts.reduce((s,p) => s + p.length/2, 0);
+      headParts.push(padLeft(offset.toString(16), 64));
+      const hex = val.replace('0x','');
+      const len = padLeft((hex.length/2).toString(16), 64);
+      const padded = hex + '0'.repeat((64 - hex.length % 64) % 64);
+      tailParts.push(len + padded);
+    }
+  });
+  
+  return '0x' + encoded + headParts.join('') + tailParts.join('');
+}
+
+function funcSelector(name, types) {
+  const sig = name + '(' + types.join(',') + ')';
+  // Use a simple keccak-like approach - but we need actual keccak
+  // We'll use the built-in crypto or a simple implementation
+  const hash = keccak256(sig);
+  return hash.slice(0, 8);
+}
+
+// Keccak-256 implementation
+function keccak256(str) {
+  // We'll use SubtleCrypto if available, otherwise a JS implementation
+  // For browser, we use a minimal keccak
+  const bytes = new TextEncoder().encode(str);
+  return keccak(bytes, 256);
+}
+
+// Minimal Keccak implementation
+function keccak(message, bits) {
+  const rate = 1600 - bits * 2;
+  const rateBytes = rate / 8;
+  const outputBytes = bits / 8;
+  
+  // Padding
+  const padLen = rateBytes - (message.length % rateBytes);
+  const padded = new Uint8Array(message.length + padLen);
+  padded.set(message);
+  padded[message.length] = 0x01;
+  padded[padded.length - 1] |= 0x80;
+  
+  // State
+  const state = new Uint8Array(200);
+  
+  // Absorb
+  for (let offset = 0; offset < padded.length; offset += rateBytes) {
+    for (let i = 0; i < rateBytes; i++) {
+      state[i] ^= padded[offset + i];
+    }
+    keccakF(state);
+  }
+  
+  // Squeeze
+  return Array.from(state.slice(0, outputBytes)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+function keccakF(state) {
+  const lanes = new BigUint64Array(25);
+  for (let i = 0; i < 25; i++) {
+    const view = new DataView(state.buffer, i * 8, 8);
+    lanes[i] = view.getBigUint64(0, true);
+  }
+  
+  const RC = [
+    0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
+    0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n,
+    0x000000000000008an, 0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
+    0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n, 0x8000000000008003n,
+    0x8000000000008002n, 0x8000000000000080n, 0x000000000000800an, 0x800000008000000an,
+    0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n
+  ];
+  
+  const ROTC = [
+    1n,3n,6n,10n,15n,21n,28n,36n,45n,55n,2n,14n,27n,41n,56n,8n,25n,43n,62n,18n,39n,61n,20n,44n
+  ];
+  
+  const PILN = [10,7,11,17,18,3,5,16,8,21,24,4,15,23,19,13,12,2,20,14,22,9,6,1];
+  
+  for (let round = 0; round < 24; round++) {
+    // θ
+    const C = new BigUint64Array(5);
+    for (let x = 0; x < 5; x++) {
+      C[x] = lanes[x] ^ lanes[x+5] ^ lanes[x+10] ^ lanes[x+15] ^ lanes[x+20];
+    }
+    for (let x = 0; x < 5; x++) {
+      const D = C[(x+4)%5] ^ rot64(C[(x+1)%5], 1n);
+      for (let y = 0; y < 25; y += 5) lanes[x+y] ^= D;
+    }
+    
+    // ρ and π
+    let current = lanes[1];
+    for (let i = 0; i < 24; i++) {
+      const j = PILN[i];
+      const temp = lanes[j];
+      lanes[j] = rot64(current, BigInt(ROTC[i]));
+      current = temp;
+    }
+    
+    // χ
+    for (let y = 0; y < 25; y += 5) {
+      const t = [lanes[y], lanes[y+1], lanes[y+2], lanes[y+3], lanes[y+4]];
+      for (let x = 0; x < 5; x++) {
+        lanes[y+x] = t[x] ^ ((~t[(x+1)%5]) & t[(x+2)%5]);
+      }
+    }
+    
+    // ι
+    lanes[0] ^= RC[round];
+  }
+  
+  for (let i = 0; i < 25; i++) {
+    const view = new DataView(state.buffer, i * 8, 8);
+    view.setBigUint64(0, lanes[i], true);
+  }
+}
+
+function rot64(x, n) {
+  const mask = 0xFFFFFFFFFFFFFFFFn;
+  return ((x << n) | (x >> (64n - n))) & mask;
+}
+
+function padLeft(hex, len) {
+  return hex.padStart(len, '0');
+}
+
+// Execution functions
+function execFactory(funcName, inputIds) {
+  const args = inputIds.map(id => {
+    const el = document.getElementById(id);
+    return el.value.trim();
+  });
+  if (args.some(a => !a)) { showToast('请填写所有字段'); return; }
+  if (inputIds.some(id => id.includes('addr') || id.includes('owner') || id.includes('treasury') || id.includes('signer'))) {
+    const addrArgs = args.filter((_, i) => inputIds[i].includes('addr') || inputIds[i].includes('owner') || inputIds[i].includes('treasury') || inputIds[i].includes('signer'));
+    for (const a of addrArgs) {
+      if (!/^0x[0-9a-fA-F]{40}$/.test(a)) { showToast('地址格式不正确'); return; }
+    }
+  }
+  sendTx(CONTRACTS.factory, FACTORY_ABI, funcName, args);
+}
+
+function ethToWei(ethStr) {
+  // String-based ETH to Wei conversion to avoid floating point precision loss
+  ethStr = ethStr.trim();
+  const parts = ethStr.split('.');
+  const whole = parts[0] || '0';
+  let frac = (parts[1] || '').padEnd(18, '0').slice(0, 18);
+  const wei = BigInt(whole) * 10n**18n + BigInt(frac);
+  return wei.toString();
+}
+
+function execFactoryFee() {
+  const ethVal = document.getElementById('factory-fee-eth').value.trim();
+  if (!ethVal) { showToast('请填写费用金额'); return; }
+  const wei = ethToWei(ethVal);
+  sendTx(CONTRACTS.factory, FACTORY_ABI, 'setCreationFee', [wei]);
+}
+
+function execFactoryPause(paused) {
+  sendTx(CONTRACTS.factory, FACTORY_ABI, 'setPaused', [paused]);
+}
+
+function execEscrow(funcName, inputIds) {
+  const args = inputIds.map(id => document.getElementById(id).value.trim());
+  if (args.some(a => !a)) { showToast('请填写所有字段'); return; }
+  sendTx(CONTRACTS.escrow, ESCROW_ABI, funcName, args);
+}
+
+function execRouter(funcName, inputIds) {
+  const args = inputIds.map(id => document.getElementById(id).value.trim());
+  if (args.some(a => !a)) { showToast('请填写所有字段'); return; }
+  sendTx(CONTRACTS.router, ROUTER_ABI, funcName, args);
+}
+
+function execRouterRoute() {
+  const quote = document.getElementById('router-route-quote').value.trim();
+  const path = document.getElementById('router-route-path').value.trim();
+  if (!quote || !path) { showToast('请填写所有字段'); return; }
+  sendTx(CONTRACTS.router, ROUTER_ABI, 'setEthRoute', [quote, path]);
+}
+
+function execRouterRescue() {
+  const token = document.getElementById('router-rescue-token').value.trim();
+  const to = document.getElementById('router-rescue-to').value.trim();
+  if (!token || !to) { showToast('请填写所有字段'); return; }
+  sendTx(CONTRACTS.router, ROUTER_ABI, 'rescue', [token, to]);
+}
+</script>
+</body>
+</html>
