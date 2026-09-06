@@ -341,30 +341,48 @@ body::after{
 
 <!-- PLACEHOLDER: panels will be filled via Edit -->
 <div id="panel-overview" class="tab-panel active">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <h2 style="font-size:1.1rem;font-weight:700">合约状态总览</h2>
+    <button class="btn-exec primary" onclick="refreshAllOwners()" style="font-size:.8rem;padding:8px 16px">
+      🔄 刷新链上状态
+    </button>
+  </div>
+
   <div class="overview-grid">
     <div class="overview-card">
       <div class="overview-card-label">LaunchFactory 工厂合约</div>
       <div class="overview-card-value"><a href="https://etherscan.io/address/0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb" target="_blank">0xC2e5...C3fb</a></div>
+      <div class="overview-card-sub" style="margin-top:8px;font-size:.72rem;color:var(--text-muted)">
+        Owner: <span id="owner-factory" style="color:var(--accent);font-family:var(--font-mono)">加载中...</span>
+      </div>
     </div>
     <div class="overview-card">
       <div class="overview-card-label">FeeEscrow 手续费托管</div>
       <div class="overview-card-value"><a href="https://etherscan.io/address/0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058" target="_blank">0xb075...E058</a></div>
+      <div class="overview-card-sub" style="margin-top:8px;font-size:.72rem;color:var(--text-muted)">
+        Owner: <span id="owner-escrow" style="color:var(--accent);font-family:var(--font-mono)">加载中...</span>
+      </div>
     </div>
     <div class="overview-card">
       <div class="overview-card-label">LaunchRouter 路由合约</div>
       <div class="overview-card-value"><a href="https://etherscan.io/address/0x0139498eAEa8aB4934701aEE164091F416c8de98" target="_blank">0x0139...de98</a></div>
+      <div class="overview-card-sub" style="margin-top:8px;font-size:.72rem;color:var(--text-muted)">
+        Owner: <span id="owner-router" style="color:var(--accent);font-family:var(--font-mono)">加载中...</span>
+      </div>
     </div>
     <div class="overview-card">
       <div class="overview-card-label">LaunchHook 钩子合约</div>
       <div class="overview-card-value"><a href="https://etherscan.io/address/0x27A30e3082D5bbe959f75F26B4063E18855328cC" target="_blank">0x27A3...28cC</a></div>
-    </div>
-    <div class="overview-card">
-      <div class="overview-card-label">当前 Owner 地址</div>
-      <div class="overview-card-value"><a href="https://etherscan.io/address/0x038C66BDA2e892559295599c32d2C5831a448385" target="_blank">0x038C...8385</a></div>
+      <div class="overview-card-sub" style="margin-top:8px;font-size:.72rem;color:var(--text-muted)">
+        <span style="color:var(--text-muted)">无 Owner（不可变）</span>
+      </div>
     </div>
     <div class="overview-card">
       <div class="overview-card-label">Uniswap V4 PoolManager</div>
       <div class="overview-card-value"><a href="https://etherscan.io/address/0x000000000004444c5dc75cb358380d2e3de08a90" target="_blank">0x0000...8a90</a></div>
+      <div class="overview-card-sub" style="margin-top:8px;font-size:.72rem;color:var(--text-muted)">
+        <span style="color:var(--text-muted)">Uniswap 官方合约</span>
+      </div>
     </div>
   </div>
 
@@ -403,8 +421,8 @@ body::after{
     <h3 style="font-size:.9rem;color:var(--warn);margin-bottom:10px">⚠️ 重要提醒</h3>
     <ul style="font-size:.82rem;color:var(--text-secondary);line-height:1.8;padding-left:18px">
       <li><strong>setHook 不可逆</strong> — Factory 和 FeeEscrow 的 setHook 只能调用一次，已完成绑定</li>
-      <li><strong>建议更换 Owner</strong> — 当前所有合约的 owner 都是部署者 EOA，建议后续替换为多签钱包（如 Safe）</li>
-      <li><strong>priceSigner</strong> — 当前为部署者地址，生产环境应改为后端签名服务地址</li>
+      <li><strong>Owner 权限</strong> — 点击上方"刷新链上状态"按钮可查看每个合约的当前 Owner</li>
+      <li><strong>两步转移</strong> — 转移 Owner 需要新 Owner 调用 acceptOwnership() 才能生效</li>
       <li>所有 <code>onlyOwner</code> 函数只有 Owner 地址才能调用</li>
     </ul>
   </div>
@@ -416,6 +434,9 @@ body::after{
     <div class="contract-banner-info">
       <h3>LaunchFactory — 代币发射工厂</h3>
       <div class="addr"><a href="https://etherscan.io/address/0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb#code" target="_blank">0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb</a></div>
+      <div style="margin-top:6px;font-size:.75rem;color:var(--text-secondary)">
+        当前 Owner: <span id="factory-owner-display" style="color:var(--accent);font-family:var(--font-mono)">点击"刷新链上状态"读取</span>
+      </div>
     </div>
     <span class="tag done">11 个管理功能</span>
   </div>
@@ -643,6 +664,9 @@ body::after{
     <div class="contract-banner-info">
       <h3>FeeEscrow — 手续费托管合约</h3>
       <div class="addr"><a href="https://etherscan.io/address/0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058#code" target="_blank">0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058</a></div>
+      <div style="margin-top:6px;font-size:.75rem;color:var(--text-secondary)">
+        当前 Owner: <span id="escrow-owner-display" style="color:var(--accent);font-family:var(--font-mono)">点击"刷新链上状态"读取</span>
+      </div>
     </div>
     <span class="tag done">4 个管理功能</span>
   </div>
@@ -738,6 +762,9 @@ body::after{
     <div class="contract-banner-info">
       <h3>LaunchRouter — 交易路由合约</h3>
       <div class="addr"><a href="https://etherscan.io/address/0x0139498eAEa8aB4934701aEE164091F416c8de98#code" target="_blank">0x0139498eAEa8aB4934701aEE164091F416c8de98</a></div>
+      <div style="margin-top:6px;font-size:.75rem;color:var(--text-secondary)">
+        当前 Owner: <span id="router-owner-display" style="color:var(--accent);font-family:var(--font-mono)">点击"刷新链上状态"读取</span>
+      </div>
     </div>
     <span class="tag done">4 个管理功能</span>
   </div>
@@ -846,8 +873,7 @@ body::after{
 <div class="toast" id="toast"></div>
 
 <script>
-/* === SKELETON JS - will be filled === */
-const OWNER_ADDR = '0x038C66BDA2e892559295599c32d2C5831a448385';
+/* === Launch Protocol Owner Dashboard === */
 const CONTRACTS = {
   factory: '0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb',
   escrow:  '0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058',
@@ -882,13 +908,15 @@ async function connectWallet() {
     const btn = document.getElementById('btnConnect');
     btn.classList.add('connected');
     btn.innerHTML = userAddress.slice(0,6) + '...' + userAddress.slice(-4);
-    if (userAddress === OWNER_ADDR.toLowerCase()) {
-      document.getElementById('ownerBadge').classList.add('show');
-    }
-    window.ethereum.on('accountsChanged', accs => {
+    
+    // Auto refresh owner status after connecting
+    await refreshAllOwners();
+    
+    window.ethereum.on('accountsChanged', async accs => {
       userAddress = accs[0].toLowerCase();
       btn.innerHTML = userAddress.slice(0,6) + '...' + userAddress.slice(-4);
-      document.getElementById('ownerBadge').classList.toggle('show', userAddress === OWNER_ADDR.toLowerCase());
+      // Refresh owner status when account changes
+      await refreshAllOwners();
     });
   } catch(e) { showToast('连接被拒绝'); }
 }
@@ -932,6 +960,127 @@ function getAddr(inputId) {
   if (!v) { showToast('请填写地址'); return null; }
   if (!/^0x[0-9a-fA-F]{40}$/.test(v)) { showToast('地址格式不正确'); return null; }
   return v;
+}
+
+// Read owner() from contract
+async function readOwner(contractAddr) {
+  if (!window.ethereum) return null;
+  try {
+    // owner() selector: 0x8da5cb5b
+    const result = await window.ethereum.request({
+      method: 'eth_call',
+      params: [{
+        to: contractAddr,
+        data: '0x8da5cb5b'
+      }, 'latest']
+    });
+    // Result is 32 bytes, address is in last 20 bytes
+    if (result && result.length >= 66) {
+      return '0x' + result.slice(26);
+    }
+    return null;
+  } catch(e) {
+    console.error('Failed to read owner:', e);
+    return null;
+  }
+}
+
+// Read pendingOwner() from contract (Ownable2Step)
+async function readPendingOwner(contractAddr) {
+  if (!window.ethereum) return null;
+  try {
+    // pendingOwner() selector: 0xe30c3978
+    const result = await window.ethereum.request({
+      method: 'eth_call',
+      params: [{
+        to: contractAddr,
+        data: '0xe30c3978'
+      }, 'latest']
+    });
+    if (result && result.length >= 66) {
+      const addr = '0x' + result.slice(26);
+      // Return null if it's zero address
+      return addr === '0x0000000000000000000000000000000000000000' ? null : addr;
+    }
+    return null;
+  } catch(e) {
+    return null;
+  }
+}
+
+// Format address for display
+function formatAddr(addr) {
+  if (!addr) return '未知';
+  return addr.slice(0, 6) + '...' + addr.slice(-4);
+}
+
+// Refresh all owners from chain
+async function refreshAllOwners() {
+  if (!window.ethereum) {
+    showToast('请先连接钱包');
+    return;
+  }
+  
+  showToast('正在读取链上状态...');
+  
+  // Read Factory owner
+  const factoryOwner = await readOwner(CONTRACTS.factory);
+  const factoryPending = await readPendingOwner(CONTRACTS.factory);
+  const factoryEl = document.getElementById('owner-factory');
+  const factoryDisplayEl = document.getElementById('factory-owner-display');
+  if (factoryEl) {
+    let text = factoryOwner ? formatAddr(factoryOwner) : '读取失败';
+    if (factoryPending) text += ' (待接受: ' + formatAddr(factoryPending) + ')';
+    factoryEl.innerHTML = factoryOwner ? `<a href="https://etherscan.io/address/${factoryOwner}" target="_blank" style="color:var(--accent);text-decoration:none">${text}</a>` : text;
+  }
+  if (factoryDisplayEl) {
+    let text = factoryOwner ? formatAddr(factoryOwner) : '读取失败';
+    if (factoryPending) text += ' ⏳ 待接受: ' + formatAddr(factoryPending);
+    factoryDisplayEl.innerHTML = factoryOwner ? `<a href="https://etherscan.io/address/${factoryOwner}" target="_blank" style="color:var(--accent);text-decoration:none">${text}</a>` : text;
+  }
+  
+  // Read Escrow owner
+  const escrowOwner = await readOwner(CONTRACTS.escrow);
+  const escrowPending = await readPendingOwner(CONTRACTS.escrow);
+  const escrowEl = document.getElementById('owner-escrow');
+  const escrowDisplayEl = document.getElementById('escrow-owner-display');
+  if (escrowEl) {
+    let text = escrowOwner ? formatAddr(escrowOwner) : '读取失败';
+    if (escrowPending) text += ' (待接受: ' + formatAddr(escrowPending) + ')';
+    escrowEl.innerHTML = escrowOwner ? `<a href="https://etherscan.io/address/${escrowOwner}" target="_blank" style="color:var(--accent);text-decoration:none">${text}</a>` : text;
+  }
+  if (escrowDisplayEl) {
+    let text = escrowOwner ? formatAddr(escrowOwner) : '读取失败';
+    if (escrowPending) text += ' ⏳ 待接受: ' + formatAddr(escrowPending);
+    escrowDisplayEl.innerHTML = escrowOwner ? `<a href="https://etherscan.io/address/${escrowOwner}" target="_blank" style="color:var(--accent);text-decoration:none">${text}</a>` : text;
+  }
+  
+  // Read Router owner
+  const routerOwner = await readOwner(CONTRACTS.router);
+  const routerPending = await readPendingOwner(CONTRACTS.router);
+  const routerEl = document.getElementById('owner-router');
+  const routerDisplayEl = document.getElementById('router-owner-display');
+  if (routerEl) {
+    let text = routerOwner ? formatAddr(routerOwner) : '读取失败';
+    if (routerPending) text += ' (待接受: ' + formatAddr(routerPending) + ')';
+    routerEl.innerHTML = routerOwner ? `<a href="https://etherscan.io/address/${routerOwner}" target="_blank" style="color:var(--accent);text-decoration:none">${text}</a>` : text;
+  }
+  if (routerDisplayEl) {
+    let text = routerOwner ? formatAddr(routerOwner) : '读取失败';
+    if (routerPending) text += ' ⏳ 待接受: ' + formatAddr(routerPending);
+    routerDisplayEl.innerHTML = routerOwner ? `<a href="https://etherscan.io/address/${routerOwner}" target="_blank" style="color:var(--accent);text-decoration:none">${text}</a>` : text;
+  }
+  
+  // Update owner badge based on actual chain state
+  const userAddr = userAddress ? userAddress.toLowerCase() : '';
+  const isOwner = userAddr && (
+    userAddr === (factoryOwner || '').toLowerCase() ||
+    userAddr === (escrowOwner || '').toLowerCase() ||
+    userAddr === (routerOwner || '').toLowerCase()
+  );
+  document.getElementById('ownerBadge').classList.toggle('show', isOwner);
+  
+  showToast('链上状态已更新');
 }
 
 async function sendTx(contractAddr, abiArr, funcName, args) {
