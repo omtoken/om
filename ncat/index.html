@@ -285,12 +285,14 @@ async function loadData() {
     const hook = new ethers.Contract(CONFIG.launchHook, ABI.launchHook, provider);
     const pmAddr = await hook.poolManager();
 
-    const platformRecipient = await escrow.platformRecipient();
+    const platformRecipient = (await escrow.platformRecipient()).toLowerCase();
     const isCreator = userAddress.toLowerCase() === CONFIG.creator.toLowerCase();
-    const isOwner = userAddress.toLowerCase() === CONFIG.platformRecipient.toLowerCase();
+    const isPlatform = userAddress.toLowerCase() === platformRecipient;
+    // creator 和 platform 是否是同一个地址
+    const sameAddress = CONFIG.creator.toLowerCase() === platformRecipient;
 
     // 状态栏
-    renderStatusBar(isCreator, isOwner, platformRecipient);
+    renderStatusBar(isCreator, isPlatform);
 
     // 只检查已知代币（公共 RPC 不支持 eth_getLogs 大范围扫描）
     const tokensToCheck = Object.keys(CONFIG.knownTokens);
@@ -312,29 +314,34 @@ async function loadData() {
         hookBalance = await pm.balanceOf(CONFIG.launchHook, currencyId);
       } catch(e) {}
 
-      // 用户可领取 (creator 份额)
+      // 查询 creator 份额（claimable[creator][token]）
       let creatorClaimable = 0n;
       if (isCreator) {
-        try { creatorClaimable = await escrow.claimable(userAddress, tokenAddr); } catch(e) {}
+        try { creatorClaimable = await escrow.claimable(CONFIG.creator, tokenAddr); } catch(e) {}
       }
 
-      // 平台可领取
+      // 查询平台份额（claimable[platformRecipient][token]）
+      // 如果 creator == platformRecipient，这是同一个 mapping 条目，不能重复加
       let platformClaimable = 0n;
-      if (isOwner || userAddress.toLowerCase() === platformRecipient.toLowerCase()) {
+      if (isPlatform && !sameAddress) {
         try { platformClaimable = await escrow.claimable(platformRecipient, tokenAddr); } catch(e) {}
       }
+
+      // 当前用户的总可领取
+      // 如果 sameAddress，creatorClaimable 就是全部（creator 和 platform 共享一个余额）
+      let myTotal = isCreator ? creatorClaimable : 0n;
+      if (isPlatform && !sameAddress) myTotal += platformClaimable;
 
       // 总已记账
       let totalCredited = 0n;
       try { totalCredited = await escrow.totalCredited(tokenAddr); } catch(e) {}
 
-      const totalPending = creatorClaimable + platformClaimable;
-      if (totalPending === 0n && hookBalance === 0n && totalCredited === 0n) continue;
+      if (myTotal === 0n && hookBalance === 0n && totalCredited === 0n) continue;
       hasAnyFees = true;
 
       html += renderTokenCard(tokenAddr, tokenInfo, {
-        creatorClaimable, platformClaimable, hookBalance, totalCredited,
-        isCreator, isOwner, platformRecipient,
+        creatorClaimable, platformClaimable, myTotal, hookBalance, totalCredited,
+        isCreator, isPlatform, sameAddress,
       });
     }
 
@@ -348,19 +355,19 @@ async function loadData() {
   }
 }
 
-function renderStatusBar(isCreator, isOwner, platformRecipient) {
+function renderStatusBar(isCreator, isPlatform) {
   const bar = document.getElementById('statusBar');
   bar.style.display = 'flex';
   let chips = '';
   chips += '<div class="status-chip"><span class="status-dot"></span>以太坊主网</div>';
   if (isCreator) chips += '<div class="status-chip"><span class="status-dot"></span>代币创建者</div>';
-  if (isOwner) chips += '<div class="status-chip"><span class="status-dot"></span>平台 Owner</div>';
-  if (!isCreator && !isOwner) chips += '<div class="status-chip"><span class="status-dot warn"></span>普通用户（无手续费权限）</div>';
+  if (isPlatform) chips += '<div class="status-chip"><span class="status-dot"></span>平台 Owner</div>';
+  if (!isCreator && !isPlatform) chips += '<div class="status-chip"><span class="status-dot warn"></span>普通用户（无手续费权限）</div>';
   bar.innerHTML = chips;
 }
 
 function renderTokenCard(tokenAddr, info, data) {
-  const { creatorClaimable, platformClaimable, hookBalance, totalCredited, isCreator, isOwner, platformRecipient } = data;
+  const { creatorClaimable, platformClaimable, myTotal, hookBalance, totalCredited, isCreator, isPlatform, sameAddress } = data;
   const fmt = (v) => ethers.formatUnits(v, info.decimals);
   const fmtShort = (v) => {
     const s = fmt(v);
@@ -370,13 +377,49 @@ function renderTokenCard(tokenAddr, info, data) {
     return n.toLocaleString('zh-CN', { maximumFractionDigits: 6 });
   };
 
-  const myClaimable = (isCreator ? creatorClaimable : 0n) + ((isOwner || userAddress?.toLowerCase() === platformRecipient?.toLowerCase()) ? platformClaimable : 0n);
-  const canClaim = myClaimable > 0n;
+  const canClaim = myTotal > 0n;
   const canSweep = hookBalance > 0n;
 
   let roles = '';
   if (isCreator) roles += '<span class="role-badge creator">创建者</span>';
-  if (isOwner) roles += '<span class="role-badge owner">Owner</span>';
+  if (isPlatform) roles += '<span class="role-badge owner">Owner</span>';
+
+  // 构建金额面板
+  let amountsHtml = '';
+
+  if (sameAddress) {
+    // creator 和 platform 是同一地址，只显示一个总余额
+    amountsHtml = `
+      <div class="amount-box" style="grid-column:1/-1">
+        <div class="amount-label">可领取总额（创建者 + 平台，同一地址）</div>
+        <div class="amount-value">${fmtShort(myTotal)}</div>
+        <div class="amount-usd">${fmtShort(myTotal)} ${info.symbol}</div>
+      </div>`;
+  } else {
+    amountsHtml = `
+      <div class="amount-box">
+        <div class="amount-label">可领取（创建者份额）</div>
+        <div class="amount-value">${isCreator ? fmtShort(creatorClaimable) : '—'}</div>
+        ${isCreator ? '<div class="amount-usd">' + fmtShort(creatorClaimable) + ' ' + info.symbol + '</div>' : ''}
+      </div>
+      <div class="amount-box">
+        <div class="amount-label">可领取（平台份额）</div>
+        <div class="amount-value">${isPlatform ? fmtShort(platformClaimable) : '—'}</div>
+        ${isPlatform ? '<div class="amount-usd">' + fmtShort(platformClaimable) + ' ' + info.symbol + '</div>' : ''}
+      </div>`;
+  }
+
+  amountsHtml += `
+    <div class="amount-box">
+      <div class="amount-label">待归集（PoolManager 中）</div>
+      <div class="amount-value small">${fmtShort(hookBalance)}</div>
+      <div class="amount-usd">需 sweep 到 FeeEscrow</div>
+    </div>
+    <div class="amount-box">
+      <div class="amount-label">累计已记账</div>
+      <div class="amount-value small">${fmtShort(totalCredited)}</div>
+      <div class="amount-usd">历史总额</div>
+    </div>`;
 
   let html = `
   <div class="section">
@@ -392,30 +435,11 @@ function renderTokenCard(tokenAddr, info, data) {
         </div>
       </div>
       <div class="amounts">
-        <div class="amount-box">
-          <div class="amount-label">可领取（创建者份额）</div>
-          <div class="amount-value">${isCreator ? fmtShort(creatorClaimable) : '—'}</div>
-          ${isCreator ? '<div class="amount-usd">' + fmtShort(creatorClaimable) + ' ' + info.symbol + '</div>' : ''}
-        </div>
-        <div class="amount-box">
-          <div class="amount-label">可领取（平台份额）</div>
-          <div class="amount-value">${isOwner ? fmtShort(platformClaimable) : '—'}</div>
-          ${isOwner ? '<div class="amount-usd">' + fmtShort(platformClaimable) + ' ' + info.symbol + '</div>' : ''}
-        </div>
-        <div class="amount-box">
-          <div class="amount-label">待归集（PoolManager 中）</div>
-          <div class="amount-value small">${fmtShort(hookBalance)}</div>
-          <div class="amount-usd">需 sweep 到 FeeEscrow</div>
-        </div>
-        <div class="amount-box">
-          <div class="amount-label">累计已记账</div>
-          <div class="amount-value small">${fmtShort(totalCredited)}</div>
-          <div class="amount-usd">历史总额</div>
-        </div>
+        ${amountsHtml}
       </div>`;
 
   if (canClaim) {
-    html += `<button class="claim-btn" onclick="doClaim('${tokenAddr}')">领取手续费 (${fmtShort(myClaimable)} ${info.symbol})</button>`;
+    html += `<button class="claim-btn" onclick="doClaim('${tokenAddr}')">领取手续费 (${fmtShort(myTotal)} ${info.symbol})</button>`;
   } else {
     html += `<button class="claim-btn" disabled>暂无可领取的手续费</button>`;
   }
