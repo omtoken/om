@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手续费领取中心</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0b0f;--surface:#12131a;--surface2:#1a1b25;--border:#2a2b3a;
+  --text:#e8e9f0;--text2:#8b8d9e;--accent:#00e5a0;--accent2:#00c48c;
+  --danger:#ff4d6a;--warn:#ffb84d;--blue:#4d9fff;
+}
+body{
+  font-family:'Noto Sans SC','sans-serif';background:var(--bg);color:var(--text);
+  min-height:100vh;overflow-x:hidden;
+}
+body::before{
+  content:'';position:fixed;top:0;left:0;right:0;bottom:0;
+  background:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(0,229,160,.06),transparent),
+             radial-gradient(ellipse 60% 40% at 80% 100%,rgba(77,159,255,.04),transparent);
+  pointer-events:none;z-index:0;
+}
+.container{max-width:860px;margin:0 auto;padding:24px 20px;position:relative;z-index:1}
+header{display:flex;justify-content:space-between;align-items:center;padding:20px 0 32px;border-bottom:1px solid var(--border);margin-bottom:32px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo-icon{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--blue));display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#0a0b0f}
+.logo h1{font-size:20px;font-weight:700;letter-spacing:-.5px}
+.logo span{font-size:12px;color:var(--text2);font-weight:400}
+.connect-btn{
+  padding:10px 20px;border-radius:8px;border:1px solid var(--accent);
+  background:transparent;color:var(--accent);font-family:inherit;font-size:14px;
+  font-weight:600;cursor:pointer;transition:all .2s;
+}
+.connect-btn:hover{background:var(--accent);color:#0a0b0f}
+.connect-btn.connected{border-color:var(--border);color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:13px}
+.connect-btn.connected:hover{border-color:var(--danger);color:var(--danger)}
+
+.status-bar{
+  display:flex;gap:16px;margin-bottom:28px;flex-wrap:wrap;
+}
+.status-chip{
+  display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;
+  background:var(--surface);border:1px solid var(--border);font-size:12px;color:var(--text2);
+}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.status-dot.warn{background:var(--warn)}
+
+.section{margin-bottom:28px}
+.section-title{
+  font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;
+  letter-spacing:1.5px;margin-bottom:14px;padding-left:2px;
+}
+.card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:24px;margin-bottom:12px;transition:border-color .2s;
+}
+.card:hover{border-color:#3a3b4f}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.token-info{display:flex;align-items:center;gap:12px}
+.token-icon{
+  width:44px;height:44px;border-radius:50%;
+  background:linear-gradient(135deg,#2a2b3a,#1a1b25);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--accent);
+  border:1px solid var(--border);
+}
+.token-name{font-size:16px;font-weight:700}
+.token-symbol{font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace}
+
+.amounts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px}
+.amount-box{
+  background:var(--surface2);border-radius:10px;padding:16px;
+  border:1px solid transparent;transition:border-color .2s;
+}
+.amount-box:hover{border-color:var(--border)}
+.amount-label{font-size:11px;color:var(--text2);margin-bottom:6px;font-weight:500}
+.amount-value{
+  font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:600;
+  color:var(--text);word-break:break-all;
+}
+.amount-value.small{font-size:16px}
+.amount-usd{font-size:11px;color:var(--text2);margin-top:4px;font-family:'JetBrains Mono',monospace}
+
+.claim-btn{
+  width:100%;padding:14px;border-radius:10px;border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#0a0b0f;font-family:inherit;font-size:15px;font-weight:700;
+  cursor:pointer;transition:all .2s;letter-spacing:.3px;
+}
+.claim-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.claim-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;filter:none}
+
+.pool-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;
+}
+.pool-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.pool-row:last-child{border-bottom:none}
+.pool-row-label{font-size:13px;color:var(--text2)}
+.pool-row-value{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--text);text-align:right;max-width:60%;word-break:break-all}
+
+.sweep-btn{
+  padding:10px 20px;border-radius:8px;border:1px solid var(--warn);
+  background:transparent;color:var(--warn);font-family:inherit;font-size:13px;
+  font-weight:600;cursor:pointer;transition:all .2s;margin-top:14px;
+}
+.sweep-btn:hover{background:var(--warn);color:#0a0b0f}
+.sweep-btn:disabled{opacity:.4;cursor:not-allowed}
+
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);
+  padding:14px 24px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);
+  font-size:14px;z-index:999;transition:transform .3s ease;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);max-width:90vw;text-align:center;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:var(--accent);color:var(--accent)}
+.toast.error{border-color:var(--danger);color:var(--danger)}
+.toast.info{border-color:var(--blue);color:var(--blue)}
+
+.loading{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.empty-state{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty-state .icon{font-size:48px;margin-bottom:16px;opacity:.3}
+.empty-state p{font-size:14px;line-height:1.6}
+
+.role-badge{
+  display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;
+  margin-left:8px;vertical-align:middle;
+}
+.role-badge.creator{background:rgba(0,229,160,.12);color:var(--accent)}
+.role-badge.owner{background:rgba(77,159,255,.12);color:var(--blue)}
+
+.tx-link{color:var(--blue);text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:12px}
+.tx-link:hover{text-decoration:underline}
+
+.history-item{
+  display:flex;justify-content:space-between;align-items:center;padding:12px 0;
+  border-bottom:1px solid var(--border);font-size:13px;
+}
+.history-item:last-child{border-bottom:none}
+.history-type{font-weight:600;font-size:12px;padding:3px 8px;border-radius:6px}
+.history-type.claim{background:rgba(0,229,160,.1);color:var(--accent)}
+.history-type.sweep{background:rgba(255,184,77,.1);color:var(--warn)}
+
+@media(max-width:600px){
+  .amounts{grid-template-columns:1fr}
+  header{flex-direction:column;gap:16px;align-items:flex-start}
+  .pool-row{flex-direction:column;align-items:flex-start;gap:4px}
+  .pool-row-value{text-align:left;max-width:100%}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">F</div>
+      <div>
+        <h1>手续费领取中心</h1>
+        <span>Stockpad Launch · Fee Escrow</span>
+      </div>
+    </div>
+    <button class="connect-btn" id="connectBtn" onclick="toggleConnect()">连接钱包</button>
+  </header>
+
+  <div id="statusBar" class="status-bar" style="display:none"></div>
+  <div id="mainContent">
+    <div class="empty-state">
+      <div class="icon">◈</div>
+      <p>请先连接钱包以查看可领取的手续费</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 合约配置 ──
+const CONFIG = {
+  chainId: 1,
+  feeEscrow: '0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058',
+  launchHook: '0x27A30e3082D5bbe959f75F26B4063E18855328cC',
+  poolManager: '0x000000000004444c5dc75cb358380d2e3de08a90',
+  factory: '0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb',
+  knownTokens: {
+    '0x2D1F7226Bd1F780AF6B9A49DCC0aE00E8Df4bDEE': { symbol: 'NVDAon', decimals: 18, name: 'NVDAon' },
+    '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': { symbol: 'WETH', decimals: 18, name: 'WETH' },
+  },
+  creator: '0x038C66BDA2e892559295599c32d2C5831a448385',
+  platformRecipient: '0x038C66BDA2e892559295599c32d2C5831a448385',
+};
+
+const ABI = {
+  feeEscrow: [
+    'function claimable(address,address) view returns (uint256)',
+    'function totalCredited(address) view returns (uint256)',
+    'function claim(address currency, address to) returns (uint256)',
+    'function hook() view returns (address)',
+    'function platformRecipient() view returns (address)',
+    'event Claimed(address indexed account, address indexed currency, address to, uint256 amount)',
+    'event Credited(address indexed account, address indexed currency, uint256 amount)',
+  ],
+  launchHook: [
+    'function sweep(address currency) external',
+    'function sweepCurrency(address currency) external',
+    'function poolManager() view returns (address)',
+  ],
+  poolManager: [
+    'function balanceOf(address,address) view returns (uint256)',
+  ],
+  erc20: [
+    'function symbol() view returns (string)',
+    'function decimals() view returns (uint8)',
+    'function name() view returns (string)',
+    'function balanceOf(address) view returns (uint256)',
+  ],
+};
+
+let provider = null;
+let signer = null;
+let userAddress = null;
+let refreshTimer = null;
+
+// ── 钱包连接 ──
+async function toggleConnect() {
+  if (userAddress) {
+    disconnect();
+    return;
+  }
+  if (!window.ethereum) {
+    showToast('未检测到 MetaMask 钱包，请安装后重试', 'error');
+    return;
+  }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const network = await provider.getNetwork();
+    if (Number(network.chainId) !== CONFIG.chainId) {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x1' }],
+        });
+        provider = new ethers.BrowserProvider(window.ethereum);
+      } catch (e) {
+        showToast('请切换到以太坊主网', 'error');
+        return;
+      }
+    }
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
+    const btn = document.getElementById('connectBtn');
+    btn.textContent = userAddress.slice(0, 6) + '...' + userAddress.slice(-4);
+    btn.className = 'connect-btn connected';
+    btn.title = '点击断开连接';
+    await loadData();
+    refreshTimer = setInterval(loadData, 30000);
+  } catch (e) {
+    showToast('连接失败: ' + (e.message || e), 'error');
+  }
+}
+
+function disconnect() {
+  userAddress = null; signer = null; provider = null;
+  if (refreshTimer) clearInterval(refreshTimer);
+  const btn = document.getElementById('connectBtn');
+  btn.textContent = '连接钱包';
+  btn.className = 'connect-btn';
+  btn.title = '';
+  document.getElementById('statusBar').style.display = 'none';
+  document.getElementById('mainContent').innerHTML = '<div class="empty-state"><div class="icon">◈</div><p>请先连接钱包以查看可领取的手续费</p></div>';
+}
+
+// ── 数据加载 ──
+async function loadData() {
+  if (!userAddress) return;
+  const main = document.getElementById('mainContent');
+  main.innerHTML = '<div style="text-align:center;padding:40px"><span class="loading"></span> 加载中...</div>';
+
+  try {
+    const escrow = new ethers.Contract(CONFIG.feeEscrow, ABI.feeEscrow, provider);
+    const hook = new ethers.Contract(CONFIG.launchHook, ABI.launchHook, provider);
+    const pmAddr = await hook.poolManager();
+
+    const platformRecipient = await escrow.platformRecipient();
+    const isCreator = userAddress.toLowerCase() === CONFIG.creator.toLowerCase();
+    const isOwner = userAddress.toLowerCase() === CONFIG.platformRecipient.toLowerCase();
+
+    // 状态栏
+    renderStatusBar(isCreator, isOwner, platformRecipient);
+
+    // 获取所有已知代币 + 扫描 Claimed/Credited 事件找更多
+    const tokensToCheck = new Set(Object.keys(CONFIG.knownTokens));
+    
+    // 扫描 Credited 事件找所有涉及当前用户的代币
+    const filter = escrow.filters.Credited(userAddress);
+    const creditedEvents = await escrow.queryFilter(filter, 0, 'latest');
+    creditedEvents.forEach(ev => tokensToCheck.add(ev.args[1]));
+
+    // 也查 platformRecipient 的
+    if (platformRecipient !== userAddress) {
+      const filter2 = escrow.filters.Credited(platformRecipient);
+      const ev2 = await escrow.queryFilter(filter2, 0, 'latest');
+      ev2.forEach(ev => tokensToCheck.add(ev.args[1]));
+    }
+
+    let html = '';
+    let hasAnyFees = false;
+
+    // 对每个代币渲染卡片
+    for (const tokenAddr of tokensToCheck) {
+      const tokenInfo = await getTokenInfo(tokenAddr);
+      const pm = new ethers.Contract(pmAddr, ABI.poolManager, provider);
+
+      // currencyId = keccak256(abi.encodePacked(addr)) 对于 ERC20
+      const currencyId = ethers.keccak256(ethers.solidityPacked(['address'], [tokenAddr]));
+      
+      // Hook 在 PoolManager 中的余额（待 sweep）
+      let hookBalance = 0n;
+      try {
+        hookBalance = await pm.balanceOf(CONFIG.launchHook, currencyId);
+      } catch(e) {}
+
+      // 用户可领取 (creator 份额)
+      let creatorClaimable = 0n;
+      if (isCreator) {
+        try { creatorClaimable = await escrow.claimable(userAddress, tokenAddr); } catch(e) {}
+      }
+
+      // 平台可领取
+      let platformClaimable = 0n;
+      if (isOwner || userAddress.toLowerCase() === platformRecipient.toLowerCase()) {
+        try { platformClaimable = await escrow.claimable(platformRecipient, tokenAddr); } catch(e) {}
+      }
+
+      // 总已记账
+      let totalCredited = 0n;
+      try { totalCredited = await escrow.totalCredited(tokenAddr); } catch(e) {}
+
+      const totalPending = creatorClaimable + platformClaimable;
+      if (totalPending === 0n && hookBalance === 0n && totalCredited === 0n) continue;
+      hasAnyFees = true;
+
+      html += renderTokenCard(tokenAddr, tokenInfo, {
+        creatorClaimable, platformClaimable, hookBalance, totalCredited,
+        isCreator, isOwner, platformRecipient,
+      });
+    }
+
+    if (!hasAnyFees) {
+      html = '<div class="empty-state"><div class="icon">◈</div><p>当前没有可领取的手续费<br><span style="font-size:12px;color:var(--text2)">当有人交易 NCAT 后，手续费会出现在这里</span></p></div>';
+    }
+
+    main.innerHTML = html;
+  } catch (e) {
+    main.innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>加载失败: ' + e.message + '</p></div>';
+  }
+}
+
+function renderStatusBar(isCreator, isOwner, platformRecipient) {
+  const bar = document.getElementById('statusBar');
+  bar.style.display = 'flex';
+  let chips = '';
+  chips += '<div class="status-chip"><span class="status-dot"></span>以太坊主网</div>';
+  if (isCreator) chips += '<div class="status-chip"><span class="status-dot"></span>代币创建者</div>';
+  if (isOwner) chips += '<div class="status-chip"><span class="status-dot"></span>平台 Owner</div>';
+  if (!isCreator && !isOwner) chips += '<div class="status-chip"><span class="status-dot warn"></span>普通用户（无手续费权限）</div>';
+  bar.innerHTML = chips;
+}
+
+function renderTokenCard(tokenAddr, info, data) {
+  const { creatorClaimable, platformClaimable, hookBalance, totalCredited, isCreator, isOwner, platformRecipient } = data;
+  const fmt = (v) => ethers.formatUnits(v, info.decimals);
+  const fmtShort = (v) => {
+    const s = fmt(v);
+    const n = parseFloat(s);
+    if (n === 0) return '0';
+    if (n < 0.0001) return '<0.0001';
+    return n.toLocaleString('zh-CN', { maximumFractionDigits: 6 });
+  };
+
+  const myClaimable = (isCreator ? creatorClaimable : 0n) + ((isOwner || userAddress?.toLowerCase() === platformRecipient?.toLowerCase()) ? platformClaimable : 0n);
+  const canClaim = myClaimable > 0n;
+  const canSweep = hookBalance > 0n;
+
+  let roles = '';
+  if (isCreator) roles += '<span class="role-badge creator">创建者</span>';
+  if (isOwner) roles += '<span class="role-badge owner">Owner</span>';
+
+  let html = `
+  <div class="section">
+    <div class="section-title">报价代币 · ${info.symbol}</div>
+    <div class="card">
+      <div class="card-header">
+        <div class="token-info">
+          <div class="token-icon">${info.symbol.slice(0,2)}</div>
+          <div>
+            <div class="token-name">${info.name}${roles}</div>
+            <div class="token-symbol">${tokenAddr}</div>
+          </div>
+        </div>
+      </div>
+      <div class="amounts">
+        <div class="amount-box">
+          <div class="amount-label">可领取（创建者份额）</div>
+          <div class="amount-value">${isCreator ? fmtShort(creatorClaimable) : '—'}</div>
+          ${isCreator ? '<div class="amount-usd">' + fmtShort(creatorClaimable) + ' ' + info.symbol + '</div>' : ''}
+        </div>
+        <div class="amount-box">
+          <div class="amount-label">可领取（平台份额）</div>
+          <div class="amount-value">${isOwner ? fmtShort(platformClaimable) : '—'}</div>
+          ${isOwner ? '<div class="amount-usd">' + fmtShort(platformClaimable) + ' ' + info.symbol + '</div>' : ''}
+        </div>
+        <div class="amount-box">
+          <div class="amount-label">待归集（PoolManager 中）</div>
+          <div class="amount-value small">${fmtShort(hookBalance)}</div>
+          <div class="amount-usd">需 sweep 到 FeeEscrow</div>
+        </div>
+        <div class="amount-box">
+          <div class="amount-label">累计已记账</div>
+          <div class="amount-value small">${fmtShort(totalCredited)}</div>
+          <div class="amount-usd">历史总额</div>
+        </div>
+      </div>`;
+
+  if (canClaim) {
+    html += `<button class="claim-btn" onclick="doClaim('${tokenAddr}')">领取手续费 (${fmtShort(myClaimable)} ${info.symbol})</button>`;
+  } else {
+    html += `<button class="claim-btn" disabled>暂无可领取的手续费</button>`;
+  }
+
+  html += `</div>`;
+
+  // Sweep 按钮（任何人可调用）
+  if (canSweep) {
+    html += `
+    <div class="pool-card" style="margin-top:12px">
+      <div class="pool-row">
+        <span class="pool-row-label">PoolManager 待归集</span>
+        <span class="pool-row-value">${fmtShort(hookBalance)} ${info.symbol}</span>
+      </div>
+      <div class="pool-row">
+        <span class="pool-row-label">存放位置</span>
+        <span class="pool-row-value">Hook → PoolManager ERC-1155 账本</span>
+      </div>
+      <button class="sweep-btn" onclick="doSweep('${tokenAddr}')">归集到 FeeEscrow</button>
+    </div>`;
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+// ── 操作 ──
+async function doClaim(tokenAddr) {
+  if (!signer) return;
+  const btn = document.querySelector('.claim-btn:not([disabled])');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span> 交易中...'; }
+
+  try {
+    const escrow = new ethers.Contract(CONFIG.feeEscrow, ABI.feeEscrow, signer);
+    const to = userAddress;
+    const tx = await escrow.claim(tokenAddr, to);
+    showToast('交易已提交，等待确认...', 'info');
+    const receipt = await tx.wait();
+    showToast('领取成功！交易: ' + receipt.hash.slice(0, 18) + '...', 'success');
+    await loadData();
+  } catch (e) {
+    showToast('领取失败: ' + (e.reason || e.message || e), 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '领取手续费'; }
+  }
+}
+
+async function doSweep(tokenAddr) {
+  if (!signer) return;
+  const btn = document.querySelector('.sweep-btn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="loading"></span> 归集中...'; }
+
+  try {
+    const hook = new ethers.Contract(CONFIG.launchHook, ABI.launchHook, signer);
+    const tx = await hook.sweep(tokenAddr);
+    showToast('交易已提交，等待确认...', 'info');
+    const receipt = await tx.wait();
+    showToast('归集成功！交易: ' + receipt.hash.slice(0, 18) + '...', 'success');
+    await loadData();
+  } catch (e) {
+    showToast('归集失败: ' + (e.reason || e.message || e), 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '归集到 FeeEscrow'; }
+  }
+}
+
+// ── 工具函数 ──
+async function getTokenInfo(addr) {
+  if (CONFIG.knownTokens[addr]) return CONFIG.knownTokens[addr];
+  try {
+    const c = new ethers.Contract(addr, ABI.erc20, provider);
+    const [name, symbol, decimals] = await Promise.all([c.name(), c.symbol(), c.decimals()]);
+    CONFIG.knownTokens[addr] = { name, symbol, decimals: Number(decimals) };
+    return CONFIG.knownTokens[addr];
+  } catch {
+    return { name: '未知代币', symbol: '???', decimals: 18 };
+  }
+}
+
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// 监听账户变化
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', () => { if (userAddress) toggleConnect(); });
+  window.ethereum.on('chainChanged', () => { if (userAddress) toggleConnect(); });
+}
+</script>
+</body>
+</html>
