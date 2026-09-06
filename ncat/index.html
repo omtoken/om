@@ -182,16 +182,16 @@ header{display:flex;justify-content:space-between;align-items:center;padding:20p
 // ── 合约配置 ──
 const CONFIG = {
   chainId: 1,
-  feeEscrow: '0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058',
-  launchHook: '0x27A30e3082D5bbe959f75F26B4063E18855328cC',
+  feeEscrow: '0xb075efbf17fe7f8fd0dfe2f8e9c5969ccda8e058',
+  launchHook: '0x27a30e3082d5bbe959f75f26b4063e18855328cc',
   poolManager: '0x000000000004444c5dc75cb358380d2e3de08a90',
-  factory: '0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb',
+  factory: '0xc2e52567bad2cc15de50e55e742376f4d68dc3fb',
   knownTokens: {
-    '0x2D1F7226Bd1F780AF6B9A49DCC0aE00E8Df4bDEE': { symbol: 'NVDAon', decimals: 18, name: 'NVDAon' },
-    '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': { symbol: 'WETH', decimals: 18, name: 'WETH' },
+    '0x2d1f7226bd1f780af6b9a49dcc0ae00e8df4bdee': { symbol: 'NVDAon', decimals: 18, name: 'NVDAon' },
+    '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': { symbol: 'WETH', decimals: 18, name: 'WETH' },
   },
-  creator: '0x038C66BDA2e892559295599c32d2C5831a448385',
-  platformRecipient: '0x038C66BDA2e892559295599c32d2C5831a448385',
+  creator: '0x038c66bda2e892559295599c32d2c5831a448385',
+  platformRecipient: '0x038c66bda2e892559295599c32d2c5831a448385',
 };
 
 const ABI = {
@@ -298,13 +298,13 @@ async function loadData() {
     // 扫描 Credited 事件找所有涉及当前用户的代币
     const filter = escrow.filters.Credited(userAddress);
     const creditedEvents = await escrow.queryFilter(filter, 0, 'latest');
-    creditedEvents.forEach(ev => tokensToCheck.add(ev.args[1]));
+    creditedEvents.forEach(ev => tokensToCheck.add(ev.args[1].toLowerCase()));
 
     // 也查 platformRecipient 的
-    if (platformRecipient !== userAddress) {
+    if (platformRecipient.toLowerCase() !== userAddress.toLowerCase()) {
       const filter2 = escrow.filters.Credited(platformRecipient);
       const ev2 = await escrow.queryFilter(filter2, 0, 'latest');
-      ev2.forEach(ev => tokensToCheck.add(ev.args[1]));
+      ev2.forEach(ev => tokensToCheck.add(ev.args[1].toLowerCase()));
     }
 
     let html = '';
