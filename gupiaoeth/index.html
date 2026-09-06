@@ -323,13 +323,13 @@ body::after{
     <span class="tab-icon">📊</span> 总览
   </button>
   <button class="tab" onclick="switchTab('factory',this)">
-    <span class="tab-icon">🏭</span> LaunchFactory <span class="tab-count">10</span>
+    <span class="tab-icon">🏭</span> LaunchFactory <span class="tab-count">11</span>
   </button>
   <button class="tab" onclick="switchTab('escrow',this)">
-    <span class="tab-icon">💰</span> FeeEscrow <span class="tab-count">3</span>
+    <span class="tab-icon">💰</span> FeeEscrow <span class="tab-count">4</span>
   </button>
   <button class="tab" onclick="switchTab('router',this)">
-    <span class="tab-icon">🔀</span> LaunchRouter <span class="tab-count">3</span>
+    <span class="tab-icon">🔀</span> LaunchRouter <span class="tab-count">4</span>
   </button>
 </div>
 </div>
@@ -417,7 +417,7 @@ body::after{
       <h3>LaunchFactory — 代币发射工厂</h3>
       <div class="addr"><a href="https://etherscan.io/address/0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb#code" target="_blank">0xC2e52567BAD2cc15De50E55e742376f4d68dC3fb</a></div>
     </div>
-    <span class="tag done">10 个管理功能</span>
+    <span class="tag done">11 个管理功能</span>
   </div>
 
   <div class="func-grid">
@@ -617,6 +617,24 @@ body::after{
       </div>
     </div>
 
+    <!-- 11. acceptOwnership (inherited) -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon safe">✅</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">接受 Owner 权限 <code>acceptOwnership()</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>如果有人把工厂合约的老板权限转给了你，你需要点这个按钮来"接受"。只有被指定的新 Owner 才能调用。接受之后，你就是新的老板了，原来的老板就没有权限了。注意：调用这个功能时，你的钱包地址必须是 pending owner（被指定接收权限的那个地址）。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div style="padding:12px;background:var(--accent-dim);border-radius:var(--radius-sm);border:1px solid rgba(0,229,255,.15);margin-bottom:14px">
+          <span style="font-size:.82rem;color:var(--accent)">💡 此操作无需填写参数，直接用当前连接的钱包调用即可。前提是你的地址是被指定接收权限的那个。</span>
+        </div>
+        <button class="btn-exec primary" onclick="execFactoryNoArg('acceptOwnership')">接受 Owner 权限</button>
+      </div>
+    </div>
+
   </div>
 </div>
 <div id="panel-escrow" class="tab-panel">
@@ -626,7 +644,7 @@ body::after{
       <h3>FeeEscrow — 手续费托管合约</h3>
       <div class="addr"><a href="https://etherscan.io/address/0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058#code" target="_blank">0xb075EFbF17Fe7F8fD0dFE2F8e9c5969ccDA8E058</a></div>
     </div>
-    <span class="tag done">3 个管理功能</span>
+    <span class="tag done">4 个管理功能</span>
   </div>
 
   <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin-bottom:20px">
@@ -694,6 +712,24 @@ body::after{
       </div>
     </div>
 
+    <!-- 4. acceptOwnership -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon safe">✅</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">接受 Owner 权限 <code>acceptOwnership()</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>如果有人把这个托管合约的老板权限转给了你，你需要点这个按钮来"接受"。只有被指定的新 Owner 才能调用。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div style="padding:12px;background:var(--accent-dim);border-radius:var(--radius-sm);border:1px solid rgba(0,229,255,.15);margin-bottom:14px">
+          <span style="font-size:.82rem;color:var(--accent)">💡 此操作无需填写参数，直接用当前连接的钱包调用即可。</span>
+        </div>
+        <button class="btn-exec primary" onclick="execEscrowNoArg('acceptOwnership')">接受 Owner 权限</button>
+      </div>
+    </div>
+
   </div>
 </div>
 <div id="panel-router" class="tab-panel">
@@ -703,7 +739,7 @@ body::after{
       <h3>LaunchRouter — 交易路由合约</h3>
       <div class="addr"><a href="https://etherscan.io/address/0x0139498eAEa8aB4934701aEE164091F416c8de98#code" target="_blank">0x0139498eAEa8aB4934701aEE164091F416c8de98</a></div>
     </div>
-    <span class="tag done">3 个管理功能</span>
+    <span class="tag done">4 个管理功能</span>
   </div>
 
   <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:18px 22px;margin-bottom:20px">
@@ -783,6 +819,24 @@ body::after{
       </div>
     </div>
 
+    <!-- 4. acceptOwnership -->
+    <div class="func-card">
+      <div class="func-card-header" onclick="toggleCard(this)">
+        <div class="func-card-icon safe">✅</div>
+        <div class="func-card-meta">
+          <div class="func-card-title">接受 Owner 权限 <code>acceptOwnership()</code></div>
+          <div class="func-card-desc"><strong>大白话：</strong>如果有人把路由合约的老板权限转给了你，你需要点这个按钮来"接受"。只有被指定的新 Owner 才能调用。</div>
+        </div>
+        <div class="func-card-toggle">▼</div>
+      </div>
+      <div class="func-card-body">
+        <div style="padding:12px;background:var(--accent-dim);border-radius:var(--radius-sm);border:1px solid rgba(0,229,255,.15);margin-bottom:14px">
+          <span style="font-size:.82rem;color:var(--accent)">💡 此操作无需填写参数，直接用当前连接的钱包调用即可。</span>
+        </div>
+        <button class="btn-exec primary" onclick="execRouterNoArg('acceptOwnership')">接受 Owner 权限</button>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -858,16 +912,19 @@ const FACTORY_ABI = [
   {name:'setPaused',type:'function',inputs:[{name:'paused_',type:'bool'}]},
   {name:'setOpeningFdvUsd',type:'function',inputs:[{name:'fdvUsd',type:'uint256'}]},
   {name:'transferOwnership',type:'function',inputs:[{name:'newOwner',type:'address'}]},
+  {name:'acceptOwnership',type:'function',inputs:[]},
 ];
 const ESCROW_ABI = [
   {name:'setHook',type:'function',inputs:[{name:'hook_',type:'address'}]},
   {name:'setPlatformRecipient',type:'function',inputs:[{name:'recipient',type:'address'}]},
   {name:'transferOwnership',type:'function',inputs:[{name:'newOwner',type:'address'}]},
+  {name:'acceptOwnership',type:'function',inputs:[]},
 ];
 const ROUTER_ABI = [
   {name:'setEthRoute',type:'function',inputs:[{name:'quote',type:'address'},{name:'path',type:'bytes'}]},
   {name:'rescue',type:'function',inputs:[{name:'token',type:'address'},{name:'to',type:'address'}]},
   {name:'transferOwnership',type:'function',inputs:[{name:'newOwner',type:'address'}]},
+  {name:'acceptOwnership',type:'function',inputs:[]},
 ];
 
 function getAddr(inputId) {
@@ -1107,6 +1164,19 @@ function execRouterRescue() {
   const to = document.getElementById('router-rescue-to').value.trim();
   if (!token || !to) { showToast('请填写所有字段'); return; }
   sendTx(CONTRACTS.router, ROUTER_ABI, 'rescue', [token, to]);
+}
+
+// No-argument execution functions (for acceptOwnership)
+function execFactoryNoArg(funcName) {
+  sendTx(CONTRACTS.factory, FACTORY_ABI, funcName, []);
+}
+
+function execEscrowNoArg(funcName) {
+  sendTx(CONTRACTS.escrow, ESCROW_ABI, funcName, []);
+}
+
+function execRouterNoArg(funcName) {
+  sendTx(CONTRACTS.router, ROUTER_ABI, funcName, []);
 }
 </script>
 </body>
