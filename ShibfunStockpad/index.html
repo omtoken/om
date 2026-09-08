@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stockpad Launch - 合约管理面板</title>
+<!-- Google Fonts: 用 Noto Sans SC 做中文，Space Mono 做数字/地址 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700;900&family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ========== CSS 变量：亮色主题，清晰不暗 ========== */
+:root {
+  --bg: #F4F6FB;
+  --surface: #FFFFFF;
+  --surface-alt: #EEF1F8;
+  --border: #D8DCE6;
+  --border-focus: #4F6EF7;
+  --text: #1A1F36;
+  --text-secondary: #5A6178;
+  --text-muted: #8E94A8;
+  --primary: #4F6EF7;
+  --primary-hover: #3B57D9;
+  --primary-light: #EEF1FF;
+  --success: #10B981;
+  --success-light: #ECFDF5;
+  --warning: #F59E0B;
+  --warning-light: #FFFBEB;
+  --danger: #EF4444;
+  --danger-light: #FEF2F2;
+  --danger-hover: #DC2626;
+  --accent-shiba: #FF6B35;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 10px 25px rgba(0,0,0,0.08);
+  --font-cn: 'Noto Sans SC', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+  --font-body: 'DM Sans', 'Noto Sans SC', sans-serif;
+}
+
+/* ========== 全局样式 ========== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ========== 顶部导航栏 ========== */
+.topbar {
+  background: linear-gradient(135deg, #4F6EF7 0%, #7C5BF0 100%);
+  padding: 0 32px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 12px rgba(79,110,247,0.3);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+}
+.topbar-brand .logo {
+  width: 36px; height: 36px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 900; color: #fff;
+  font-family: var(--font-mono);
+}
+.topbar-brand h1 {
+  font-family: var(--font-cn);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.topbar-brand span {
+  font-size: 12px;
+  opacity: 0.8;
+  font-family: var(--font-mono);
+}
+
+/* 钱包按钮 */
+.btn-wallet {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+  padding: 8px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: var(--font-cn);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-wallet:hover { background: rgba(255,255,255,0.25); }
+.btn-wallet.connected {
+  background: rgba(16,185,129,0.2);
+  border-color: rgba(16,185,129,0.5);
+}
+.btn-wallet .dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #EF4444;
+}
+.btn-wallet.connected .dot { background: #10B981; }
+.wallet-addr {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+/* ========== 状态信息条 ========== */
+.info-bar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 32px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.info-item {
+  display: flex; align-items: center; gap: 6px;
+}
+.info-item .label {
+  color: var(--text-muted);
+  font-family: var(--font-cn);
+}
+.info-item .value {
+  font-family: var(--font-mono);
+  color: var(--text);
+  font-size: 12px;
+}
+.info-item .value.owner-match { color: var(--success); font-weight: 600; }
+.info-item .value.owner-mismatch { color: var(--danger); font-weight: 600; }
+
+/* ========== 主容器 ========== */
+.main { max-width: 1200px; margin: 0 auto; padding: 24px 32px 64px; }
+
+/* ========== Tab 切换 ========== */
+.tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  padding: 6px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+.tab-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-cn);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  position: relative;
+}
+.tab-btn:hover { background: var(--surface-alt); color: var(--text); }
+.tab-btn.active {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(79,110,247,0.3);
+}
+.tab-btn .badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.3);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  margin-left: 4px;
+  font-family: var(--font-mono);
+}
+.tab-btn:not(.active) .badge {
+  background: var(--surface-alt);
+}
+
+/* ========== 合约面板 ========== */
+.contract-panel {
+  display: none;
+  animation: fadeIn 0.3s ease;
+}
+.contract-panel.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+.panel-header {
+  background: var(--surface);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.panel-header h2 {
+  font-family: var(--font-cn);
+  font-size: 20px;
+  font-weight: 700;
+}
+.panel-header .contract-addr {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 4px 10px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.panel-header .contract-addr:hover { background: #DDE3FF; }
+
+/* 合约状态卡片 */
+.state-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 20px 24px;
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--border);
+}
+.state-card {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+}
+.state-card .sc-label {
+  font-family: var(--font-cn);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.state-card .sc-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  word-break: break-all;
+}
+.state-card .sc-value.small { font-size: 11px; font-weight: 400; }
+
+/* ========== 功能区块 ========== */
+.func-sections { padding: 0; }
+.func-section {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 24px;
+}
+.func-section:last-child { border-bottom: none; }
+.func-section-title {
+  font-family: var(--font-cn);
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.func-section-title .icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.func-section-title .icon.blue { background: var(--primary-light); color: var(--primary); }
+.func-section-title .icon.green { background: var(--success-light); color: var(--success); }
+.func-section-title .icon.orange { background: var(--warning-light); color: var(--warning); }
+.func-section-title .icon.red { background: var(--danger-light); color: var(--danger); }
+
+/* 功能卡片网格 */
+.func-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+.func-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.func-card:hover {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(79,110,247,0.08);
+}
+.func-card h4 {
+  font-family: var(--font-cn);
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.func-card .func-desc {
+  font-family: var(--font-cn);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.func-card .func-desc code {
+  background: var(--surface-alt);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--primary);
+}
+
+/* 表单元素 */
+.form-group { margin-bottom: 12px; }
+.form-group label {
+  display: block;
+  font-family: var(--font-cn);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface);
+  transition: border-color 0.2s;
+  outline: none;
+}
+.form-group input:focus, .form-group select:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px rgba(79,110,247,0.1);
+}
+.form-group input::placeholder { color: var(--text-muted); font-family: var(--font-cn); }
+
+/* 按钮 */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-cn);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); box-shadow: 0 2px 8px rgba(79,110,247,0.3); }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: #059669; }
+.btn-warning { background: var(--warning); color: #fff; }
+.btn-warning:hover { background: #D97706; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: var(--danger-hover); }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-sm { padding: 6px 12px; font-size: 12px; width: auto; }
+
+/* 开关切换 */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.toggle-switch {
+  position: relative;
+  width: 48px; height: 26px;
+  cursor: pointer;
+}
+.toggle-switch input { display: none; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 13px;
+  transition: background 0.3s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  top: 3px; left: 3px;
+  transition: transform 0.3s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--primary); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+/* 日志输出 */
+.log-panel {
+  background: #1E2235;
+  border-radius: var(--radius);
+  margin-top: 24px;
+  overflow: hidden;
+}
+.log-header {
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.log-header span {
+  font-family: var(--font-cn);
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+}
+.log-header button {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: rgba(255,255,255,0.5);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--font-cn);
+}
+.log-body {
+  padding: 12px 16px;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.8;
+  color: #A0AEC0;
+}
+.log-body .log-entry { margin-bottom: 2px; }
+.log-body .log-time { color: #636E80; }
+.log-body .log-ok { color: #68D391; }
+.log-body .log-err { color: #FC8181; }
+.log-body .log-info { color: #63B3ED; }
+.log-body .log-warn { color: #F6AD55; }
+
+/* 提示框 */
+.alert {
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-cn);
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.5;
+}
+.alert-info { background: var(--primary-light); color: #3B57D9; border: 1px solid #C7D2FE; }
+.alert-warning { background: var(--warning-light); color: #92400E; border: 1px solid #FDE68A; }
+.alert-danger { background: var(--danger-light); color: #991B1B; border: 1px solid #FECACA; }
+
+/* Toast 通知 */
+.toast-container {
+  position: fixed;
+  top: 80px;
+  right: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 12px 20px;
+  box-shadow: var(--shadow-lg);
+  font-family: var(--font-cn);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  animation: slideIn 0.3s ease;
+  border-left: 4px solid var(--primary);
+  max-width: 400px;
+}
+.toast.success { border-left-color: var(--success); }
+.toast.error { border-left-color: var(--danger); }
+.toast.warning { border-left-color: var(--warning); }
+@keyframes slideIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+/* 加载动画 */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .topbar { padding: 0 16px; }
+  .main { padding: 16px; }
+  .func-grid { grid-template-columns: 1fr; }
+  .state-cards { grid-template-columns: 1fr 1fr; }
+  .tabs { gap: 2px; padding: 4px; }
+  .tab-btn { padding: 10px 12px; font-size: 13px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ====== 顶部导航栏 ====== -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="logo">S</div>
+    <div>
+      <h1>Stockpad Launch 管理面板</h1>
+      <span>Owner Console v1.0</span>
+    </div>
+  </div>
+  <button class="btn-wallet" id="btnConnectWallet" onclick="connectWallet()">
+    <span class="dot"></span>
+    <span id="walletBtnText">连接钱包</span>
+  </button>
+  <button class="btn-wallet" id="btnRefresh" onclick="refreshAllState()" style="margin-left:8px;display:none">
+    <span>🔄</span>
+    <span>刷新状态</span>
+  </button>
+</div>
+
+<!-- ====== 状态信息条：显示当前 owner 和连接状态 ====== -->
+<div class="info-bar" id="infoBar">
+  <div class="info-item">
+    <span class="label">网络:</span>
+    <span class="value" id="infoNetwork">未连接</span>
+  </div>
+  <div class="info-item">
+    <span class="label">当前钱包:</span>
+    <span class="value" id="infoAccount">-</span>
+  </div>
+  <div class="info-item">
+    <span class="label">Factory Owner:</span>
+    <span class="value" id="infoFactoryOwner">-</span>
+  </div>
+  <div class="info-item">
+    <span class="label">权限状态:</span>
+    <span class="value" id="infoPermStatus">-</span>
+  </div>
+</div>
+
+<!-- ====== Toast 通知容器 ====== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ====== 主内容区 ====== -->
+<div class="main">
+
+  <!-- Tab 切换按钮（用 data-tab 属性匹配，避免文本匹配出错） -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="factory" onclick="switchTab('factory')">
+      LaunchFactory <span class="badge">9 项</span>
+    </button>
+    <button class="tab-btn" data-tab="escrow" onclick="switchTab('escrow')">
+      FeeEscrow <span class="badge">1 项</span>
+    </button>
+    <button class="tab-btn" data-tab="hook" onclick="switchTab('hook')">
+      LaunchHook <span class="badge">1 项</span>
+    </button>
+    <button class="tab-btn" data-tab="router" onclick="switchTab('router')">
+      LaunchRouter <span class="badge">2 项</span>
+    </button>
+    <button class="tab-btn" data-tab="ownership" onclick="switchTab('ownership')">
+      所有权管理 <span class="badge">核心</span>
+    </button>
+  </div>
+
+  <!-- ==================== FACTORY 面板 ==================== -->
+  <div class="contract-panel active" id="panel-factory">
+    <div class="panel-header">
+      <h2>LaunchFactory 工厂合约</h2>
+      <a class="contract-addr" href="https://etherscan.io/address/0x235B870118C492e862670AeC2B3B7E7A92915628" target="_blank">
+        0x235B...5628 ↗
+      </a>
+    </div>
+
+    <!-- 状态卡片：显示合约当前状态 -->
+    <div class="state-cards">
+      <div class="state-card">
+        <div class="sc-label">国库地址 (Treasury)</div>
+        <div class="sc-value" id="f-treasury">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">价格签名者 (PriceSigner)</div>
+        <div class="sc-value" id="f-priceSigner">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">路由合约 (Router)</div>
+        <div class="sc-value" id="f-router">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">WETH 地址</div>
+        <div class="sc-value" id="f-weth">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">创建费 (CreationFee)</div>
+        <div class="sc-value" id="f-creationFee">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">开盘 FDV (USD)</div>
+        <div class="sc-value" id="f-openingFdv">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">暂停状态</div>
+        <div class="sc-value" id="f-paused">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">Hook 合约</div>
+        <div class="sc-value" id="f-hook">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">已发射代币数</div>
+        <div class="sc-value" id="f-launchCount">加载中...</div>
+      </div>
+    </div>
+
+    <div class="func-sections">
+      <!-- 重要提示 -->
+      <div class="func-section">
+        <div class="alert alert-warning">
+          ⚠️ 注意：Factory 的 <code>setHook</code> 只能调用一次，已在部署时绑定完成。再次调用会 revert。
+        </div>
+        <div class="alert alert-info">
+          🔒 <strong>setHook 已锁定</strong>：当前 Hook 地址已显示在状态卡片中，无法更改。
+        </div>
+      </div>
+
+      <!-- 基础配置 -->
+      <div class="func-section">
+        <div class="func-section-title">
+          <span class="icon blue">⚙</span> 基础配置
+        </div>
+        <div class="func-grid">
+
+          <!-- 设置 Router -->
+          <div class="func-card">
+            <h4>设置路由合约 (setRouter)</h4>
+            <p class="func-desc">设置 LaunchRouter 地址，用于创建代币时的自动买入功能。可以更新。</p>
+            <div class="form-group">
+              <label>Router 地址</label>
+              <input type="text" id="f-input-router" placeholder="0x..." value="0x4725EAFa1e1386a1BcD0895eC3dC1A12DfC0EADA">
+            </div>
+            <button class="btn btn-primary" onclick="factorySetRouter()">设置 Router</button>
+          </div>
+
+          <!-- 设置创建费 -->
+          <div class="func-card">
+            <h4>设置创建费 (setCreationFee)</h4>
+            <p class="func-desc">用户创建新代币时需要支付的费用。当前默认 0.001 ETH。</p>
+            <div class="form-group">
+              <label>创建费（ETH）</label>
+              <input type="text" id="f-input-creationFee" placeholder="例如: 0.001" value="0.001">
+            </div>
+            <button class="btn btn-primary" onclick="factorySetCreationFee()">设置创建费</button>
+          </div>
+
+          <!-- 设置国库地址 -->
+          <div class="func-card">
+            <h4>设置国库地址 (setTreasury)</h4>
+            <p class="func-desc">创建代币时收取的费用会发送到这个地址。</p>
+            <div class="form-group">
+              <label>国库地址</label>
+              <input type="text" id="f-input-treasury" placeholder="0x...">
+            </div>
+            <button class="btn btn-primary" onclick="factorySetTreasury()">设置国库</button>
+          </div>
+
+          <!-- 设置价格签名者 -->
+          <div class="func-card">
+            <h4>设置价格签名者 (setPriceSigner)</h4>
+            <p class="func-desc">设置后端签名服务地址，用于验证代币价格签名。生产环境应改为后端服务地址。</p>
+            <div class="form-group">
+              <label>签名者地址</label>
+              <input type="text" id="f-input-priceSigner" placeholder="0x...">
+            </div>
+            <button class="btn btn-primary" onclick="factorySetPriceSigner()">设置签名者</button>
+          </div>
+
+          <!-- 设置开盘 FDV -->
+          <div class="func-card">
+            <h4>设置开盘 FDV (setOpeningFdvUsd)</h4>
+            <p class="func-desc">新代币的初始完全稀释估值（美元）。当前默认 $4,000。</p>
+            <div class="form-group">
+              <label>开盘 FDV（USD）</label>
+              <input type="text" id="f-input-openingFdv" placeholder="例如: 4000" value="4000">
+            </div>
+            <button class="btn btn-primary" onclick="factorySetOpeningFdv()">设置开盘 FDV</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 配对代币管理 -->
+      <div class="func-section">
+        <div class="func-section-title">
+          <span class="icon green">🪙</span> 配对代币管理
+        </div>
+        <div class="func-grid">
+
+          <!-- 注册配对代币 -->
+          <div class="func-card">
+            <h4>注册配对代币 (registerQuote)</h4>
+            <p class="func-desc">注册一个代币作为创建新池子时的配对选项。比如 SHIB、USDC 等。会自动读取 decimals 和 symbol。</p>
+            <div class="form-group">
+              <label>代币地址</label>
+              <input type="text" id="f-input-quote" placeholder="0x... (例如 SHIB: 0x95aD...cE)">
+            </div>
+            <button class="btn btn-success" onclick="factoryRegisterQuote()">注册代币</button>
+          </div>
+
+          <!-- 禁用配对代币 -->
+          <div class="func-card">
+            <h4>禁用配对代币 (disableQuote)</h4>
+            <p class="func-desc">禁用某个已注册的配对代币，禁用后不能再用于创建新池子（已创建的池子不受影响）。</p>
+            <div class="form-group">
+              <label>代币地址</label>
+              <input type="text" id="f-input-disable-quote" placeholder="0x...">
+            </div>
+            <button class="btn btn-warning" onclick="factoryDisableQuote()">禁用代币</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 系统控制 -->
+      <div class="func-section">
+        <div class="func-section-title">
+          <span class="icon orange">🎛</span> 系统控制
+        </div>
+        <div class="func-grid">
+
+          <!-- 暂停/恢复 -->
+          <div class="func-card">
+            <h4>暂停/恢复发射 (setPaused)</h4>
+            <p class="func-desc">暂停后所有人无法创建新代币。紧急情况下使用。</p>
+            <div class="toggle-row">
+              <label class="toggle-switch">
+                <input type="checkbox" id="f-input-paused">
+                <span class="toggle-slider"></span>
+              </label>
+              <span style="font-family:var(--font-cn);font-size:13px;color:var(--text-secondary)">开启 = 暂停所有新代币创建</span>
+            </div>
+            <br>
+            <button class="btn btn-warning" onclick="factorySetPaused()">更新暂停状态</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 黑名单管理 -->
+      <div class="func-section">
+        <div class="func-section-title">
+          <span class="icon red">🚫</span> 黑名单管理
+        </div>
+        <div class="func-grid">
+
+          <!-- 查询黑名单状态 -->
+          <div class="func-card">
+            <h4>查询黑名单状态 (blacklist)</h4>
+            <p class="func-desc">查询某个地址是否在黑名单中。黑名单地址不参与分红。</p>
+            <div class="form-group">
+              <label>要查询的地址</label>
+              <input type="text" id="f-input-blacklist-query" placeholder="0x...">
+            </div>
+            <button class="btn btn-outline" onclick="factoryQueryBlacklist()">查询状态</button>
+            <div id="f-blacklist-result" style="margin-top:12px;padding:10px;background:var(--surface-alt);border-radius:6px;display:none">
+              <span style="font-family:var(--font-cn);font-size:13px;font-weight:600">状态：</span>
+              <span id="f-blacklist-status" style="font-family:var(--font-mono);font-size:13px"></span>
+            </div>
+          </div>
+
+          <!-- 单个黑名单 -->
+          <div class="func-card">
+            <h4>设置单个黑名单 (setBlacklist)</h4>
+            <p class="func-desc">将某个地址加入/移出黑名单。被拉黑的地址不参与分红，未领分红会被回收到平台。</p>
+            <div class="form-group">
+              <label>地址</label>
+              <input type="text" id="f-input-blacklist-addr" placeholder="0x...">
+            </div>
+            <div class="toggle-row" style="margin-bottom:12px">
+              <label class="toggle-switch">
+                <input type="checkbox" id="f-input-blacklist-status" checked>
+                <span class="toggle-slider"></span>
+              </label>
+              <span style="font-family:var(--font-cn);font-size:13px;color:var(--text-secondary)">开启 = 拉黑 | 关闭 = 解除</span>
+            </div>
+            <button class="btn btn-danger" onclick="factorySetBlacklist()">设置黑名单</button>
+          </div>
+
+          <!-- 批量黑名单 -->
+          <div class="func-card">
+            <h4>批量设置黑名单 (setBlacklistBatch)</h4>
+            <p class="func-desc">一次设置多个地址的黑名单状态。每行一个地址，或用逗号分隔。</p>
+            <div class="form-group">
+              <label>地址列表（每行一个或逗号分隔）</label>
+              <input type="text" id="f-input-blacklist-batch" placeholder="0xaaa...&#10;0xbbb...">
+            </div>
+            <div class="toggle-row" style="margin-bottom:12px">
+              <label class="toggle-switch">
+                <input type="checkbox" id="f-input-blacklist-batch-status" checked>
+                <span class="toggle-slider"></span>
+              </label>
+              <span style="font-family:var(--font-cn);font-size:13px;color:var(--text-secondary)">开启 = 拉黑 | 关闭 = 解除</span>
+            </div>
+            <button class="btn btn-danger" onclick="factorySetBlacklistBatch()">批量设置</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ESCROW 面板 ==================== -->
+  <div class="contract-panel" id="panel-escrow">
+    <div class="panel-header">
+      <h2>FeeEscrow 手续费分配器</h2>
+      <a class="contract-addr" href="https://etherscan.io/address/0xFc02ee0c03384303936dfD5adC36972163661081" target="_blank">
+        0xFc02...1081 ↗
+      </a>
+    </div>
+
+    <div class="state-cards">
+      <div class="state-card">
+        <div class="sc-label">Hook 合约</div>
+        <div class="sc-value" id="e-hook">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">Factory 合约</div>
+        <div class="sc-value" id="e-factory">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">平台收款地址</div>
+        <div class="sc-value" id="e-recipient">加载中...</div>
+      </div>
+    </div>
+
+    <div class="func-sections">
+      <div class="func-section">
+        <div class="alert alert-warning">
+          ⚠️ 注意：setHook 和 setFactory 都只能调用一次！已经绑定过了，再次调用会 revert。
+        </div>
+        <div class="func-section-title">
+          <span class="icon blue">⚙</span> Escrow 配置
+        </div>
+        <div class="func-grid">
+
+          <!-- 设置平台收款地址 -->
+          <div class="func-card">
+            <h4>设置平台收款地址 (setPlatformRecipient)</h4>
+            <p class="func-desc">手续费中平台份额的收款地址。修改后新分配的手续费会发到新地址。同时需要更新各 DividendTracker 的 platformRecipient。</p>
+            <div class="form-group">
+              <label>新的收款地址</label>
+              <input type="text" id="e-input-recipient" placeholder="0x...">
+            </div>
+            <button class="btn btn-primary" onclick="escrowSetPlatformRecipient()">设置收款地址</button>
+          </div>
+
+          <!-- 说明卡片 -->
+          <div class="func-card" style="background:var(--surface-alt);border-style:dashed">
+            <h4>💡 手续费分配说明</h4>
+            <p class="func-desc" style="margin-bottom:0">
+              FeeEscrow 负责分配交易手续费：<br><br>
+              <strong>平台份额（默认 30%）</strong>→ 发到 platformRecipient<br>
+              <strong>分红份额（默认 70%）</strong>→ 发到各代币的 DividendTracker<br><br>
+              任何人可以调用 <code>distribute()</code> 触发分配，不需要 owner 权限。<br>
+              推荐用 <code>distributeFor(池子索引)</code> 单个分配，gas 最低。
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== HOOK 面板 ==================== -->
+  <div class="contract-panel" id="panel-hook">
+    <div class="panel-header">
+      <h2>LaunchHook 交易钩子</h2>
+      <a class="contract-addr" href="https://etherscan.io/address/0x01B565F243f45F86Fb4332868dE6978D456D28CC" target="_blank">
+        0x01B5...28CC ↗
+      </a>
+    </div>
+
+    <div class="state-cards">
+      <div class="state-card">
+        <div class="sc-label">分红比例 (TrackerShareBps)</div>
+        <div class="sc-value" id="h-trackerBps">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">最低手续费率</div>
+        <div class="sc-value" id="h-minFeeRate">1%</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">最高手续费率</div>
+        <div class="sc-value" id="h-maxFeeRate">10%</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">反狙击持续时间</div>
+        <div class="sc-value" id="h-antiSnipeDuration">20 秒</div>
+      </div>
+    </div>
+
+    <div class="func-sections">
+      <div class="func-section">
+        <div class="func-section-title">
+          <span class="icon blue">⚙</span> Hook 配置
+        </div>
+        <div class="func-grid">
+
+          <!-- 设置分红比例 -->
+          <div class="func-card">
+            <h4>设置分红比例 (setTrackerShareBps)</h4>
+            <p class="func-desc">设置手续费中分给持币人分红的比例。单位 BPS（分母 10000）。例如 7000 = 70%。<br><br>
+            ⚠️ 只对新发射的代币生效！已发射的代币比例在创建时已锁定，不会改变。</p>
+            <div class="form-group">
+              <label>分红比例（BPS，0~10000）</label>
+              <input type="text" id="h-input-bps" placeholder="例如: 7000 (即 70%)" value="7000">
+            </div>
+            <button class="btn btn-primary" onclick="hookSetTrackerShareBps()">设置分红比例</button>
+          </div>
+
+          <!-- 说明 -->
+          <div class="func-card" style="background:var(--surface-alt);border-style:dashed">
+            <h4>💡 Hook 功能说明</h4>
+            <p class="func-desc" style="margin-bottom:0">
+              LaunchHook 是 Uniswap V4 的交易钩子，负责：<br><br>
+              <strong>反狙击保护</strong>：开盘 20 秒内费率从 99% 线性降到正常费率<br>
+              <strong>交易手续费</strong>：买卖时收取 1%~10% 手续费<br>
+              <strong>手续费拆分</strong>：按比例拆分为平台份额和分红份额<br><br>
+              Owner 只能修改 <code>trackerShareBps</code>（分红比例），其他参数在发射时已锁定。
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ROUTER 面板 ==================== -->
+  <div class="contract-panel" id="panel-router">
+    <div class="panel-header">
+      <h2>LaunchRouter 交易路由</h2>
+      <a class="contract-addr" href="https://etherscan.io/address/0x4725EAFa1e1386a1BcD0895eC3dC1A12DfC0EADA" target="_blank">
+        0x4725...EADA ↗
+      </a>
+    </div>
+
+    <!-- Router 状态卡片 -->
+    <div class="state-cards">
+      <div class="state-card">
+        <div class="sc-label">PoolManager</div>
+        <div class="sc-value" id="r-poolManager">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">V3 Router</div>
+        <div class="sc-value" id="r-v3Router">加载中...</div>
+      </div>
+      <div class="state-card">
+        <div class="sc-label">WETH</div>
+        <div class="sc-value" id="r-weth">加载中...</div>
+      </div>
+    </div>
+
+    <div class="func-sections">
+      <div class="func-section">
+        <div class="func-section-title">
+          <span class="icon blue">⚙</span> Router 配置
+        </div>
+        <div class="func-grid">
+
+          <!-- 查询 ETH 路由 -->
+          <div class="func-card">
+            <h4>查询 ETH 路由 (ethRoute)</h4>
+            <p class="func-desc">查询某个配对代币的 ETH 兑换路径。如果已设置，会显示 Uniswap V3 路径。</p>
+            <div class="form-group">
+              <label>配对代币地址</label>
+              <input type="text" id="r-input-route-query" placeholder="0x... (要查询的 quote 代币)">
+            </div>
+            <button class="btn btn-outline" onclick="routerQueryEthRoute()">查询路由</button>
+            <div id="r-route-result" style="margin-top:12px;padding:10px;background:var(--surface-alt);border-radius:6px;display:none">
+              <span style="font-family:var(--font-cn);font-size:13px;font-weight:600">路由路径：</span>
+              <span id="r-route-path" style="font-family:var(--font-mono);font-size:11px;word-break:break-all"></span>
+            </div>
+          </div>
+
+          <!-- 设置 ETH 路由 -->
+          <div class="func-card">
+            <h4>设置 ETH 兑换路径 (setEthRoute)</h4>
+            <p class="func-desc">当用户用 ETH 购买非 WETH 配对代币时，需要先通过 Uniswap V3 把 ETH 换成 quote 代币。这里设置兑换路径。<br><br>
+            路径格式：Uniswap V3 的编码路径（地址+费率），例如 WETH→USDC 的 0.3% 池子路径。</p>
+            <div class="form-group">
+              <label>配对代币地址 (Quote)</label>
+              <input type="text" id="r-input-quote" placeholder="0x... (配对代币地址)">
+            </div>
+            <div class="form-group">
+              <label>兑换路径 (Path, hex)</label>
+              <input type="text" id="r-input-path" placeholder="0x... (Uniswap V3 编码路径)">
+            </div>
+            <button class="btn btn-primary" onclick="routerSetEthRoute()">设置 ETH 路由</button>
+          </div>
+
+          <!-- 紧急提取 -->
+          <div class="func-card">
+            <h4>紧急提取代币 (rescue)</h4>
+            <p class="func-desc">提取卡在 Router 合约中的代币。通常不需要，但如果有人误转代币到合约地址，可以用这个功能取回。</p>
+            <div class="form-group">
+              <label>代币地址</label>
+              <input type="text" id="r-input-rescue-token" placeholder="0x... (要提取的代币)">
+            </div>
+            <div class="form-group">
+              <label>接收地址</label>
+              <input type="text" id="r-input-rescue-to" placeholder="0x... (接收方)">
+            </div>
+            <button class="btn btn-warning" onclick="routerRescue()">紧急提取</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 所有权管理面板 ==================== -->
+  <div class="contract-panel" id="panel-ownership">
+    <div class="panel-header">
+      <h2>所有权管理（二步确认）</h2>
+    </div>
+
+    <div class="func-sections">
+      <div class="func-section">
+        <div class="alert alert-info">
+          ℹ️ 所有合约都使用 <strong>Ownable2Step（二步确认）</strong>。转移所有权的流程：<br>
+          <strong>第一步</strong>：当前 Owner 调用 <code>transferOwnership(新地址)</code>，提议转移<br>
+          <strong>第二步</strong>：新 Owner 调用 <code>acceptOwnership()</code>，正式接管<br>
+          这样可以防止误操作把所有权转给错误地址。
+        </div>
+
+        <div class="func-section-title">
+          <span class="icon blue">🔑</span> 各合约所有权状态
+        </div>
+        <div class="state-cards">
+          <div class="state-card">
+            <div class="sc-label">Factory 当前 Owner</div>
+            <div class="sc-value" id="own-f-owner">加载中...</div>
+          </div>
+          <div class="state-card">
+            <div class="sc-label">Factory 待接受者</div>
+            <div class="sc-value" id="own-f-pending">加载中...</div>
+          </div>
+          <div class="state-card">
+            <div class="sc-label">Escrow 当前 Owner</div>
+            <div class="sc-value" id="own-e-owner">加载中...</div>
+          </div>
+          <div class="state-card">
+            <div class="sc-label">Escrow 待接受者</div>
+            <div class="sc-value" id="own-e-pending">加载中...</div>
+          </div>
+          <div class="state-card">
+            <div class="sc-label">Hook 当前 Owner</div>
+            <div class="sc-value" id="own-h-owner">加载中...</div>
+          </div>
+          <div class="state-card">
+            <div class="sc-label">Hook 待接受者</div>
+            <div class="sc-value" id="own-h-pending">加载中...</div>
+          </div>
+          <div class="state-card">
+            <div class="sc-label">Router 当前 Owner</div>
+            <div class="sc-value" id="own-r-owner">加载中...</div>
+          </div>
+          <div class="state-card">
+            <div class="sc-label">Router 待接受者</div>
+            <div class="sc-value" id="own-r-pending">加载中...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 转移所有权 -->
+      <div class="func-section">
+        <div class="func-section-title">
+          <span class="icon green">📤</span> 转移所有权（第一步：提议）
+        </div>
+        <div class="func-grid">
+
+          <div class="func-card">
+            <h4>Factory → 转移给...</h4>
+            <p class="func-desc">提议将 LaunchFactory 的所有权转给新地址。对方需要调用 acceptOwnership 接受。</p>
+            <div class="form-group">
+              <label>新 Owner 地址</label>
+              <input type="text" id="own-input-factory-addr" placeholder="0x...">
+            </div>
+            <button class="btn btn-primary" onclick="transferOwnership('factory')">提议转移 Factory</button>
+          </div>
+
+          <div class="func-card">
+            <h4>FeeEscrow → 转移给...</h4>
+            <p class="func-desc">提议将 FeeEscrow 的所有权转给新地址。</p>
+            <div class="form-group">
+              <label>新 Owner 地址</label>
+              <input type="text" id="own-input-escrow-addr" placeholder="0x...">
+            </div>
+            <button class="btn btn-primary" onclick="transferOwnership('escrow')">提议转移 Escrow</button>
+          </div>
+
+          <div class="func-card">
+            <h4>LaunchHook → 转移给...</h4>
+            <p class="func-desc">提议将 LaunchHook 的所有权转给新地址。</p>
+            <div class="form-group">
+              <label>新 Owner 地址</label>
+              <input type="text" id="own-input-hook-addr" placeholder="0x...">
+            </div>
+            <button class="btn btn-primary" onclick="transferOwnership('hook')">提议转移 Hook</button>
+          </div>
+
+          <div class="func-card">
+            <h4>LaunchRouter → 转移给...</h4>
+            <p class="func-desc">提议将 LaunchRouter 的所有权转给新地址。</p>
+            <div class="form-group">
+              <label>新 Owner 地址</label>
+              <input type="text" id="own-input-router-addr" placeholder="0x...">
+            </div>
+            <button class="btn btn-primary" onclick="transferOwnership('router')">提议转移 Router</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 接受所有权 -->
+      <div class="func-section">
+        <div class="func-section-title">
+          <span class="icon green">📥</span> 接受所有权（第二步：接受）
+        </div>
+        <div class="alert alert-info">
+          用<strong>新 Owner 的钱包</strong>连接后，点击下面的按钮接受所有权。确保上面"待接受者"显示的是你的地址。
+        </div>
+        <div class="func-grid">
+
+          <div class="func-card">
+            <h4>接受 Factory 所有权</h4>
+            <p class="func-desc">以当前钱包身份接受 LaunchFactory 的所有权。</p>
+            <button class="btn btn-success" onclick="acceptOwnership('factory')">接受 Factory 所有权</button>
+          </div>
+
+          <div class="func-card">
+            <h4>接受 Escrow 所有权</h4>
+            <p class="func-desc">以当前钱包身份接受 FeeEscrow 的所有权。</p>
+            <button class="btn btn-success" onclick="acceptOwnership('escrow')">接受 Escrow 所有权</button>
+          </div>
+
+          <div class="func-card">
+            <h4>接受 Hook 所有权</h4>
+            <p class="func-desc">以当前钱包身份接受 LaunchHook 的所有权。</p>
+            <button class="btn btn-success" onclick="acceptOwnership('hook')">接受 Hook 所有权</button>
+          </div>
+
+          <div class="func-card">
+            <h4>接受 Router 所有权</h4>
+            <p class="func-desc">以当前钱包身份接受 LaunchRouter 的所有权。</p>
+            <button class="btn btn-success" onclick="acceptOwnership('router')">接受 Router 所有权</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 放弃所有权（危险） -->
+      <div class="func-section">
+        <div class="func-section-title">
+          <span class="icon red">☠</span> 放弃所有权（极度危险）
+        </div>
+        <div class="alert alert-danger">
+          ☠️ <strong>警告：放弃所有权后，该合约将永远无法被管理！</strong><br>
+          所有 onlyOwner 函数（设置参数、黑名单、转移所有权等）将永远无法调用。<br>
+          这个操作不可逆！请三思！
+        </div>
+        <div class="func-grid">
+
+          <div class="func-card" style="border-color:var(--danger)">
+            <h4 style="color:var(--danger)">放弃 Factory 所有权</h4>
+            <p class="func-desc">永久放弃 LaunchFactory 的管理权限。不可逆！</p>
+            <button class="btn btn-danger" onclick="renounceOwnership('factory')">放弃 Factory 所有权</button>
+          </div>
+
+          <div class="func-card" style="border-color:var(--danger)">
+            <h4 style="color:var(--danger)">放弃 Escrow 所有权</h4>
+            <p class="func-desc">永久放弃 FeeEscrow 的管理权限。不可逆！</p>
+            <button class="btn btn-danger" onclick="renounceOwnership('escrow')">放弃 Escrow 所有权</button>
+          </div>
+
+          <div class="func-card" style="border-color:var(--danger)">
+            <h4 style="color:var(--danger)">放弃 Hook 所有权</h4>
+            <p class="func-desc">永久放弃 LaunchHook 的管理权限。不可逆！</p>
+            <button class="btn btn-danger" onclick="renounceOwnership('hook')">放弃 Hook 所有权</button>
+          </div>
+
+          <div class="func-card" style="border-color:var(--danger)">
+            <h4 style="color:var(--danger)">放弃 Router 所有权</h4>
+            <p class="func-desc">永久放弃 LaunchRouter 的管理权限。不可逆！</p>
+            <button class="btn btn-danger" onclick="renounceOwnership('router')">放弃 Router 所有权</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 日志面板 ====== -->
+  <div class="log-panel">
+    <div class="log-header">
+      <span>操作日志</span>
+      <button onclick="clearLog()">清空</button>
+    </div>
+    <div class="log-body" id="logBody">
+      <div class="log-entry"><span class="log-info">[系统]</span> 管理面板已就绪，请连接钱包后操作</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ethers.js v6：用于与以太坊合约交互 -->
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script>
+/* ================================================================
+   合约地址配置（从部署报告获取，不硬编码 owner）
+   ================================================================ */
+const CONTRACTS = {
+  factory:  '0x235B870118C492e862670AeC2B3B7E7A92915628',
+  hook:     '0x01B565F243f45F86Fb4332868dE6978D456D28CC',
+  escrow:   '0xFc02ee0c03384303936dfD5adC36972163661081',
+  router:   '0x4725EAFa1e1386a1BcD0895eC3dC1A12DfC0EADA',
+};
+
+/* ================================================================
+   ABI 定义 —— 只包含 owner 相关函数的 ABI
+   这样 ethers.js 可以正确调用合约方法
+   ================================================================ */
+
+// --- Ownable2Step 通用 ABI（所有合约都有这些） ---
+const ABI_OWNABLE2STEP = [
+  "function owner() view returns (address)",
+  "function pendingOwner() view returns (address)",
+  "function transferOwnership(address newOwner)",      // 第一步：提议转移
+  "function acceptOwnership()",                        // 第二步：新 owner 接受
+  "function renounceOwnership()"                       // 放弃所有权（危险！）
+];
+
+// --- LaunchFactory 的 owner 函数 ABI ---
+const ABI_FACTORY = [
+  ...ABI_OWNABLE2STEP,
+  // 读取状态
+  "function treasury() view returns (address)",
+  "function priceSigner() view returns (address)",
+  "function router() view returns (address)",
+  "function creationFee() view returns (uint256)",
+  "function openingFdvUsd() view returns (uint256)",
+  "function paused() view returns (bool)",
+  "function hook() view returns (address)",
+  "function blacklist(address) view returns (bool)",
+  "function launchCount() view returns (uint256)",
+  // owner 写入函数
+  "function setHook(address hook_)",                   // 设置 Hook（只能一次）
+  "function setRouter(address router_)",               // 设置 Router
+  "function registerQuote(address quote)",             // 注册配对代币（如 SHIB）
+  "function disableQuote(address quote)",              // 禁用配对代币
+  "function setCreationFee(uint256 fee)",              // 设置创建费
+  "function setTreasury(address treasury_)",           // 设置国库地址
+  "function setPriceSigner(address signer)",           // 设置价格签名者
+  "function setPaused(bool paused_)",                  // 暂停/恢复发射
+  "function setOpeningFdvUsd(uint256 fdvUsd)",         // 设置开盘 FDV
+  "function setBlacklist(address account, bool status)",       // 设置单个黑名单
+  "function setBlacklistBatch(address[] accounts, bool status)" // 批量设置黑名单
+];
+
+// --- FeeEscrow 的 owner 函数 ABI ---
+const ABI_ESCROW = [
+  ...ABI_OWNABLE2STEP,
+  "function hook() view returns (address)",
+  "function factory() view returns (address)",
+  "function platformRecipient() view returns (address)",
+  "function setHook(address hook_)",                   // 设置 Hook（只能一次）
+  "function setFactory(address factory_)",             // 设置 Factory（只能一次）
+  "function setPlatformRecipient(address recipient)"   // 设置平台收款地址
+];
+
+// --- LaunchHook 的 owner 函数 ABI ---
+const ABI_HOOK = [
+  ...ABI_OWNABLE2STEP,
+  "function trackerShareBps() view returns (uint256)",
+  "function setTrackerShareBps(uint256 bps)"           // 设置分红比例（仅对新代币生效）
+];
+
+// --- LaunchRouter 的 owner 函数 ABI ---
+const ABI_ROUTER = [
+  ...ABI_OWNABLE2STEP,
+  // 读取状态
+  "function poolManager() view returns (address)",
+  "function v3Router() view returns (address)",
+  "function weth() view returns (address)",
+  "function ethRoute(address) view returns (bytes)",
+  // owner 写入函数
+  "function setEthRoute(address quote, bytes path)",   // 设置 ETH 兑换路径
+  "function rescue(address token, address to)"          // 紧急提取卡住的代币
+];
+
+/* ================================================================
+   全局状态
+   ================================================================ */
+let provider = null;
+let signer = null;
+let userAddress = null;
+let chainId = null;
+let contracts = {}; // 存储合约实例
+
+/* ================================================================
+   钱包连接
+   ================================================================ */
+async function connectWallet() {
+  // 检查是否安装了 MetaMask
+  if (typeof window.ethereum === 'undefined') {
+    showToast('请先安装 MetaMask 钱包', 'error');
+    return;
+  }
+  try {
+    // 请求连接钱包
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    // 创建 ethers provider 和 signer
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    userAddress = accounts[0];
+    const network = await provider.getNetwork();
+    chainId = Number(network.chainId);
+
+    // 检查是否在以太坊主网（chainId=1）
+    if (chainId !== 1) {
+      showToast('请切换到以太坊主网！当前链 ID: ' + chainId, 'warning');
+    }
+
+    // 更新 UI
+    updateWalletUI();
+    // 初始化合约实例
+    await initContracts();
+    // 读取所有合约状态
+    await refreshAllState();
+
+    log('ok', '钱包已连接: ' + shortAddr(userAddress));
+    showToast('钱包连接成功', 'success');
+  } catch (err) {
+    log('err', '连接失败: ' + err.message);
+    showToast('连接失败: ' + err.message, 'error');
+  }
+}
+
+// 更新钱包连接后的 UI 显示
+function updateWalletUI() {
+  const btn = document.getElementById('btnConnectWallet');
+  const txt = document.getElementById('walletBtnText');
+  btn.classList.add('connected');
+  txt.innerHTML = '<span class="wallet-addr">' + shortAddr(userAddress) + '</span>';
+  document.getElementById('infoNetwork').textContent = chainId === 1 ? '以太坊主网' : '链 ID: ' + chainId;
+  document.getElementById('infoAccount').textContent = shortAddr(userAddress);
+  // 显示刷新按钮
+  document.getElementById('btnRefresh').style.display = 'flex';
+}
+
+// 监听账户和链变化
+if (typeof window.ethereum !== 'undefined') {
+  window.ethereum.on('accountsChanged', (accounts) => {
+    if (accounts.length === 0) {
+      // 用户断开连接
+      location.reload();
+    } else {
+      location.reload(); // 简单处理：刷新页面
+    }
+  });
+  window.ethereum.on('chainChanged', () => { location.reload(); });
+}
+
+/* ================================================================
+   Tab 切换
+   ================================================================ */
+function switchTab(name) {
+  // 用 data-tab 属性匹配，更稳健
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  document.querySelectorAll('.contract-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+}
+
+/* ================================================================
+   日志 & Toast
+   ================================================================ */
+// 日志输出到页面底部
+function log(type, msg) {
+  const body = document.getElementById('logBody');
+  const time = new Date().toLocaleTimeString('zh-CN');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = '<span class="log-time">[' + time + ']</span> <span class="log-' + type + '">' + msg + '</span>';
+  body.appendChild(entry);
+  body.scrollTop = body.scrollHeight;
+}
+
+// 清空日志
+function clearLog() {
+  document.getElementById('logBody').innerHTML = '';
+}
+
+// Toast 通知弹窗
+function showToast(msg, type = 'info') {
+  const container = document.getElementById('toastContainer');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+  toast.innerHTML = '<span>' + icon + '</span><span>' + msg + '</span>';
+  container.appendChild(toast);
+  // 3 秒后自动消失
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+// 地址缩写显示
+function shortAddr(addr) {
+  if (!addr) return '-';
+  return addr.slice(0, 6) + '...' + addr.slice(-4);
+}
+
+// 格式化 ETH 金额（从 wei 转）
+function formatETH(val) {
+  if (!val && val !== 0n) return '-';
+  return ethers.formatEther(val) + ' ETH';
+}
+
+// 格式化大数字
+function formatNum(val, decimals = 18) {
+  if (!val && val !== 0n) return '-';
+  return ethers.formatUnits(val, decimals);
+}
+
+/* ================================================================
+   合约交互函数
+   ================================================================ */
+// 初始化所有合约实例
+async function initContracts() {
+  if (!signer) return;
+  contracts.factory = new ethers.Contract(CONTRACTS.factory, ABI_FACTORY, signer);
+  contracts.escrow = new ethers.Contract(CONTRACTS.escrow, ABI_ESCROW, signer);
+  contracts.hook = new ethers.Contract(CONTRACTS.hook, ABI_HOOK, signer);
+  contracts.router = new ethers.Contract(CONTRACTS.router, ABI_ROUTER, signer);
+  log('info', '合约实例已初始化');
+}
+
+// 读取并显示所有合约状态
+async function refreshAllState() {
+  if (!signer) return;
+  try {
+    // 并行读取所有 owner
+    const [fOwner, eOwner, hOwner, rOwner] = await Promise.all([
+      contracts.factory.owner(),
+      contracts.escrow.owner(),
+      contracts.hook.owner(),
+      contracts.router.owner()
+    ]);
+
+    // 显示 Factory Owner
+    document.getElementById('infoFactoryOwner').textContent = shortAddr(fOwner);
+
+    // 判断当前钱包是否是 owner
+    const isOwner = userAddress.toLowerCase() === fOwner.toLowerCase();
+    const permEl = document.getElementById('infoPermStatus');
+    if (isOwner) {
+      permEl.textContent = '✅ 你是 Owner';
+      permEl.className = 'value owner-match';
+    } else {
+      permEl.textContent = '❌ 非 Owner（只读）';
+      permEl.className = 'value owner-mismatch';
+    }
+
+    // 更新各面板的状态卡片
+    await refreshFactoryState();
+    await refreshEscrowState();
+    await refreshHookState();
+    await refreshRouterState();
+    await refreshOwnershipState();
+
+    log('ok', '合约状态已刷新');
+  } catch (err) {
+    log('err', '读取状态失败: ' + err.message);
+  }
+}
+
+// ---------- Factory 状态刷新 ----------
+async function refreshFactoryState() {
+  try {
+    const [treasury, priceSigner, router, weth, creationFee, openingFdv, paused, hookAddr, launchCount] = await Promise.all([
+      contracts.factory.treasury(),
+      contracts.factory.priceSigner(),
+      contracts.factory.router(),
+      contracts.factory.weth(),
+      contracts.factory.creationFee(),
+      contracts.factory.openingFdvUsd(),
+      contracts.factory.paused(),
+      contracts.factory.hook(),
+      contracts.factory.launchCount()
+    ]);
+    setText('f-treasury', shortAddr(treasury));
+    setText('f-priceSigner', shortAddr(priceSigner));
+    setText('f-router', shortAddr(router));
+    setText('f-weth', shortAddr(weth));
+    setText('f-creationFee', formatETH(creationFee));
+    setText('f-openingFdv', '$' + formatNum(openingFdv));
+    setText('f-paused', paused ? '⏸ 已暂停' : '▶ 运行中');
+    setText('f-hook', shortAddr(hookAddr));
+    setText('f-launchCount', launchCount.toString());
+    
+    // 同步暂停开关状态
+    document.getElementById('f-input-paused').checked = paused;
+  } catch (e) { log('err', '读取 Factory 状态失败: ' + e.message); }
+}
+
+// ---------- Escrow 状态刷新 ----------
+async function refreshEscrowState() {
+  try {
+    const [hookAddr, factoryAddr, recipient] = await Promise.all([
+      contracts.escrow.hook(),
+      contracts.escrow.factory(),
+      contracts.escrow.platformRecipient()
+    ]);
+    setText('e-hook', shortAddr(hookAddr));
+    setText('e-factory', shortAddr(factoryAddr));
+    setText('e-recipient', shortAddr(recipient));
+  } catch (e) { log('err', '读取 Escrow 状态失败: ' + e.message); }
+}
+
+// ---------- Hook 状态刷新 ----------
+async function refreshHookState() {
+  try {
+    const bps = await contracts.hook.trackerShareBps();
+    setText('h-trackerBps', bps.toString() + ' BPS (' + (Number(bps)/100) + '%)');
+  } catch (e) { log('err', '读取 Hook 状态失败: ' + e.message); }
+}
+
+// ---------- Router 状态刷新 ----------
+async function refreshRouterState() {
+  try {
+    const [poolManager, v3Router, weth] = await Promise.all([
+      contracts.router.poolManager(),
+      contracts.router.v3Router(),
+      contracts.router.weth()
+    ]);
+    setText('r-poolManager', shortAddr(poolManager));
+    setText('r-v3Router', shortAddr(v3Router));
+    setText('r-weth', shortAddr(weth));
+    log('info', 'Router 状态已刷新');
+  } catch (e) { log('err', '读取 Router 状态失败: ' + e.message); }
+}
+
+// ---------- 所有权状态刷新 ----------
+async function refreshOwnershipState() {
+  try {
+    const [fOwner, eOwner, hOwner, rOwner, fPending, ePending, hPending, rPending] = await Promise.all([
+      contracts.factory.owner(), contracts.escrow.owner(), contracts.hook.owner(), contracts.router.owner(),
+      contracts.factory.pendingOwner(), contracts.escrow.pendingOwner(), contracts.hook.pendingOwner(), contracts.router.pendingOwner()
+    ]);
+    // Factory
+    setText('own-f-owner', shortAddr(fOwner));
+    setText('own-f-pending', fPending === '0x0000000000000000000000000000000000000000' ? '无待处理' : shortAddr(fPending));
+    // Escrow
+    setText('own-e-owner', shortAddr(eOwner));
+    setText('own-e-pending', ePending === '0x0000000000000000000000000000000000000000' ? '无待处理' : shortAddr(ePending));
+    // Hook
+    setText('own-h-owner', shortAddr(hOwner));
+    setText('own-h-pending', hPending === '0x0000000000000000000000000000000000000000' ? '无待处理' : shortAddr(hPending));
+    // Router
+    setText('own-r-owner', shortAddr(rOwner));
+    setText('own-r-pending', rPending === '0x0000000000000000000000000000000000000000' ? '无待处理' : shortAddr(rPending));
+  } catch (e) { log('err', '读取所有权状态失败: ' + e.message); }
+}
+
+// 辅助：设置元素文本
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+// 辅助：发送交易并处理结果
+async function sendTx(contract, method, ...args) {
+  try {
+    log('info', '正在发送交易: ' + method + '...');
+    showToast('请确认交易...', 'info');
+    const tx = await contract[method](...args);
+    log('info', '交易已提交: ' + tx.hash.slice(0, 18) + '...');
+    showToast('交易已提交，等待确认', 'info');
+    const receipt = await tx.wait();
+    log('ok', '交易已确认! Gas 消耗: ' + receipt.gasUsed.toString());
+    showToast('交易成功!', 'success');
+    // 刷新状态
+    await refreshAllState();
+    return receipt;
+  } catch (err) {
+    const msg = err.reason || err.message || '未知错误';
+    log('err', '交易失败: ' + msg);
+    showToast('交易失败: ' + msg, 'error');
+    throw err;
+  }
+}
+
+/* ============ Factory 操作函数 ============ */
+
+// 设置 Router
+async function factorySetRouter() {
+  const addr = document.getElementById('f-input-router').value.trim();
+  if (!ethers.isAddress(addr)) return showToast('请输入有效地址', 'error');
+  await sendTx(contracts.factory, 'setRouter', addr);
+}
+
+// 注册配对代币
+async function factoryRegisterQuote() {
+  const addr = document.getElementById('f-input-quote').value.trim();
+  if (!ethers.isAddress(addr)) return showToast('请输入有效地址', 'error');
+  await sendTx(contracts.factory, 'registerQuote', addr);
+}
+
+// 禁用配对代币
+async function factoryDisableQuote() {
+  const addr = document.getElementById('f-input-disable-quote').value.trim();
+  if (!ethers.isAddress(addr)) return showToast('请输入有效地址', 'error');
+  await sendTx(contracts.factory, 'disableQuote', addr);
+}
+
+// 设置创建费
+async function factorySetCreationFee() {
+  const val = document.getElementById('f-input-creationFee').value.trim();
+  if (!val || isNaN(val)) return showToast('请输入有效金额（ETH）', 'error');
+  const wei = ethers.parseEther(val);
+  await sendTx(contracts.factory, 'setCreationFee', wei);
+}
+
+// 设置国库地址
+async function factorySetTreasury() {
+  const addr = document.getElementById('f-input-treasury').value.trim();
+  if (!ethers.isAddress(addr)) return showToast('请输入有效地址', 'error');
+  await sendTx(contracts.factory, 'setTreasury', addr);
+}
+
+// 设置价格签名者
+async function factorySetPriceSigner() {
+  const addr = document.getElementById('f-input-priceSigner').value.trim();
+  if (!ethers.isAddress(addr)) return showToast('请输入有效地址', 'error');
+  await sendTx(contracts.factory, 'setPriceSigner', addr);
+}
+
+// 暂停/恢复
+async function factorySetPaused() {
+  const checked = document.getElementById('f-input-paused').checked;
+  await sendTx(contracts.factory, 'setPaused', checked);
+}
+
+// 设置开盘 FDV
+async function factorySetOpeningFdv() {
+  const val = document.getElementById('f-input-openingFdv').value.trim();
+  if (!val || isNaN(val)) return showToast('请输入有效金额（USD）', 'error');
+  // 乘 1e18 转成链上格式
+  const wei = ethers.parseEther(val);
+  await sendTx(contracts.factory, 'setOpeningFdvUsd', wei);
+}
+
+// 设置黑名单
+async function factorySetBlacklist() {
+  const addr = document.getElementById('f-input-blacklist-addr').value.trim();
+  const status = document.getElementById('f-input-blacklist-status').checked;
+  if (!ethers.isAddress(addr)) return showToast('请输入有效地址', 'error');
+  await sendTx(contracts.factory, 'setBlacklist', addr, status);
+}
+
+// 查询黑名单状态
+async function factoryQueryBlacklist() {
+  const addr = document.getElementById('f-input-blacklist-query').value.trim();
+  if (!ethers.isAddress(addr)) return showToast('请输入有效地址', 'error');
+  try {
+    const isBlacklisted = await contracts.factory.blacklist(addr);
+    const resultDiv = document.getElementById('f-blacklist-result');
+    const statusSpan = document.getElementById('f-blacklist-status');
+    resultDiv.style.display = 'block';
+    if (isBlacklisted) {
+      statusSpan.textContent = '⛔ 已在黑名单中';
+      statusSpan.style.color = 'var(--danger)';
+    } else {
+      statusSpan.textContent = '✅ 不在黑名单';
+      statusSpan.style.color = 'var(--success)';
+    }
+    log('ok', '黑名单查询成功: ' + shortAddr(addr) + ' - ' + (isBlacklisted ? '已拉黑' : '未拉黑'));
+  } catch (err) {
+    log('err', '查询失败: ' + err.message);
+    showToast('查询失败: ' + err.message, 'error');
+  }
+}
+
+// 批量设置黑名单
+async function factorySetBlacklistBatch() {
+  const raw = document.getElementById('f-input-blacklist-batch').value.trim();
+  const status = document.getElementById('f-input-blacklist-batch-status').checked;
+  const addrs = raw.split(/[\n,]+/).map(a => a.trim()).filter(a => ethers.isAddress(a));
+  if (addrs.length === 0) return showToast('请输入至少一个有效地址', 'error');
+  await sendTx(contracts.factory, 'setBlacklistBatch', addrs, status);
+}
+
+/* ============ Escrow 操作函数 ============ */
+
+// 设置平台收款地址
+async function escrowSetPlatformRecipient() {
+  const addr = document.getElementById('e-input-recipient').value.trim();
+  if (!ethers.isAddress(addr)) return showToast('请输入有效地址', 'error');
+  await sendTx(contracts.escrow, 'setPlatformRecipient', addr);
+}
+
+/* ============ Hook 操作函数 ============ */
+
+// 设置分红比例
+async function hookSetTrackerShareBps() {
+  const val = document.getElementById('h-input-bps').value.trim();
+  if (!val || isNaN(val)) return showToast('请输入有效数值', 'error');
+  const bps = parseInt(val);
+  if (bps < 0 || bps > 10000) return showToast('BPS 范围: 0 ~ 10000', 'error');
+  await sendTx(contracts.hook, 'setTrackerShareBps', bps);
+}
+
+/* ============ Router 操作函数 ============ */
+
+// 设置 ETH 路由
+async function routerSetEthRoute() {
+  const quote = document.getElementById('r-input-quote').value.trim();
+  let path = document.getElementById('r-input-path').value.trim();
+  if (!ethers.isAddress(quote)) return showToast('请输入有效的 quote 地址', 'error');
+  if (!path) return showToast('请输入路由路径', 'error');
+  // bytes 类型必须以 0x 开头
+  if (!path.startsWith('0x')) path = '0x' + path;
+  if (!/^0x[0-9a-fA-F]*$/.test(path)) return showToast('路径必须是合法的 hex 字符串', 'error');
+  await sendTx(contracts.router, 'setEthRoute', quote, path);
+}
+
+// 查询 ETH 路由
+async function routerQueryEthRoute() {
+  const quote = document.getElementById('r-input-route-query').value.trim();
+  if (!ethers.isAddress(quote)) return showToast('请输入有效的 quote 地址', 'error');
+  try {
+    const path = await contracts.router.ethRoute(quote);
+    const resultDiv = document.getElementById('r-route-result');
+    const pathSpan = document.getElementById('r-route-path');
+    resultDiv.style.display = 'block';
+    if (path === '0x' || path.length <= 2) {
+      pathSpan.textContent = '未设置';
+      pathSpan.style.color = 'var(--text-muted)';
+    } else {
+      pathSpan.textContent = path;
+      pathSpan.style.color = 'var(--text)';
+    }
+    log('ok', '路由查询成功: ' + shortAddr(quote) + ' -> ' + (path.length > 2 ? path.slice(0, 20) + '...' : '未设置'));
+  } catch (err) {
+    log('err', '查询失败: ' + err.message);
+    showToast('查询失败: ' + err.message, 'error');
+  }
+}
+
+// 紧急提取
+async function routerRescue() {
+  const token = document.getElementById('r-input-rescue-token').value.trim();
+  const to = document.getElementById('r-input-rescue-to').value.trim();
+  if (!ethers.isAddress(token)) return showToast('请输入有效的代币地址', 'error');
+  if (!ethers.isAddress(to)) return showToast('请输入有效的接收地址', 'error');
+  await sendTx(contracts.router, 'rescue', token, to);
+}
+
+/* ============ 所有权管理函数 ============ */
+
+// 转移所有权（第一步：提议）
+async function transferOwnership(contractName) {
+  const inputId = 'own-input-' + contractName + '-addr';
+  const addr = document.getElementById(inputId).value.trim();
+  if (!ethers.isAddress(addr)) return showToast('请输入有效地址', 'error');
+  if (!confirm('确认要提议将 ' + contractName + ' 的所有权转移给 ' + shortAddr(addr) + ' 吗？\n\n对方需要调用 acceptOwnership() 才能正式接管。')) return;
+  await sendTx(contracts[contractName], 'transferOwnership', addr);
+}
+
+// 接受所有权（第二步：接受）
+async function acceptOwnership(contractName) {
+  if (!confirm('确认要以当前钱包身份接受 ' + contractName + ' 的所有权吗？')) return;
+  await sendTx(contracts[contractName], 'acceptOwnership');
+}
+
+// 放弃所有权（危险操作！）
+async function renounceOwnership(contractName) {
+  const input = prompt('⚠️ 极度危险！\n\n放弃所有权后，该合约将永远无法被管理！\n所有 onlyOwner 函数将永久失效！\n\n此操作不可逆！\n\n请输入 "我确认放弃" 来继续:');
+  if (input !== '我确认放弃') return showToast('已取消', 'warning');
+  await sendTx(contracts[contractName], 'renounceOwnership');
+}
+
+/* ================================================================
+   页面初始化
+   ================================================================ */
+// 页面加载完成
+document.addEventListener('DOMContentLoaded', () => {
+  log('info', 'Stockpad Launch 管理面板已加载');
+  log('info', '合约地址已配置（Factory/Hook/Escrow/Router）');
+  // 检查是否已有钱包连接
+  if (typeof window.ethereum !== 'undefined') {
+    window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+      if (accounts.length > 0) {
+        connectWallet();
+      }
+    });
+  }
+});
+</script>
+</body>
+</html>
