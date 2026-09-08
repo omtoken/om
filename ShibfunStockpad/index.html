@@ -1277,6 +1277,8 @@ const ABI_OWNABLE2STEP = [
 const ABI_FACTORY = [
   ...ABI_OWNABLE2STEP,
   // 读取状态
+  "function poolManager() view returns (address)",
+  "function weth() view returns (address)",
   "function treasury() view returns (address)",
   "function priceSigner() view returns (address)",
   "function router() view returns (address)",
@@ -1287,7 +1289,6 @@ const ABI_FACTORY = [
   "function blacklist(address) view returns (bool)",
   "function launchCount() view returns (uint256)",
   // owner 写入函数
-  "function setHook(address hook_)",                   // 设置 Hook（只能一次）
   "function setRouter(address router_)",               // 设置 Router
   "function registerQuote(address quote)",             // 注册配对代币（如 SHIB）
   "function disableQuote(address quote)",              // 禁用配对代币
@@ -1481,40 +1482,24 @@ async function initContracts() {
 // 读取并显示所有合约状态
 async function refreshAllState() {
   if (!signer) return;
+  
+  // 先读取 Factory Owner 用于顶部信息栏（单独 try-catch，不影响其他刷新）
   try {
-    // 并行读取所有 owner
-    const [fOwner, eOwner, hOwner, rOwner] = await Promise.all([
-      contracts.factory.owner(),
-      contracts.escrow.owner(),
-      contracts.hook.owner(),
-      contracts.router.owner()
-    ]);
-
-    // 显示 Factory Owner
+    const fOwner = await contracts.factory.owner();
     document.getElementById('infoFactoryOwner').textContent = shortAddr(fOwner);
-
-    // 判断当前钱包是否是 owner
-    const isOwner = userAddress.toLowerCase() === fOwner.toLowerCase();
-    const permEl = document.getElementById('infoPermStatus');
-    if (isOwner) {
-      permEl.textContent = '✅ 你是 Owner';
-      permEl.className = 'value owner-match';
-    } else {
-      permEl.textContent = '❌ 非 Owner（只读）';
-      permEl.className = 'value owner-mismatch';
-    }
-
-    // 更新各面板的状态卡片
-    await refreshFactoryState();
-    await refreshEscrowState();
-    await refreshHookState();
-    await refreshRouterState();
-    await refreshOwnershipState();
-
-    log('ok', '合约状态已刷新');
-  } catch (err) {
-    log('err', '读取状态失败: ' + err.message);
+  } catch (e) {
+    log('warn', '读取 Factory Owner 失败: ' + e.message);
+    document.getElementById('infoFactoryOwner').textContent = '读取失败';
   }
+
+  // 各面板独立刷新，互不影响
+  await refreshFactoryState();
+  await refreshEscrowState();
+  await refreshHookState();
+  await refreshRouterState();
+  await refreshOwnershipState();
+
+  log('ok', '合约状态已刷新');
 }
 
 // ---------- Factory 状态刷新 ----------
@@ -1565,7 +1550,10 @@ async function refreshHookState() {
   try {
     const bps = await contracts.hook.trackerShareBps();
     setText('h-trackerBps', bps.toString() + ' BPS (' + (Number(bps)/100) + '%)');
-  } catch (e) { log('err', '读取 Hook 状态失败: ' + e.message); }
+  } catch (e) {
+    log('warn', '读取 Hook 状态失败: ' + e.message);
+    setText('h-trackerBps', '读取失败');
+  }
 }
 
 // ---------- Router 状态刷新 ----------
@@ -1585,24 +1573,81 @@ async function refreshRouterState() {
 
 // ---------- 所有权状态刷新 ----------
 async function refreshOwnershipState() {
-  try {
-    const [fOwner, eOwner, hOwner, rOwner, fPending, ePending, hPending, rPending] = await Promise.all([
-      contracts.factory.owner(), contracts.escrow.owner(), contracts.hook.owner(), contracts.router.owner(),
-      contracts.factory.pendingOwner(), contracts.escrow.pendingOwner(), contracts.hook.pendingOwner(), contracts.router.pendingOwner()
-    ]);
-    // Factory
-    setText('own-f-owner', shortAddr(fOwner));
-    setText('own-f-pending', fPending === '0x0000000000000000000000000000000000000000' ? '无待处理' : shortAddr(fPending));
-    // Escrow
-    setText('own-e-owner', shortAddr(eOwner));
-    setText('own-e-pending', ePending === '0x0000000000000000000000000000000000000000' ? '无待处理' : shortAddr(ePending));
-    // Hook
-    setText('own-h-owner', shortAddr(hOwner));
-    setText('own-h-pending', hPending === '0x0000000000000000000000000000000000000000' ? '无待处理' : shortAddr(hPending));
-    // Router
-    setText('own-r-owner', shortAddr(rOwner));
-    setText('own-r-pending', rPending === '0x0000000000000000000000000000000000000000' ? '无待处理' : shortAddr(rPending));
-  } catch (e) { log('err', '读取所有权状态失败: ' + e.message); }
+  // 使用 Promise.allSettled，即使某个合约调用失败也不影响其他
+  const results = await Promise.allSettled([
+    contracts.factory.owner(),
+    contracts.escrow.owner(),
+    contracts.hook.owner(),
+    contracts.router.owner(),
+    contracts.factory.pendingOwner(),
+    contracts.escrow.pendingOwner(),
+    contracts.hook.pendingOwner(),
+    contracts.router.pendingOwner()
+  ]);
+  
+  // 提取结果（失败的用默认值）
+  const getValue = (index, fallback = ethers.ZeroAddress) => {
+    const r = results[index];
+    return r.status === 'fulfilled' ? r.value : fallback;
+  };
+  
+  const fOwner = getValue(0);
+  const eOwner = getValue(1);
+  const hOwner = getValue(2);
+  const rOwner = getValue(3);
+  const fPending = getValue(4);
+  const ePending = getValue(5);
+  const hPending = getValue(6);
+  const rPending = getValue(7);
+  
+  // 记录失败的合约
+  const failed = [];
+  if (results[2].status === 'rejected') failed.push('Hook');
+  if (results[0].status === 'rejected') failed.push('Factory');
+  if (results[1].status === 'rejected') failed.push('Escrow');
+  if (results[3].status === 'rejected') failed.push('Router');
+  
+  if (failed.length > 0) {
+    log('warn', '以下合约状态读取失败: ' + failed.join(', '));
+  }
+  
+  // 用 toLowerCase() 比较，避免 checksum 格式导致零地址判断失败
+  const ZERO = ethers.ZeroAddress.toLowerCase();
+  
+  // Factory
+  setText('own-f-owner', shortAddr(fOwner));
+  setText('own-f-pending', fPending.toLowerCase() === ZERO ? '无待处理' : shortAddr(fPending));
+  // Escrow
+  setText('own-e-owner', shortAddr(eOwner));
+  setText('own-e-pending', ePending.toLowerCase() === ZERO ? '无待处理' : shortAddr(ePending));
+  // Hook
+  setText('own-h-owner', shortAddr(hOwner));
+  setText('own-h-pending', hPending.toLowerCase() === ZERO ? '无待处理' : shortAddr(hPending));
+  // Router
+  setText('own-r-owner', shortAddr(rOwner));
+  setText('own-r-pending', rPending.toLowerCase() === ZERO ? '无待处理' : shortAddr(rPending));
+  
+  // 更新权限状态栏：分别检查四个合约
+  const userLower = userAddress.toLowerCase();
+  const owners = {
+    Factory: fOwner.toLowerCase(),
+    Escrow: eOwner.toLowerCase(),
+    Hook: hOwner.toLowerCase(),
+    Router: rOwner.toLowerCase()
+  };
+  const isOwnerAll = Object.values(owners).every(o => o === userLower);
+  const ownedList = Object.entries(owners).filter(([, o]) => o === userLower).map(([name]) => name);
+  const permEl = document.getElementById('infoPermStatus');
+  if (isOwnerAll) {
+    permEl.textContent = '✅ 全部 Owner';
+    permEl.className = 'value owner-match';
+  } else if (ownedList.length > 0) {
+    permEl.textContent = '⚠️ 部分: ' + ownedList.join(', ');
+    permEl.className = 'value owner-match';
+  } else {
+    permEl.textContent = '❌ 非 Owner（只读）';
+    permEl.className = 'value owner-mismatch';
+  }
 }
 
 // 辅助：设置元素文本
