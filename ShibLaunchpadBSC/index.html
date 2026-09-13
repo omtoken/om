@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ShibLaunchpad - BSC 合约管理面板</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--text2:#8b949e;--accent:#f0b90b;--accent2:#d29900;--green:#3fb950;--red:#f85149;--blue:#58a6ff;--radius:8px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+header{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border-bottom:2px solid var(--accent);padding:16px 24px;position:sticky;top:0;z-index:100}
+.header-inner{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+h1{font-size:1.3rem;color:var(--accent);font-weight:700}
+#wallet-area{display:flex;align-items:center;gap:12px}
+#wallet-addr{color:var(--green);font-family:monospace;font-size:.9rem}
+#btn-connect{background:var(--accent);color:#000;border:none;padding:8px 20px;border-radius:var(--radius);cursor:pointer;font-weight:600;font-size:.9rem;transition:all .2s}
+#btn-connect:hover{background:var(--accent2);transform:translateY(-1px)}
+#contract-tabs{max-width:1400px;margin:16px auto 0;padding:0 24px;display:flex;gap:4px;flex-wrap:wrap}
+.tab{padding:10px 18px;background:var(--card);border:1px solid var(--border);border-bottom:none;border-radius:var(--radius) var(--radius) 0 0;cursor:pointer;color:var(--text2);font-size:.85rem;font-weight:500;transition:all .2s}
+.tab:hover{color:var(--text);background:#1c2333}
+.tab.active{color:var(--accent);border-color:var(--accent);background:var(--card);border-bottom:1px solid var(--card);position:relative;z-index:1}
+main{max-width:1400px;margin:0 auto;padding:0 24px 40px}
+.panel{display:none;background:var(--card);border:1px solid var(--border);border-radius:0 var(--radius) var(--radius) var(--radius);padding:24px}
+.panel.active{display:block}
+.section{margin-bottom:24px;padding:20px;background:#0d1117;border:1px solid var(--border);border-radius:var(--radius)}
+.section-title{font-size:1.05rem;color:var(--accent);margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+.info-item{display:flex;flex-direction:column;gap:2px;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius)}
+.info-label{font-size:.75rem;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+.info-value{font-size:.9rem;word-break:break-all;font-family:monospace}
+.info-value.status-ok{color:var(--green)}
+.info-value.status-paused{color:var(--red)}
+.form-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+.form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:200px}
+.form-group label{font-size:.8rem;color:var(--text2)}
+.form-group input,.form-group select{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:var(--radius);font-size:.85rem;font-family:monospace}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--accent)}
+.btn{padding:8px 16px;border:none;border-radius:var(--radius);cursor:pointer;font-weight:600;font-size:.82rem;transition:all .2s;white-space:nowrap}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#000}.btn-primary:hover:not(:disabled){background:var(--accent2)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover:not(:disabled){background:#da3633}
+.btn-success{background:var(--green);color:#000}.btn-success:hover:not(:disabled){background:#2ea043}
+.btn-blue{background:var(--blue);color:#000}.btn-blue:hover:not(:disabled){background:#388bfd}
+.btn-group{display:flex;gap:6px;flex-wrap:wrap}
+.contract-addr{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);font-family:monospace;font-size:.82rem}
+#toast-container{position:fixed;top:80px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 20px;border-radius:var(--radius);font-size:.85rem;animation:slideIn .3s ease;max-width:400px;word-break:break-all;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+.toast-success{background:#1a3a2a;border:1px solid var(--green);color:var(--green)}
+.toast-error{background:#3a1a1a;border:1px solid var(--red);color:var(--red)}
+.toast-info{background:#1a2a3a;border:1px solid var(--blue);color:var(--blue)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:.7rem;font-weight:600}
+.badge-owner{background:#2a1a00;color:var(--accent);border:1px solid var(--accent)}
+.badge-view{background:#0a2a1a;color:var(--green);border:1px solid var(--green)}
+.note{font-size:.78rem;color:var(--text2);margin-top:4px;font-style:italic}
+@media(max-width:768px){.header-inner{flex-direction:column;align-items:flex-start}h1{font-size:1.1rem}.info-grid{grid-template-columns:1fr}.form-row{flex-direction:column}.tab{padding:8px 12px;font-size:.78rem}}
+</style>
+</head>
+<body>
+<div id="app">
+<header>
+<div class="header-inner">
+<h1>ShibLaunchpad - BSC 合约管理面板</h1>
+<div id="wallet-area">
+<span id="wallet-label">当前钱包: <b id="wallet-addr">-</b></span>
+<button id="btn-connect" onclick="connectWallet()">连接钱包</button>
+</div>
+</div>
+</header>
+<nav id="contract-tabs">
+<div class="tab active" onclick="switchTab(0)">FactoryAdmin</div>
+<div class="tab" onclick="switchTab(1)">FeeEscrow</div>
+<div class="tab" onclick="switchTab(2)">LaunchFactory</div>
+<div class="tab" onclick="switchTab(3)">LaunchHook</div>
+<div class="tab" onclick="switchTab(4)">LaunchRouter</div>
+</nav>
+<main id="panels">
+
+<!-- ===== FactoryAdmin Panel ===== -->
+<div class="panel active" id="panel-0">
+<div class="section">
+<div class="section-title">合约地址</div>
+<div class="info-grid">
+<div class="info-item"><span class="info-label">FactoryAdmin</span><span class="info-value"><a href="https://bscscan.com/address/0x82851f8b9Db9d508B44cCF4d934778d6C07C211B" target="_blank">0x82851f8b9Db9d508B44cCF4d934778d6C07C211B</a></span></div>
+<div class="info-item"><span class="info-label">当前 Owner</span><span class="info-value" id="fa-owner">加载中...</span></div>
+<div class="info-item"><span class="info-label">Pending Owner</span><span class="info-value" id="fa-pending-owner">-</span></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">合约状态</div>
+<div class="info-grid">
+<div class="info-item"><span class="info-label">Treasury</span><span class="info-value" id="fa-treasury">-</span></div>
+<div class="info-item"><span class="info-label">Router</span><span class="info-value" id="fa-router">-</span></div>
+<div class="info-item"><span class="info-label">Hook</span><span class="info-value" id="fa-hook">-</span></div>
+<div class="info-item"><span class="info-label">Creation Fee</span><span class="info-value" id="fa-creation-fee">-</span></div>
+<div class="info-item"><span class="info-label">Paused</span><span class="info-value" id="fa-paused">-</span></div>
+<div class="info-item"><span class="info-label">WBNB</span><span class="info-value" id="fa-weth">-</span></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">🔑 所有权管理 <span class="badge badge-owner">Ownable2Step</span></div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">第一步: 发起转让 (transferOwnership)</h4>
+<div class="form-row">
+<div class="form-group"><label>新 Owner 地址</label><input id="fa-transfer-to" placeholder="0x..."></div>
+<button class="btn btn-primary" onclick="fa_transferOwnership()">发起转让</button>
+</div>
+</div>
+<div>
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">第二步: 接受转让 (acceptOwnership) — 需新Owner钱包</h4>
+<button class="btn btn-success" onclick="fa_acceptOwnership()">接受所有权</button>
+</div>
+</div>
+<div class="section">
+<div class="section-title">⚙ 配置管理</div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">设置 Treasury</h4>
+<div class="form-row">
+<div class="form-group"><label>Treasury 地址</label><input id="fa-treasury-input" placeholder="0x..."></div>
+<button class="btn btn-primary" onclick="fa_setTreasury()">设置</button>
+</div>
+</div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">设置 Router</h4>
+<div class="form-row">
+<div class="form-group"><label>Router 地址</label><input id="fa-router-input" placeholder="0x..."></div>
+<button class="btn btn-primary" onclick="fa_setRouter()">设置</button>
+</div>
+</div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">设置 Creation Fee (BNB)</h4>
+<div class="form-row">
+<div class="form-group"><label>Fee (BNB)</label><input id="fa-fee-input" type="number" step="0.0001" placeholder="0.001"></div>
+<button class="btn btn-primary" onclick="fa_setCreationFee()">设置</button>
+</div>
+</div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">注册 Quote Token</h4>
+<div class="form-row">
+<div class="form-group"><label>Quote Token 地址</label><input id="fa-quote-input" placeholder="0x..."></div>
+<button class="btn btn-primary" onclick="fa_registerQuote()">注册</button>
+</div>
+</div>
+<div>
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">禁用 Quote Token</h4>
+<div class="form-row">
+<div class="form-group"><label>Quote Token 地址</label><input id="fa-quote-disable-input" placeholder="0x..."></div>
+<button class="btn btn-danger" onclick="fa_disableQuote()">禁用</button>
+</div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">⚠ 暂停 / 黑名单</div>
+<div style="margin-bottom:16px">
+<div class="btn-group">
+<button class="btn btn-danger" onclick="fa_setPaused(true)">暂停发币</button>
+<button class="btn btn-success" onclick="fa_setPaused(false)">恢复发币</button>
+</div>
+</div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">单个黑名单</h4>
+<div class="form-row">
+<div class="form-group"><label>地址</label><input id="fa-bl-addr" placeholder="0x..."></div>
+<button class="btn btn-danger" onclick="fa_setBlacklist(true)">加入黑名单</button>
+<button class="btn btn-success" onclick="fa_setBlacklist(false)">移出黑名单</button>
+</div>
+</div>
+<div>
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">批量黑名单 (逗号分隔地址)</h4>
+<div class="form-row">
+<div class="form-group"><label>地址列表</label><input id="fa-bl-batch" placeholder="0x..., 0x..."></div>
+<button class="btn btn-danger" onclick="fa_setBlacklistBatch(true)">批量拉黑</button>
+<button class="btn btn-success" onclick="fa_setBlacklistBatch(false)">批量解除</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ===== FeeEscrow Panel ===== -->
+<div class="panel" id="panel-1">
+<div class="section">
+<div class="section-title">合约地址</div>
+<div class="info-grid">
+<div class="info-item"><span class="info-label">FeeEscrow</span><span class="info-value"><a href="https://bscscan.com/address/0x1C4244211907Dc5B508FdE7b54A14A600B36274b" target="_blank">0x1C4244211907Dc5B508FdE7b54A14A600B36274b</a></span></div>
+<div class="info-item"><span class="info-label">当前 Owner</span><span class="info-value" id="fe-owner">加载中...</span></div>
+<div class="info-item"><span class="info-label">Pending Owner</span><span class="info-value" id="fe-pending-owner">-</span></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">合约状态</div>
+<div class="info-grid">
+<div class="info-item"><span class="info-label">Hook</span><span class="info-value" id="fe-hook">-</span></div>
+<div class="info-item"><span class="info-label">Factory</span><span class="info-value" id="fe-factory">-</span></div>
+<div class="info-item"><span class="info-label">Platform Recipient</span><span class="info-value" id="fe-platform-recipient">-</span></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">🔑 所有权管理 <span class="badge badge-owner">Ownable2Step</span></div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">第一步: 发起转让</h4>
+<div class="form-row">
+<div class="form-group"><label>新 Owner 地址</label><input id="fe-transfer-to" placeholder="0x..."></div>
+<button class="btn btn-primary" onclick="fe_transferOwnership()">发起转让</button>
+</div>
+</div>
+<div>
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">第二步: 接受转让</h4>
+<button class="btn btn-success" onclick="fe_acceptOwnership()">接受所有权</button>
+</div>
+</div>
+<div class="section">
+<div class="section-title">⚙ 配置管理</div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">设置 Platform Recipient</h4>
+<div class="form-row">
+<div class="form-group"><label>Recipient 地址</label><input id="fe-recipient-input" placeholder="0x..."></div>
+<button class="btn btn-primary" onclick="fe_setPlatformRecipient()">设置</button>
+</div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">💰 费用分发</div>
+<div style="margin-bottom:12px">
+<button class="btn btn-primary" onclick="fe_distribute()">全部分发 (distribute)</button>
+<span class="note">遍历所有池子分发待分配费用</span>
+</div>
+<div style="margin-bottom:12px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">分发指定池子</h4>
+<div class="form-row">
+<div class="form-group"><label>Pool Index</label><input id="fe-dist-index" type="number" placeholder="0"></div>
+<button class="btn btn-primary" onclick="fe_distributeFor()">分发</button>
+</div>
+</div>
+<div>
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">批量分发 (范围)</h4>
+<div class="form-row">
+<div class="form-group"><label>起始 Index</label><input id="fe-dist-start" type="number" placeholder="0"></div>
+<div class="form-group"><label>数量 (最多20)</label><input id="fe-dist-count" type="number" placeholder="10"></div>
+<button class="btn btn-primary" onclick="fe_distributeRange()">批量分发</button>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ===== LaunchFactory Panel ===== -->
+<div class="panel" id="panel-2">
+<div class="section">
+<div class="section-title">合约地址</div>
+<div class="info-grid">
+<div class="info-item"><span class="info-label">LaunchFactory</span><span class="info-value"><a href="https://bscscan.com/address/0x85f43B7abA447432151C2B2B852A3C887373B0F8" target="_blank">0x85f43B7abA447432151C2B2B852A3C887373B0F8</a></span></div>
+<div class="info-item"><span class="info-label">当前 Owner</span><span class="info-value" id="lf-owner">加载中...</span></div>
+<div class="info-item"><span class="info-label">Pending Owner</span><span class="info-value" id="lf-pending-owner">-</span></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">合约状态 <span class="badge badge-view">只读</span></div>
+<div class="info-grid">
+<div class="info-item"><span class="info-label">PoolManager (V4)</span><span class="info-value"><a href="https://bscscan.com/address/0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF" target="_blank">0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF</a></span></div>
+<div class="info-item"><span class="info-label">FactoryAdmin</span><span class="info-value"><a href="https://bscscan.com/address/0x82851f8b9Db9d508B44cCF4d934778d6C07C211B" target="_blank">0x82851f8b9Db9d508B44cCF4d934778d6C07C211B</a></span></div>
+<div class="info-item"><span class="info-label">已发币数量</span><span class="info-value" id="lf-count">-</span></div>
+<div class="info-item"><span class="info-label">Tick Spacing</span><span class="info-value">200</span></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">🔑 所有权管理 <span class="badge badge-owner">Ownable2Step</span></div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">第一步: 发起转让</h4>
+<div class="form-row">
+<div class="form-group"><label>新 Owner 地址</label><input id="lf-transfer-to" placeholder="0x..."></div>
+<button class="btn btn-primary" onclick="lf_transferOwnership()">发起转让</button>
+</div>
+</div>
+<div>
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">第二步: 接受转让</h4>
+<button class="btn btn-success" onclick="lf_acceptOwnership()">接受所有权</button>
+</div>
+</div>
+</div>
+
+<!-- ===== LaunchHook Panel ===== -->
+<div class="panel" id="panel-3">
+<div class="section">
+<div class="section-title">合约地址</div>
+<div class="info-grid">
+<div class="info-item"><span class="info-label">LaunchHook</span><span class="info-value"><a href="https://bscscan.com/address/0x53077a16e59106c146688C44Ce93fCddacee1098" target="_blank">0x53077a16e59106c146688C44Ce93fCddacee1098</a></span></div>
+<div class="info-item"><span class="info-label">当前 Owner</span><span class="info-value" id="lh-owner">加载中...</span></div>
+<div class="info-item"><span class="info-label">Pending Owner</span><span class="info-value" id="lh-pending-owner">-</span></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">合约状态</div>
+<div class="info-grid">
+<div class="info-item"><span class="info-label">PoolManager</span><span class="info-value"><a href="https://bscscan.com/address/0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF" target="_blank">0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF</a></span></div>
+<div class="info-item"><span class="info-label">FeeEscrow</span><span class="info-value" id="lh-escrow">-</span></div>
+<div class="info-item"><span class="info-label">Factory</span><span class="info-value" id="lh-factory">-</span></div>
+<div class="info-item"><span class="info-label">Tracker Share BPS</span><span class="info-value" id="lh-tracker-bps">-</span></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">🔑 所有权管理 <span class="badge badge-owner">Ownable2Step</span></div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">第一步: 发起转让</h4>
+<div class="form-row">
+<div class="form-group"><label>新 Owner 地址</label><input id="lh-transfer-to" placeholder="0x..."></div>
+<button class="btn btn-primary" onclick="lh_transferOwnership()">发起转让</button>
+</div>
+</div>
+<div>
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">第二步: 接受转让</h4>
+<button class="btn btn-success" onclick="lh_acceptOwnership()">接受所有权</button>
+</div>
+</div>
+<div class="section">
+<div class="section-title">⚙ 配置管理</div>
+<div>
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">设置 Tracker Share BPS (0-10000)</h4>
+<div class="form-row">
+<div class="form-group"><label>BPS (当前: 7000 = 70% 分红)</label><input id="lh-bps-input" type="number" min="0" max="10000" placeholder="7000"></div>
+<button class="btn btn-primary" onclick="lh_setTrackerShareBps()">设置</button>
+</div>
+<span class="note">10000 = 100% 给 Tracker 分红, 0 = 100% 给平台</span>
+</div>
+</div>
+</div>
+
+<!-- ===== LaunchRouter Panel ===== -->
+<div class="panel" id="panel-4">
+<div class="section">
+<div class="section-title">合约地址</div>
+<div class="info-grid">
+<div class="info-item"><span class="info-label">LaunchRouter</span><span class="info-value"><a href="https://bscscan.com/address/0x9f4bAa20d9ab8284bC983bEb1E0A235003597F31" target="_blank">0x9f4bAa20d9ab8284bC983bEb1E0A235003597F31</a></span></div>
+<div class="info-item"><span class="info-label">当前 Owner</span><span class="info-value" id="lr-owner">加载中...</span></div>
+<div class="info-item"><span class="info-label">Pending Owner</span><span class="info-value" id="lr-pending-owner">-</span></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">合约状态</div>
+<div class="info-grid">
+<div class="info-item"><span class="info-label">PoolManager</span><span class="info-value"><a href="https://bscscan.com/address/0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF" target="_blank">0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF</a></span></div>
+<div class="info-item"><span class="info-label">WBNB</span><span class="info-value"><a href="https://bscscan.com/address/0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c" target="_blank">0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c</a></span></div>
+</div>
+</div>
+<div class="section">
+<div class="section-title">🔑 所有权管理 <span class="badge badge-owner">Ownable2Step</span></div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">第一步: 发起转让</h4>
+<div class="form-row">
+<div class="form-group"><label>新 Owner 地址</label><input id="lr-transfer-to" placeholder="0x..."></div>
+<button class="btn btn-primary" onclick="lr_transferOwnership()">发起转让</button>
+</div>
+</div>
+<div>
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">第二步: 接受转让</h4>
+<button class="btn btn-success" onclick="lr_acceptOwnership()">接受所有权</button>
+</div>
+</div>
+<div class="section">
+<div class="section-title">🔀 路由配置 (WBNB -> Quote 交换路径)</div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">设置 V2 路由</h4>
+<div class="form-row">
+<div class="form-group"><label>Quote Token 地址</label><input id="lr-v2-quote" placeholder="0x..."></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>DEX 类型</label>
+<select id="lr-v2-type"><option value="1">UNISWAP_V2 (1)</option><option value="3" selected>PANCAKE_V2 (3)</option></select>
+</div>
+<div class="form-group"><label>Router 地址</label><input id="lr-v2-router" placeholder="0x10ED43C718714eb63d5aA57B78B54704E256024E" value="0x10ED43C718714eb63d5aA57B78B54704E256024E"></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>V2 Path (逗号分隔, 如 WBNB,USDT)</label><input id="lr-v2-path" placeholder="0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c,0x55d398326f99059fF775485246999027B3197955"></div>
+</div>
+<button class="btn btn-primary" onclick="lr_setV2Route()">设置 V2 路由</button>
+</div>
+<div style="margin-bottom:16px">
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">设置 V3 路由</h4>
+<div class="form-row">
+<div class="form-group"><label>Quote Token 地址</label><input id="lr-v3-quote" placeholder="0x..."></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>DEX 类型</label>
+<select id="lr-v3-type"><option value="2">UNISWAP_V3 (2)</option><option value="4" selected>PANCAKE_V3 (4)</option></select>
+</div>
+<div class="form-group"><label>Router 地址</label><input id="lr-v3-router" placeholder="0x13f4EA83D0bd40E75C8222255bc855a974568Dd4" value="0x13f4EA83D0bd40E75C8222255bc855a974568Dd4"></div>
+</div>
+<div class="form-row">
+<div class="form-group"><label>V3 Path (编码后的 bytes, hex)</label><input id="lr-v3-path" placeholder="0x..."></div>
+</div>
+<button class="btn btn-primary" onclick="lr_setV3Route()">设置 V3 路由</button>
+</div>
+</div>
+<div class="section">
+<div class="section-title">🛡 紧急救援</div>
+<div>
+<h4 style="color:var(--text2);font-size:.85rem;margin-bottom:8px">Rescue - 提取卡住的 Token</h4>
+<div class="form-row">
+<div class="form-group"><label>Token 地址</label><input id="lr-rescue-token" placeholder="0x..."></div>
+<div class="form-group"><label>接收地址</label><input id="lr-rescue-to" placeholder="0x..."></div>
+<button class="btn btn-danger" onclick="lr_rescue()">Rescue</button>
+</div>
+</div>
+</div>
+</div>
+
+</main>
+<div id="toast-container"></div>
+</div>
+
+<script>
+/* ===== CONTRACT CONFIG ===== */
+const BSC_CHAIN_ID = '0x38';
+const BSC_CHAIN_ID_DEC = 56;
+const ADDR = {
+  FactoryAdmin: '0x82851f8b9Db9d508B44cCF4d934778d6C07C211B',
+  FeeEscrow:    '0x1C4244211907Dc5B508FdE7b54A14A600B36274b',
+  LaunchFactory:'0x85f43B7abA447432151C2B2B852A3C887373B0F8',
+  LaunchHook:   '0x53077a16e59106c146688C44Ce93fCddacee1098',
+  LaunchRouter: '0x9f4bAa20d9ab8284bC983bEb1E0A235003597F31',
+  WBNB:         '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c',
+  PoolManager:  '0x28e2Ea090877bF75740558f6BFB36A5ffeE9e9dF'
+};
+
+/* ===== ABI DEFINITIONS ===== */
+const ABI_ADMIN = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function transferOwnership(address)',
+  'function acceptOwnership()',
+  'function treasury() view returns (address)',
+  'function router() view returns (address)',
+  'function hook() view returns (address)',
+  'function creationFee() view returns (uint256)',
+  'function paused() view returns (bool)',
+  'function weth() view returns (address)',
+  'function setTreasury(address)',
+  'function setRouter(address)',
+  'function setCreationFee(uint256)',
+  'function registerQuote(address)',
+  'function disableQuote(address)',
+  'function setPaused(bool)',
+  'function setBlacklist(address,bool)',
+  'function setBlacklistBatch(address[],bool)'
+];
+
+const ABI_OWNABLE2 = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function transferOwnership(address)',
+  'function acceptOwnership()'
+];
+
+const ABI_ESCROW = [
+  ...ABI_OWNABLE2,
+  'function hook() view returns (address)',
+  'function factory() view returns (address)',
+  'function platformRecipient() view returns (address)',
+  'function setPlatformRecipient(address)',
+  'function distribute()',
+  'function distributeFor(uint256)',
+  'function distributeRange(uint256,uint256)'
+];
+
+const ABI_FACTORY = [
+  ...ABI_OWNABLE2,
+  'function poolManager() view returns (address)',
+  'function admin() view returns (address)',
+  'function launchCount() view returns (uint256)'
+];
+
+const ABI_HOOK = [
+  ...ABI_OWNABLE2,
+  'function poolManager() view returns (address)',
+  'function escrow() view returns (address)',
+  'function factory() view returns (address)',
+  'function trackerShareBps() view returns (uint256)',
+  'function setTrackerShareBps(uint256)'
+];
+
+const ABI_ROUTER = [
+  ...ABI_OWNABLE2,
+  'function poolManager() view returns (address)',
+  'function weth() view returns (address)',
+  'function setV2Route(address,uint8,address,address[])',
+  'function setV3Route(address,uint8,address,bytes)',
+  'function setRoute(address,uint8,address,bytes,address[])',
+  'function rescue(address,address)'
+];
+
+/* ===== STATE ===== */
+let provider = null;
+let signer = null;
+let userAddress = null;
+
+/* ===== HELPERS ===== */
+function shortAddr(a) {
+  if (!a || a === '0x0000000000000000000000000000000000000000') return '无/零地址';
+  return a.slice(0,6) + '...' + a.slice(-4);
+}
+function bscLink(addr) {
+  if (!addr || addr === '0x0000000000000000000000000000000000000000') return '无';
+  return '<a href="https://bscscan.com/address/'+addr+'" target="_blank">'+shortAddr(addr)+'</a>';
+}
+function toast(msg, type='info') {
+  const c = document.getElementById('toast-container');
+  const d = document.createElement('div');
+  d.className = 'toast toast-' + type;
+  d.textContent = msg;
+  c.appendChild(d);
+  setTimeout(() => d.remove(), 5000);
+}
+async function txToast(promise, successMsg) {
+  try {
+    const tx = await promise;
+    toast('交易已发送: ' + tx.hash.slice(0,18) + '...', 'info');
+    await tx.wait();
+    toast(successMsg || '交易成功!', 'success');
+    return tx;
+  } catch(e) {
+    toast('交易失败: ' + (e.reason || e.message || e), 'error');
+    throw e;
+  }
+}
+function requireSigner() {
+  if (!signer) { toast('请先连接钱包', 'error'); throw new Error('No signer'); }
+}
+function getContract(addr, abi) {
+  requireSigner();
+  return new ethers.Contract(addr, abi, signer);
+}
+function getReadContract(addr, abi) {
+  if (!provider) return null;
+  return new ethers.Contract(addr, abi, provider);
+}
+
+/* ===== TAB SWITCHING ===== */
+function switchTab(idx) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  document.querySelectorAll('.panel').forEach((p,i) => p.classList.toggle('active', i===idx));
+}
+
+/* ===== WALLET CONNECTION ===== */
+async function connectWallet() {
+  if (!window.ethereum) { toast('请安装 MetaMask 钱包', 'error'); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
+    document.getElementById('wallet-addr').textContent = shortAddr(userAddress);
+    document.getElementById('btn-connect').textContent = '已连接';
+
+    // Check & switch to BSC
+    const chainId = await provider.send('eth_chainId', []);
+    if (chainId !== BSC_CHAIN_ID) {
+      try {
+        await provider.send('wallet_switchEthereumChain', [{chainId: BSC_CHAIN_ID}]);
+        toast('已切换到 BSC 网络', 'success');
+      } catch(switchErr) {
+        if (switchErr.code === 4902) {
+          await provider.send('wallet_addEthereumChain', [{
+            chainId: BSC_CHAIN_ID,
+            chainName: 'BNB Smart Chain',
+            nativeCurrency: {name:'BNB',symbol:'BNB',decimals:18},
+            rpcUrls: ['https://bsc-dataseed.binance.org/'],
+            blockExplorerUrls: ['https://bscscan.com/']
+          }]);
+        }
+      }
+    }
+    toast('钱包已连接: ' + shortAddr(userAddress), 'success');
+    loadAllData();
+  } catch(e) {
+    toast('连接失败: ' + (e.message || e), 'error');
+  }
+}
+
+/* ===== LOAD ALL DATA ===== */
+async function loadAllData() {
+  if (!provider) return;
+  const ro = new ethers.Contract(ADDR.FactoryAdmin, ABI_ADMIN, provider);
+  const re = new ethers.Contract(ADDR.FeeEscrow, ABI_ESCROW, provider);
+  const rf = new ethers.Contract(ADDR.LaunchFactory, ABI_FACTORY, provider);
+  const rh = new ethers.Contract(ADDR.LaunchHook, ABI_HOOK, provider);
+  const rr = new ethers.Contract(ADDR.LaunchRouter, ABI_ROUTER, provider);
+
+  // FactoryAdmin
+  try {
+    const [owner,pending,treasury,router,hook,fee,paused,weth] = await Promise.all([
+      ro.owner(), ro.pendingOwner(), ro.treasury(), ro.router(), ro.hook(), ro.creationFee(), ro.paused(), ro.weth()
+    ]);
+    document.getElementById('fa-owner').innerHTML = bscLink(owner);
+    document.getElementById('fa-pending-owner').innerHTML = bscLink(pending);
+    document.getElementById('fa-treasury').innerHTML = bscLink(treasury);
+    document.getElementById('fa-router').innerHTML = bscLink(router);
+    document.getElementById('fa-hook').innerHTML = bscLink(hook);
+    document.getElementById('fa-creation-fee').textContent = ethers.formatEther(fee) + ' BNB';
+    const pe = document.getElementById('fa-paused');
+    pe.textContent = paused ? '已暂停' : '正常';
+    pe.className = 'info-value ' + (paused ? 'status-paused' : 'status-ok');
+    document.getElementById('fa-weth').innerHTML = bscLink(weth);
+  } catch(e) { console.error('FA load error', e); }
+
+  // FeeEscrow
+  try {
+    const [owner,pending,hook,factory,recipient] = await Promise.all([
+      re.owner(), re.pendingOwner(), re.hook(), re.factory(), re.platformRecipient()
+    ]);
+    document.getElementById('fe-owner').innerHTML = bscLink(owner);
+    document.getElementById('fe-pending-owner').innerHTML = bscLink(pending);
+    document.getElementById('fe-hook').innerHTML = bscLink(hook);
+    document.getElementById('fe-factory').innerHTML = bscLink(factory);
+    document.getElementById('fe-platform-recipient').innerHTML = bscLink(recipient);
+  } catch(e) { console.error('FE load error', e); }
+
+  // LaunchFactory
+  try {
+    const [owner,pending,count] = await Promise.all([
+      rf.owner(), rf.pendingOwner(), rf.launchCount()
+    ]);
+    document.getElementById('lf-owner').innerHTML = bscLink(owner);
+    document.getElementById('lf-pending-owner').innerHTML = bscLink(pending);
+    document.getElementById('lf-count').textContent = count.toString();
+  } catch(e) { console.error('LF load error', e); }
+
+  // LaunchHook
+  try {
+    const [owner,pending,escrow,factory,bps] = await Promise.all([
+      rh.owner(), rh.pendingOwner(), rh.escrow(), rh.factory(), rh.trackerShareBps()
+    ]);
+    document.getElementById('lh-owner').innerHTML = bscLink(owner);
+    document.getElementById('lh-pending-owner').innerHTML = bscLink(pending);
+    document.getElementById('lh-escrow').innerHTML = bscLink(escrow);
+    document.getElementById('lh-factory').innerHTML = bscLink(factory);
+    document.getElementById('lh-tracker-bps').textContent = bps.toString() + ' (' + (Number(bps)/100) + '%)';
+  } catch(e) { console.error('LH load error', e); }
+
+  // LaunchRouter
+  try {
+    const [owner,pending] = await Promise.all([rr.owner(), rr.pendingOwner()]);
+    document.getElementById('lr-owner').innerHTML = bscLink(owner);
+    document.getElementById('lr-pending-owner').innerHTML = bscLink(pending);
+  } catch(e) { console.error('LR load error', e); }
+}
+
+/* ===== FACTORY ADMIN FUNCTIONS ===== */
+async function fa_transferOwnership() {
+  const to = document.getElementById('fa-transfer-to').value.trim();
+  if (!to) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.FactoryAdmin, ABI_ADMIN);
+  await txToast(c.transferOwnership(to), 'FactoryAdmin 所有权转让已发起');
+}
+async function fa_acceptOwnership() {
+  const c = getContract(ADDR.FactoryAdmin, ABI_ADMIN);
+  await txToast(c.acceptOwnership(), 'FactoryAdmin 所有权已接受');
+  loadAllData();
+}
+async function fa_setTreasury() {
+  const v = document.getElementById('fa-treasury-input').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.FactoryAdmin, ABI_ADMIN);
+  await txToast(c.setTreasury(v), 'Treasury 已更新');
+  loadAllData();
+}
+async function fa_setRouter() {
+  const v = document.getElementById('fa-router-input').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.FactoryAdmin, ABI_ADMIN);
+  await txToast(c.setRouter(v), 'Router 已更新');
+  loadAllData();
+}
+async function fa_setCreationFee() {
+  const v = document.getElementById('fa-fee-input').value;
+  if (!v || parseFloat(v) < 0) return toast('请输入有效金额', 'error');
+  const c = getContract(ADDR.FactoryAdmin, ABI_ADMIN);
+  const wei = ethers.parseEther(v);
+  await txToast(c.setCreationFee(wei), 'Creation Fee 已更新');
+  loadAllData();
+}
+async function fa_registerQuote() {
+  const v = document.getElementById('fa-quote-input').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.FactoryAdmin, ABI_ADMIN);
+  await txToast(c.registerQuote(v), 'Quote Token 已注册');
+}
+async function fa_disableQuote() {
+  const v = document.getElementById('fa-quote-disable-input').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.FactoryAdmin, ABI_ADMIN);
+  await txToast(c.disableQuote(v), 'Quote Token 已禁用');
+}
+async function fa_setPaused(val) {
+  const c = getContract(ADDR.FactoryAdmin, ABI_ADMIN);
+  await txToast(c.setPaused(val), val ? '已暂停发币' : '已恢复发币');
+  loadAllData();
+}
+async function fa_setBlacklist(status) {
+  const addr = document.getElementById('fa-bl-addr').value.trim();
+  if (!addr) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.FactoryAdmin, ABI_ADMIN);
+  await txToast(c.setBlacklist(addr, status), status ? '已加入黑名单' : '已移出黑名单');
+}
+async function fa_setBlacklistBatch(status) {
+  const raw = document.getElementById('fa-bl-batch').value.trim();
+  if (!raw) return toast('请输入地址列表', 'error');
+  const addrs = raw.split(',').map(s => s.trim()).filter(s => s.startsWith('0x'));
+  if (addrs.length === 0) return toast('未找到有效地址', 'error');
+  const c = getContract(ADDR.FactoryAdmin, ABI_ADMIN);
+  await txToast(c.setBlacklistBatch(addrs, status), '批量黑名单操作完成 (' + addrs.length + ' 个地址)');
+}
+
+/* ===== FEE ESCROW FUNCTIONS ===== */
+async function fe_transferOwnership() {
+  const to = document.getElementById('fe-transfer-to').value.trim();
+  if (!to) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.FeeEscrow, ABI_ESCROW);
+  await txToast(c.transferOwnership(to), 'FeeEscrow 所有权转让已发起');
+}
+async function fe_acceptOwnership() {
+  const c = getContract(ADDR.FeeEscrow, ABI_ESCROW);
+  await txToast(c.acceptOwnership(), 'FeeEscrow 所有权已接受');
+  loadAllData();
+}
+async function fe_setPlatformRecipient() {
+  const v = document.getElementById('fe-recipient-input').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.FeeEscrow, ABI_ESCROW);
+  await txToast(c.setPlatformRecipient(v), 'Platform Recipient 已更新');
+  loadAllData();
+}
+async function fe_distribute() {
+  const c = getContract(ADDR.FeeEscrow, ABI_ESCROW);
+  await txToast(c.distribute(), '全部分发完成');
+}
+async function fe_distributeFor() {
+  const idx = document.getElementById('fe-dist-index').value;
+  if (idx === '') return toast('请输入 Pool Index', 'error');
+  const c = getContract(ADDR.FeeEscrow, ABI_ESCROW);
+  await txToast(c.distributeFor(idx), 'Pool #' + idx + ' 分发完成');
+}
+async function fe_distributeRange() {
+  const start = document.getElementById('fe-dist-start').value;
+  const count = document.getElementById('fe-dist-count').value;
+  if (start === '' || count === '') return toast('请输入起始和数量', 'error');
+  const c = getContract(ADDR.FeeEscrow, ABI_ESCROW);
+  await txToast(c.distributeRange(start, count), '批量分发完成');
+}
+
+/* ===== LAUNCH FACTORY FUNCTIONS ===== */
+async function lf_transferOwnership() {
+  const to = document.getElementById('lf-transfer-to').value.trim();
+  if (!to) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.LaunchFactory, ABI_FACTORY);
+  await txToast(c.transferOwnership(to), 'LaunchFactory 所有权转让已发起');
+}
+async function lf_acceptOwnership() {
+  const c = getContract(ADDR.LaunchFactory, ABI_FACTORY);
+  await txToast(c.acceptOwnership(), 'LaunchFactory 所有权已接受');
+  loadAllData();
+}
+
+/* ===== LAUNCH HOOK FUNCTIONS ===== */
+async function lh_transferOwnership() {
+  const to = document.getElementById('lh-transfer-to').value.trim();
+  if (!to) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.LaunchHook, ABI_HOOK);
+  await txToast(c.transferOwnership(to), 'LaunchHook 所有权转让已发起');
+}
+async function lh_acceptOwnership() {
+  const c = getContract(ADDR.LaunchHook, ABI_HOOK);
+  await txToast(c.acceptOwnership(), 'LaunchHook 所有权已接受');
+  loadAllData();
+}
+async function lh_setTrackerShareBps() {
+  const v = document.getElementById('lh-bps-input').value;
+  if (v === '' || Number(v) < 0 || Number(v) > 10000) return toast('请输入 0-10000 之间的值', 'error');
+  const c = getContract(ADDR.LaunchHook, ABI_HOOK);
+  await txToast(c.setTrackerShareBps(v), 'Tracker Share BPS 已更新为 ' + v);
+  loadAllData();
+}
+
+/* ===== LAUNCH ROUTER FUNCTIONS ===== */
+async function lr_transferOwnership() {
+  const to = document.getElementById('lr-transfer-to').value.trim();
+  if (!to) return toast('请输入地址', 'error');
+  const c = getContract(ADDR.LaunchRouter, ABI_ROUTER);
+  await txToast(c.transferOwnership(to), 'LaunchRouter 所有权转让已发起');
+}
+async function lr_acceptOwnership() {
+  const c = getContract(ADDR.LaunchRouter, ABI_ROUTER);
+  await txToast(c.acceptOwnership(), 'LaunchRouter 所有权已接受');
+  loadAllData();
+}
+async function lr_setV2Route() {
+  const quote = document.getElementById('lr-v2-quote').value.trim();
+  const routeType = Number(document.getElementById('lr-v2-type').value);
+  const router = document.getElementById('lr-v2-router').value.trim();
+  const pathRaw = document.getElementById('lr-v2-path').value.trim();
+  if (!quote || !router || !pathRaw) return toast('请填写所有字段', 'error');
+  const v2Path = pathRaw.split(',').map(s => s.trim()).filter(s => s.startsWith('0x'));
+  if (v2Path.length < 2) return toast('V2 Path 至少需要 2 个地址', 'error');
+  const c = getContract(ADDR.LaunchRouter, ABI_ROUTER);
+  await txToast(c.setV2Route(quote, routeType, router, v2Path), 'V2 路由已设置');
+}
+async function lr_setV3Route() {
+  const quote = document.getElementById('lr-v3-quote').value.trim();
+  const routeType = Number(document.getElementById('lr-v3-type').value);
+  const router = document.getElementById('lr-v3-router').value.trim();
+  const path = document.getElementById('lr-v3-path').value.trim();
+  if (!quote || !router || !path) return toast('请填写所有字段', 'error');
+  const c = getContract(ADDR.LaunchRouter, ABI_ROUTER);
+  await txToast(c.setV3Route(quote, routeType, router, path), 'V3 路由已设置');
+}
+async function lr_rescue() {
+  const token = document.getElementById('lr-rescue-token').value.trim();
+  const to = document.getElementById('lr-rescue-to').value.trim();
+  if (!token || !to) return toast('请填写所有字段', 'error');
+  const c = getContract(ADDR.LaunchRouter, ABI_ROUTER);
+  await txToast(c.rescue(token, to), 'Rescue 完成');
+}
+
+/* ===== AUTO-CONNECT ON LOAD ===== */
+window.addEventListener('load', async () => {
+  if (window.ethereum) {
+    try {
+      provider = new ethers.BrowserProvider(window.ethereum);
+      const accounts = await provider.listAccounts();
+      if (accounts.length > 0) {
+        signer = await provider.getSigner();
+        userAddress = await signer.getAddress();
+        document.getElementById('wallet-addr').textContent = shortAddr(userAddress);
+        document.getElementById('btn-connect').textContent = '已连接';
+        loadAllData();
+      }
+    } catch(e) {}
+  }
+});
+
+/* ===== LISTEN FOR ACCOUNT/CHAIN CHANGES ===== */
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', () => { window.location.reload(); });
+  window.ethereum.on('chainChanged', () => { window.location.reload(); });
+}
+</script>
+</body>
+</html>
