@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mule Launchpad - Shibarium 合约管理后台</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0b0f;--bg2:#12131a;--bg3:#1a1b25;--bg4:#22232f;
+  --border:#2a2b38;--border2:#3a3b4a;
+  --text:#e8e9f0;--text2:#9a9bb0;--text3:#6a6b80;
+  --accent:#ff4d4d;--accent2:#ff6b6b;--accent-bg:rgba(255,77,77,.08);
+  --green:#22c55e;--green-bg:rgba(34,197,94,.1);
+  --yellow:#eab308;--yellow-bg:rgba(234,179,8,.1);
+  --blue:#3b82f6;--blue-bg:rgba(59,130,246,.1);
+  --radius:10px;--radius-sm:6px;
+  --font:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+html{font-size:14px;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;line-height:1.6}
+::selection{background:var(--accent);color:#fff}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+#app{max-width:1100px;margin:0 auto;padding:20px 16px 60px}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--border);margin-bottom:24px}
+.header-left{display:flex;align-items:center;gap:14px}
+.logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#ff8c00);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;font-family:var(--mono)}
+.header h1{font-size:1.35rem;font-weight:700;letter-spacing:-.02em}
+.header h1 span{color:var(--accent);font-family:var(--mono);font-weight:600;font-size:.85em;margin-left:6px;padding:2px 8px;background:var(--accent-bg);border-radius:4px;border:1px solid rgba(255,77,77,.2)}
+.connect-btn{padding:10px 22px;border-radius:var(--radius);border:1px solid var(--accent);background:transparent;color:var(--accent);font-family:var(--font);font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s}
+.connect-btn:hover{background:var(--accent);color:#fff}
+.connect-btn.connected{background:var(--green-bg);border-color:var(--green);color:var(--green);cursor:default;font-size:.8rem}
+.connect-btn.connected::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:8px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:24px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.tab{padding:10px 18px;border-radius:var(--radius);border:1px solid transparent;background:transparent;color:var(--text2);font-family:var(--font);font-size:.85rem;font-weight:500;cursor:pointer;transition:all .2s;white-space:nowrap;position:relative}
+.tab:hover{color:var(--text);background:var(--bg3)}
+.tab.active{color:var(--accent);background:var(--accent-bg);border-color:rgba(255,77,77,.2)}
+.tab .tab-badge{font-size:.65rem;padding:1px 5px;border-radius:3px;margin-left:6px;background:var(--bg4);color:var(--text3)}
+.tab.active .tab-badge{background:rgba(255,77,77,.15);color:var(--accent)}
+
+/* Panel */
+.panel{display:none;animation:fadeIn .3s ease}
+.panel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Contract Info Card */
+.info-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px}
+.info-card h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:14px;font-weight:600}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.info-item{display:flex;flex-direction:column;gap:4px}
+.info-label{font-size:.75rem;color:var(--text3);font-weight:500}
+.info-value{font-family:var(--mono);font-size:.82rem;color:var(--text);word-break:break-all}
+.info-value a{color:var(--accent2);text-decoration:none;transition:color .2s}
+.info-value a:hover{color:var(--accent);text-decoration:underline}
+.info-value .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-red{background:var(--accent-bg);color:var(--accent)}
+.badge-yellow{background:var(--yellow-bg);color:var(--yellow)}
+.badge-blue{background:var(--blue-bg);color:var(--blue)}
+
+/* Section */
+.section{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+.section-header{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.section-header h2{font-size:1.05rem;font-weight:600}
+.section-header .icon{font-size:1.2rem}
+.section-desc{font-size:.8rem;color:var(--text3);margin-bottom:16px;line-height:1.5}
+.section h4{font-size:.9rem;font-weight:600;margin-bottom:6px;color:var(--text)}
+.section h4 .sub{font-size:.75rem;color:var(--text3);font-weight:400;margin-left:8px}
+
+/* Form */
+.form-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap}
+.form-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:200px}
+.form-group label{font-size:.75rem;color:var(--text3);font-weight:500}
+.form-group input,.form-group textarea{padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:var(--mono);font-size:.82rem;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group input::placeholder{color:var(--text3)}
+.btn{padding:9px 20px;border-radius:var(--radius-sm);border:none;font-family:var(--font);font-size:.82rem;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--accent2);transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1px solid var(--border2);color:var(--text2)}
+.btn-outline:hover:not(:disabled){border-color:var(--text2);color:var(--text)}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover:not(:disabled){background:#16a34a}
+.btn-red{background:rgba(255,77,77,.15);color:var(--accent);border:1px solid rgba(255,77,77,.3)}
+.btn-red:hover:not(:disabled){background:rgba(255,77,77,.25)}
+.btn-yellow{background:var(--yellow-bg);color:var(--yellow);border:1px solid rgba(234,179,8,.3)}
+.btn-yellow:hover:not(:disabled){background:rgba(234,179,8,.2)}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Divider */
+.divider{height:1px;background:var(--border);margin:18px 0}
+
+/* Toast */
+.toast-container{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+.toast{padding:12px 18px;border-radius:var(--radius);font-size:.82rem;max-width:400px;animation:slideIn .3s ease;backdrop-filter:blur(10px);border:1px solid}
+.toast-success{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.3);color:var(--green)}
+.toast-error{background:rgba(255,77,77,.12);border-color:rgba(255,77,77,.3);color:var(--accent)}
+.toast-info{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3);color:var(--blue)}
+.toast-loading{background:rgba(234,179,8,.12);border-color:rgba(234,179,8,.3);color:var(--yellow)}
+@keyframes slideIn{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+
+/* Warning box */
+.warn-box{background:var(--yellow-bg);border:1px solid rgba(234,179,8,.2);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;font-size:.8rem;color:var(--yellow);line-height:1.6}
+.warn-box strong{font-weight:600}
+
+/* Responsive */
+@media(max-width:640px){
+  .header{flex-direction:column;gap:14px;align-items:flex-start}
+  .info-grid{grid-template-columns:1fr}
+  .form-row{flex-direction:column}
+  .form-group{min-width:100%}
+  .tabs{gap:2px}
+  .tab{padding:8px 12px;font-size:.8rem}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">M</div>
+      <h1>Mule Launchpad <span>Shibarium</span></h1>
+    </div>
+    <button class="connect-btn" id="connectBtn" onclick="connectWallet()">连接钱包</button>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="admin">FactoryAdmin<span class="tab-badge">配置</span></button>
+    <button class="tab" data-tab="escrow">FeeEscrow<span class="tab-badge">手续费</span></button>
+    <button class="tab" data-tab="factory">LaunchFactory<span class="tab-badge">只读</span></button>
+    <button class="tab" data-tab="hook">LaunchHook<span class="tab-badge">分红</span></button>
+    <button class="tab" data-tab="router">MuleRouter<span class="tab-badge">路由</span></button>
+  </div>
+
+  <!-- ========== FactoryAdmin Panel ========== -->
+  <div class="panel active" id="panel-admin">
+    <div class="info-card">
+      <h3>合约地址</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">工厂管理合约</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0xBd21fDa91B7b012B2cb975dBD1Ab90C1eba7b5fE" target="_blank">0xBd21fDa91B7b012B2cb975dBD1Ab90C1eba7b5fE</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">当前管理员</span>
+          <span class="info-value" id="admin-owner">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">待确认管理员</span>
+          <span class="info-value" id="admin-pending">-</span>
+        </div>
+      </div>
+    </div>
+    <div class="info-card">
+      <h3>合约状态</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">金库地址</span>
+          <span class="info-value" id="admin-treasury">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">路由器地址</span>
+          <span class="info-value" id="admin-router">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">交易钩子地址</span>
+          <span class="info-value" id="admin-hook">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">创建费用</span>
+          <span class="info-value" id="admin-fee">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">暂停状态</span>
+          <span class="info-value" id="admin-paused">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">WBONE 地址</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0x839FdB6cc98342B428E074C1573ADF6D48CA3bFd" target="_blank">0x839FdB6cc98342B428E074C1573ADF6D48CA3bFd</a></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">🔑</span><h2>管理员权限</h2><span class="badge badge-blue" style="font-size:.7rem">两步验证</span></div>
+      <p class="section-desc">管理权转让需要两步：第一步由当前管理员发起，第二步由新管理员确认接受。这样可以防止转错地址。</p>
+      <h4>第一步：发起转让</h4>
+      <p class="section-desc">输入新管理员的钱包地址，发起转让请求。转让不会立即生效，需要对方确认。</p>
+      <div class="form-row">
+        <div class="form-group"><label>新管理员地址</label><input id="admin-transfer-to" placeholder="0x..."></div>
+        <button class="btn btn-primary" onclick="adminTransferOwnership()">发起转让</button>
+      </div>
+      <div class="divider"></div>
+      <h4>第二步：接受转让</h4>
+      <p class="section-desc">用新管理员的钱包连接，点击接受完成转让。注意：只有被指定的地址才能接受。</p>
+      <button class="btn btn-green" onclick="adminAcceptOwnership()">接受管理员权限</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">⚙️</span><h2>基础配置</h2></div>
+      <p class="section-desc">这些是平台的核心配置，修改后会立即生效，请谨慎操作。</p>
+
+      <h4>设置金库地址</h4>
+      <p class="section-desc">金库用来接收创建代币时收取的 BONE 费用。所有创建费用都会转到这个地址。</p>
+      <div class="form-row">
+        <div class="form-group"><label>金库钱包地址</label><input id="admin-treasury-input" placeholder="0x..."></div>
+        <button class="btn btn-primary" onclick="adminSetTreasury()">设置</button>
+      </div>
+      <div class="divider"></div>
+
+      <h4>设置路由器地址</h4>
+      <p class="section-desc">路由器负责处理代币买卖交易。必须设置后才能支持创建时购买功能。</p>
+      <div class="form-row">
+        <div class="form-group"><label>路由器合约地址</label><input id="admin-router-input" placeholder="0x..."></div>
+        <button class="btn btn-primary" onclick="adminSetRouter()">设置</button>
+      </div>
+      <div class="divider"></div>
+
+      <h4>设置创建费用</h4>
+      <p class="section-desc">用户创建新代币时需要支付的费用（单位：BONE）。这笔费用会转到金库。</p>
+      <div class="form-row">
+        <div class="form-group"><label>费用金额（BONE）</label><input id="admin-fee-input" type="number" step="0.001" placeholder="0.001"></div>
+        <button class="btn btn-primary" onclick="adminSetCreationFee()">设置</button>
+      </div>
+      <div class="divider"></div>
+
+      <h4>注册报价代币</h4>
+      <p class="section-desc">注册后可以作为交易对的报价代币（比如 USDT）。必须先注册才能在创建代币时使用。</p>
+      <div class="form-row">
+        <div class="form-group"><label>报价代币地址</label><input id="admin-quote-reg" placeholder="0x..."></div>
+        <button class="btn btn-primary" onclick="adminRegisterQuote()">注册</button>
+      </div>
+      <div class="divider"></div>
+
+      <h4>禁用报价代币</h4>
+      <p class="section-desc">禁用后，新创建的代币不能再使用这个报价代币，但已创建的池子不受影响。</p>
+      <div class="form-row">
+        <div class="form-group"><label>报价代币地址</label><input id="admin-quote-dis" placeholder="0x..."></div>
+        <button class="btn btn-red" onclick="adminDisableQuote()">禁用</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">⚠️</span><h2>紧急控制</h2></div>
+      <p class="section-desc">遇到紧急情况时可以使用这些功能。暂停会阻止所有新代币创建，黑名单可以禁止特定地址参与。</p>
+      <div class="btn-group" style="margin-bottom:16px">
+        <button class="btn btn-red" onclick="adminSetPaused(true)">暂停所有创建</button>
+        <button class="btn btn-green" onclick="adminSetPaused(false)">恢复创建</button>
+      </div>
+      <div class="divider"></div>
+      <h4>单个地址黑名单</h4>
+      <p class="section-desc">加入黑名单后，该地址不能创建代币，其持有的代币也不参与分红。</p>
+      <div class="form-row">
+        <div class="form-group"><label>钱包地址</label><input id="admin-bl-addr" placeholder="0x..."></div>
+        <button class="btn btn-red" onclick="adminBlacklist(true)">加入黑名单</button>
+        <button class="btn btn-green" onclick="adminBlacklist(false)">移出黑名单</button>
+      </div>
+      <div class="divider"></div>
+      <h4>批量黑名单</h4>
+      <p class="section-desc">一次处理多个地址，用逗号分隔。适合批量处理恶意地址。</p>
+      <div class="form-row">
+        <div class="form-group"><label>地址列表（逗号分隔）</label><input id="admin-bl-batch" placeholder="0x..., 0x..."></div>
+        <button class="btn btn-red" onclick="adminBlacklistBatch(true)">批量拉黑</button>
+        <button class="btn btn-green" onclick="adminBlacklistBatch(false)">批量解除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== FeeEscrow Panel ========== -->
+  <div class="panel" id="panel-escrow">
+    <div class="info-card">
+      <h3>合约地址</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">费用托管合约</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0x51Eb10467576F4454dF66d54384B9781D1641f9E" target="_blank">0x51Eb10467576F4454dF66d54384B9781D1641f9E</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">当前管理员</span>
+          <span class="info-value" id="escrow-owner">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">待确认管理员</span>
+          <span class="info-value" id="escrow-pending">-</span>
+        </div>
+      </div>
+    </div>
+    <div class="info-card">
+      <h3>合约状态</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">交易钩子地址</span>
+          <span class="info-value" id="escrow-hook">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">发射工厂地址</span>
+          <span class="info-value" id="escrow-factory">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">平台收款地址</span>
+          <span class="info-value" id="escrow-recipient">-</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">🔑</span><h2>管理员权限</h2><span class="badge badge-blue" style="font-size:.7rem">两步验证</span></div>
+      <p class="section-desc">管理权转让需要两步：第一步由当前管理员发起，第二步由新管理员确认接受。</p>
+      <h4>第一步：发起转让</h4>
+      <div class="form-row">
+        <div class="form-group"><label>新管理员地址</label><input id="escrow-transfer-to" placeholder="0x..."></div>
+        <button class="btn btn-primary" onclick="escrowTransferOwnership()">发起转让</button>
+      </div>
+      <div class="divider"></div>
+      <h4>第二步：接受转让</h4>
+      <button class="btn btn-green" onclick="escrowAcceptOwnership()">接受管理员权限</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">⚙️</span><h2>收款配置</h2></div>
+      <h4>设置平台收款地址</h4>
+      <p class="section-desc">交易手续费的平台部分会转到这个地址。这是平台的收入来源。</p>
+      <div class="form-row">
+        <div class="form-group"><label>收款钱包地址</label><input id="escrow-recipient-input" placeholder="0x..."></div>
+        <button class="btn btn-primary" onclick="escrowSetRecipient()">设置</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">💰</span><h2>手续费分发</h2></div>
+      <p class="section-desc">交易产生的手续费会暂存在合约里，需要手动触发分发。分发后，平台部分给平台收款地址，其余给持币人分红。</p>
+      <h4>分发所有池子</h4>
+      <p class="section-desc">遍历所有已创建的代币池子，把待分配的手续费全部分发出去。池子多的时候可能消耗较多 Gas。</p>
+      <button class="btn btn-primary" onclick="escrowDistributeAll()">全部分发</button>
+      <div class="divider"></div>
+      <h4>分发指定池子</h4>
+      <p class="section-desc">只分发某一个池子的手续费。池子编号从 0 开始，可以在发射工厂查看总数。</p>
+      <div class="form-row">
+        <div class="form-group"><label>池子编号</label><input id="escrow-dist-idx" type="number" min="0" placeholder="0"></div>
+        <button class="btn btn-primary" onclick="escrowDistributeFor()">分发</button>
+      </div>
+      <div class="divider"></div>
+      <h4>批量分发</h4>
+      <p class="section-desc">一次分发多个池子，最多 20 个。适合池子很多时分批处理。</p>
+      <div class="form-row">
+        <div class="form-group"><label>起始编号</label><input id="escrow-dist-start" type="number" min="0" placeholder="0"></div>
+        <div class="form-group"><label>数量（最多 20）</label><input id="escrow-dist-count" type="number" min="1" max="20" placeholder="5"></div>
+        <button class="btn btn-primary" onclick="escrowDistributeRange()">批量分发</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== LaunchFactory Panel ========== -->
+  <div class="panel" id="panel-factory">
+    <div class="info-card">
+      <h3>合约地址</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">发射工厂合约</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0x3E050175ED27A7B4cEA297643E67FDC631f06bBc" target="_blank">0x3E050175ED27A7B4cEA297643E67FDC631f06bBc</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">当前管理员</span>
+          <span class="info-value" id="factory-owner">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">待确认管理员</span>
+          <span class="info-value" id="factory-pending">-</span>
+        </div>
+      </div>
+    </div>
+    <div class="info-card">
+      <h3>合约状态 <span class="badge badge-yellow" style="font-size:.65rem">只读</span></h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">V4 池管理器</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0x53c590e30C9073a805dd7c71056FEC7841EaCE05" target="_blank">0x53c590e30C9073a805dd7c71056FEC7841EaCE05</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">工厂管理合约</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0xBd21fDa91B7b012B2cb975dBD1Ab90C1eba7b5fE" target="_blank">0xBd21fDa91B7b012B2cb975dBD1Ab90C1eba7b5fE</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">已创建代币数</span>
+          <span class="info-value" id="factory-count">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">价格刻度</span>
+          <span class="info-value" id="factory-tick">-</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">🔑</span><h2>管理员权限</h2><span class="badge badge-blue" style="font-size:.7rem">两步验证</span></div>
+      <p class="section-desc">管理权转让需要两步：第一步由当前管理员发起，第二步由新管理员确认接受。</p>
+      <h4>第一步：发起转让</h4>
+      <div class="form-row">
+        <div class="form-group"><label>新管理员地址</label><input id="factory-transfer-to" placeholder="0x..."></div>
+        <button class="btn btn-primary" onclick="factoryTransferOwnership()">发起转让</button>
+      </div>
+      <div class="divider"></div>
+      <h4>第二步：接受转让</h4>
+      <button class="btn btn-green" onclick="factoryAcceptOwnership()">接受管理员权限</button>
+    </div>
+  </div>
+
+  <!-- ========== LaunchHook Panel ========== -->
+  <div class="panel" id="panel-hook">
+    <div class="info-card">
+      <h3>合约地址</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">交易钩子合约</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0x563ac249f1B4C05632dF2EB92a566ecCCf581098" target="_blank">0x563ac249f1B4C05632dF2EB92a566ecCCf581098</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">当前管理员</span>
+          <span class="info-value" id="hook-owner">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">待确认管理员</span>
+          <span class="info-value" id="hook-pending">-</span>
+        </div>
+      </div>
+    </div>
+    <div class="info-card">
+      <h3>合约状态</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">V4 池管理器</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0x53c590e30C9073a805dd7c71056FEC7841EaCE05" target="_blank">0x53c590e30C9073a805dd7c71056FEC7841EaCE05</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">费用托管地址</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0x51Eb10467576F4454dF66d54384B9781D1641f9E" target="_blank">0x51Eb10467576F4454dF66d54384B9781D1641f9E</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">发射工厂地址</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0x3E050175ED27A7B4cEA297643E67FDC631f06bBc" target="_blank">0x3E050175ED27A7B4cEA297643E67FDC631f06bBc</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">分红比例</span>
+          <span class="info-value" id="hook-bps">-</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">🔑</span><h2>管理员权限</h2><span class="badge badge-blue" style="font-size:.7rem">两步验证</span></div>
+      <p class="section-desc">管理权转让需要两步：第一步由当前管理员发起，第二步由新管理员确认接受。</p>
+      <h4>第一步：发起转让</h4>
+      <div class="form-row">
+        <div class="form-group"><label>新管理员地址</label><input id="hook-transfer-to" placeholder="0x..."></div>
+        <button class="btn btn-primary" onclick="hookTransferOwnership()">发起转让</button>
+      </div>
+      <div class="divider"></div>
+      <h4>第二步：接受转让</h4>
+      <button class="btn btn-green" onclick="hookAcceptOwnership()">接受管理员权限</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">⚙️</span><h2>分红配置</h2></div>
+      <h4>设置持币人分红比例</h4>
+      <p class="section-desc">交易手续费的分配比例。10000 = 100% 给持币人分红，0 = 100% 归平台。比如 7000 表示 70% 给持币人，30% 给平台。默认是 7000。</p>
+      <div class="form-row">
+        <div class="form-group"><label>分红比例（0-10000）</label><input id="hook-bps-input" type="number" min="0" max="10000" placeholder="7000"></div>
+        <button class="btn btn-primary" onclick="hookSetTrackerShareBps()">设置</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MuleRouter Panel ========== -->
+  <div class="panel" id="panel-router">
+    <div class="info-card">
+      <h3>合约地址</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">路由器合约</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0xFE729C9c94A61ebe949923e69F623baba997f2C4" target="_blank">0xFE729C9c94A61ebe949923e69F623baba997f2C4</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">当前管理员</span>
+          <span class="info-value" id="router-owner">-</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">待确认管理员</span>
+          <span class="info-value" id="router-pending">-</span>
+        </div>
+      </div>
+    </div>
+    <div class="info-card">
+      <h3>合约状态</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-label">V4 池管理器</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0x53c590e30C9073a805dd7c71056FEC7841EaCE05" target="_blank">0x53c590e30C9073a805dd7c71056FEC7841EaCE05</a></span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">WBONE 地址</span>
+          <span class="info-value"><a href="https://shibariumscan.io/address/0x839FdB6cc98342B428E074C1573ADF6D48CA3bFd" target="_blank">0x839FdB6cc98342B428E074C1573ADF6D48CA3bFd</a></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">🔑</span><h2>管理员权限</h2><span class="badge badge-blue" style="font-size:.7rem">两步验证</span></div>
+      <p class="section-desc">管理权转让需要两步：第一步由当前管理员发起，第二步由新管理员确认接受。</p>
+      <h4>第一步：发起转让</h4>
+      <div class="form-row">
+        <div class="form-group"><label>新管理员地址</label><input id="router-transfer-to" placeholder="0x..."></div>
+        <button class="btn btn-primary" onclick="routerTransferOwnership()">发起转让</button>
+      </div>
+      <div class="divider"></div>
+      <h4>第二步：接受转让</h4>
+      <button class="btn btn-green" onclick="routerAcceptOwnership()">接受管理员权限</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span class="icon">🛟</span><h2>紧急救援</h2></div>
+      <p class="section-desc">如果合约中意外收到了代币，可以用这个功能把它们转到指定地址。只有管理员能操作。</p>
+      <div class="form-row">
+        <div class="form-group"><label>代币地址</label><input id="router-rescue-token" placeholder="0x..."></div>
+        <div class="form-group"><label>接收地址</label><input id="router-rescue-to" placeholder="0x..."></div>
+        <button class="btn btn-yellow" onclick="routerRescue()">提取</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+</div>
+<script>
+// === CONFIG ===
+const CHAIN_ID = 109;
+const CHAIN_ID_HEX = '0x6d';
+const RPC = 'https://rpc.shibarium.shib.io';
+const EXPLORER = 'https://shibariumscan.io';
+
+const ADDR = {
+  FactoryAdmin: '0xBd21fDa91B7b012B2cb975dBD1Ab90C1eba7b5fE',
+  FeeEscrow:    '0x51Eb10467576F4454dF66d54384B9781D1641f9E',
+  LaunchFactory:'0x3E050175ED27A7B4cEA297643E67FDC631f06bBc',
+  LaunchHook:   '0x563ac249f1B4C05632dF2EB92a566ecCCf581098',
+  MuleRouter:   '0xFE729C9c94A61ebe949923e69F623baba997f2C4',
+};
+
+// Minimal ABIs
+const ABI_OWNABLE2STEP = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function transferOwnership(address)',
+  'function acceptOwnership()',
+];
+const ABI_ADMIN = [
+  ...ABI_OWNABLE2STEP,
+  'function treasury() view returns (address)',
+  'function router() view returns (address)',
+  'function hook() view returns (address)',
+  'function creationFee() view returns (uint256)',
+  'function paused() view returns (bool)',
+  'function weth() view returns (address)',
+  'function setTreasury(address)',
+  'function setRouter(address)',
+  'function setCreationFee(uint256)',
+  'function registerQuote(address)',
+  'function disableQuote(address)',
+  'function setPaused(bool)',
+  'function setBlacklist(address,bool)',
+  'function setBlacklistBatch(address[],bool)',
+];
+const ABI_ESCROW = [
+  ...ABI_OWNABLE2STEP,
+  'function hook() view returns (address)',
+  'function factory() view returns (address)',
+  'function platformRecipient() view returns (address)',
+  'function setPlatformRecipient(address)',
+  'function distribute()',
+  'function distributeFor(uint256)',
+  'function distributeRange(uint256,uint256)',
+];
+const ABI_FACTORY = [
+  ...ABI_OWNABLE2STEP,
+  'function poolManager() view returns (address)',
+  'function admin() view returns (address)',
+  'function launchCount() view returns (uint256)',
+  'function TICK_SPACING() view returns (int24)',
+];
+const ABI_HOOK = [
+  ...ABI_OWNABLE2STEP,
+  'function poolManager() view returns (address)',
+  'function escrow() view returns (address)',
+  'function factory() view returns (address)',
+  'function trackerShareBps() view returns (uint256)',
+  'function setTrackerShareBps(uint256)',
+];
+const ABI_ROUTER = [
+  ...ABI_OWNABLE2STEP,
+  'function poolManager() view returns (address)',
+  'function weth() view returns (address)',
+  'function rescue(address,address)',
+];
+
+// === STATE ===
+let provider, signer, userAddr;
+let contracts = {};
+
+// === HELPERS ===
+function shortAddr(a) { return a ? a.slice(0,6) + '...' + a.slice(-4) : '-'; }
+function explorerAddr(a) { return `<a href="${EXPLORER}/address/${a}" target="_blank">${shortAddr(a)}</a>`; }
+function $(id) { return document.getElementById(id); }
+
+function toast(msg, type='info', duration=4000) {
+  const c = $('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(40px)'; el.style.transition='all .3s'; setTimeout(()=>el.remove(),300); }, duration);
+}
+
+async function txWrap(promise, successMsg) {
+  toast('正在发送交易...', 'loading');
+  try {
+    const tx = await promise;
+    toast('交易已提交，等待确认...', 'loading');
+    await tx.wait();
+    toast(successMsg || '交易成功！', 'success');
+    return tx;
+  } catch(e) {
+    const msg = e.reason || e.message || '交易失败';
+    toast('失败: ' + (msg.length > 80 ? msg.slice(0,80)+'...' : msg), 'error', 6000);
+    throw e;
+  }
+}
+
+function getContract(name, withSigner=false) {
+  const addr = ADDR[name];
+  const abis = { FactoryAdmin: ABI_ADMIN, FeeEscrow: ABI_ESCROW, LaunchFactory: ABI_FACTORY, LaunchHook: ABI_HOOK, MuleRouter: ABI_ROUTER };
+  if (withSigner && signer) {
+    return new ethers.Contract(addr, abis[name], signer);
+  }
+  return contracts[name] || (contracts[name] = new ethers.Contract(addr, abis[name], provider || new ethers.JsonRpcProvider(RPC)));
+}
+
+// === TABS ===
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    $('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// === WALLET ===
+async function connectWallet() {
+  if (!window.ethereum) { toast('请安装 MetaMask 钱包', 'error'); return; }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner();
+    userAddr = await signer.getAddress();
+
+    // Check & switch network
+    const network = await provider.getNetwork();
+    if (network.chainId !== BigInt(CHAIN_ID)) {
+      try {
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CHAIN_ID_HEX }] });
+      } catch(e) {
+        if (e.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{ chainId: CHAIN_ID_HEX, chainName: 'Shibarium', nativeCurrency: { name: 'BONE', symbol: 'BONE', decimals: 18 }, rpcUrls: [RPC], blockExplorerUrls: [EXPLORER] }]
+          });
+        }
+      }
+      // Re-init after switch
+      provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      userAddr = await signer.getAddress();
+    }
+
+    const btn = $('connectBtn');
+    btn.textContent = shortAddr(userAddr);
+    btn.classList.add('connected');
+    toast('钱包已连接: ' + shortAddr(userAddr), 'success');
+
+    // Listen for account/chain changes
+    window.ethereum.on('accountsChanged', () => location.reload());
+    window.ethereum.on('chainChanged', () => location.reload());
+
+    loadAllState();
+  } catch(e) {
+    toast('连接失败: ' + (e.message || '未知错误'), 'error');
+  }
+}
+
+// === LOAD STATE ===
+async function loadAllState() {
+  const p = provider || new ethers.JsonRpcProvider(RPC);
+
+  // FactoryAdmin
+  try {
+    const admin = new ethers.Contract(ADDR.FactoryAdmin, ABI_ADMIN, p);
+    const [owner, pending, treasury, router, hook, fee, paused] = await Promise.all([
+      admin.owner(), admin.pendingOwner(), admin.treasury(), admin.router(), admin.hook(), admin.creationFee(), admin.paused()
+    ]);
+    $('admin-owner').innerHTML = explorerAddr(owner);
+    $('admin-pending').textContent = pending === ethers.ZeroAddress ? '-' : shortAddr(pending);
+    $('admin-treasury').innerHTML = explorerAddr(treasury);
+    $('admin-router').innerHTML = explorerAddr(router);
+    $('admin-hook').innerHTML = explorerAddr(hook);
+    $('admin-fee').textContent = ethers.formatEther(fee) + ' BONE';
+    $('admin-paused').innerHTML = paused ? '<span class="badge badge-red">已暂停</span>' : '<span class="badge badge-green">正常</span>';
+  } catch(e) { console.error('Admin load error:', e); }
+
+  // FeeEscrow
+  try {
+    const escrow = new ethers.Contract(ADDR.FeeEscrow, ABI_ESCROW, p);
+    const [owner, pending, hook, factory, recipient] = await Promise.all([
+      escrow.owner(), escrow.pendingOwner(), escrow.hook(), escrow.factory(), escrow.platformRecipient()
+    ]);
+    $('escrow-owner').innerHTML = explorerAddr(owner);
+    $('escrow-pending').textContent = pending === ethers.ZeroAddress ? '-' : shortAddr(pending);
+    $('escrow-hook').innerHTML = explorerAddr(hook);
+    $('escrow-factory').innerHTML = explorerAddr(factory);
+    $('escrow-recipient').innerHTML = explorerAddr(recipient);
+  } catch(e) { console.error('Escrow load error:', e); }
+
+  // LaunchFactory
+  try {
+    const factory = new ethers.Contract(ADDR.LaunchFactory, ABI_FACTORY, p);
+    const [owner, pending, count, tick] = await Promise.all([
+      factory.owner(), factory.pendingOwner(), factory.launchCount(), factory.TICK_SPACING()
+    ]);
+    $('factory-owner').innerHTML = explorerAddr(owner);
+    $('factory-pending').textContent = pending === ethers.ZeroAddress ? '-' : shortAddr(pending);
+    $('factory-count').textContent = count.toString();
+    $('factory-tick').textContent = tick.toString();
+  } catch(e) { console.error('Factory load error:', e); }
+
+  // LaunchHook
+  try {
+    const hook = new ethers.Contract(ADDR.LaunchHook, ABI_HOOK, p);
+    const [owner, pending, bps] = await Promise.all([
+      hook.owner(), hook.pendingOwner(), hook.trackerShareBps()
+    ]);
+    $('hook-owner').innerHTML = explorerAddr(owner);
+    $('hook-pending').textContent = pending === ethers.ZeroAddress ? '-' : shortAddr(pending);
+    $('hook-bps').textContent = `${bps.toString()} (${(Number(bps)/100).toFixed(1)}%)`;
+  } catch(e) { console.error('Hook load error:', e); }
+
+  // MuleRouter
+  try {
+    const router = new ethers.Contract(ADDR.MuleRouter, ABI_ROUTER, p);
+    const [owner, pending] = await Promise.all([router.owner(), router.pendingOwner()]);
+    $('router-owner').innerHTML = explorerAddr(owner);
+    $('router-pending').textContent = pending === ethers.ZeroAddress ? '-' : shortAddr(pending);
+  } catch(e) { console.error('Router load error:', e); }
+}
+
+// === FactoryAdmin ACTIONS ===
+async function adminTransferOwnership() { const v = $('admin-transfer-to').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('FactoryAdmin',true).transferOwnership(v), '转让已发起'); loadAllState(); }
+async function adminAcceptOwnership() { await txWrap(getContract('FactoryAdmin',true).acceptOwnership(), '已接受管理员权限'); loadAllState(); }
+async function adminSetTreasury() { const v = $('admin-treasury-input').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('FactoryAdmin',true).setTreasury(v), '金库地址已更新'); loadAllState(); }
+async function adminSetRouter() { const v = $('admin-router-input').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('FactoryAdmin',true).setRouter(v), '路由器地址已更新'); loadAllState(); }
+async function adminSetCreationFee() { const v = $('admin-fee-input').value; if(!v||v<=0) return toast('请输入有效金额','error'); await txWrap(getContract('FactoryAdmin',true).setCreationFee(ethers.parseEther(v)), '创建费用已更新'); loadAllState(); }
+async function adminRegisterQuote() { const v = $('admin-quote-reg').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('FactoryAdmin',true).registerQuote(v), '报价代币已注册'); }
+async function adminDisableQuote() { const v = $('admin-quote-dis').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('FactoryAdmin',true).disableQuote(v), '报价代币已禁用'); }
+async function adminSetPaused(v) { await txWrap(getContract('FactoryAdmin',true).setPaused(v), v?'已暂停所有创建':'已恢复创建'); loadAllState(); }
+async function adminBlacklist(status) { const v = $('admin-bl-addr').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('FactoryAdmin',true).setBlacklist(v, status), status?'已加入黑名单':'已移出黑名单'); }
+async function adminBlacklistBatch(status) {
+  const raw = $('admin-bl-batch').value.trim(); if(!raw) return toast('请输入地址列表','error');
+  const addrs = raw.split(',').map(s=>s.trim()).filter(Boolean);
+  if(!addrs.length) return toast('请输入有效地址','error');
+  await txWrap(getContract('FactoryAdmin',true).setBlacklistBatch(addrs, status), status?`已拉黑 ${addrs.length} 个地址`:`已解除 ${addrs.length} 个地址`);
+}
+
+// === FeeEscrow ACTIONS ===
+async function escrowTransferOwnership() { const v = $('escrow-transfer-to').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('FeeEscrow',true).transferOwnership(v), '转让已发起'); loadAllState(); }
+async function escrowAcceptOwnership() { await txWrap(getContract('FeeEscrow',true).acceptOwnership(), '已接受管理员权限'); loadAllState(); }
+async function escrowSetRecipient() { const v = $('escrow-recipient-input').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('FeeEscrow',true).setPlatformRecipient(v), '收款地址已更新'); loadAllState(); }
+async function escrowDistributeAll() { await txWrap(getContract('FeeEscrow',true).distribute(), '所有池子手续费已分发'); }
+async function escrowDistributeFor() { const v = $('escrow-dist-idx').value; if(v===''||Number(v)<0) return toast('请输入有效编号','error'); await txWrap(getContract('FeeEscrow',true).distributeFor(Number(v)), `池子 #${v} 手续费已分发`); }
+async function escrowDistributeRange() {
+  const s = $('escrow-dist-start').value, c = $('escrow-dist-count').value;
+  if(s===''||c===''||Number(c)<1||Number(c)>20) return toast('请输入有效参数','error');
+  await txWrap(getContract('FeeEscrow',true).distributeRange(Number(s), Number(c)), `已批量分发 ${c} 个池子`);
+}
+
+// === LaunchFactory ACTIONS ===
+async function factoryTransferOwnership() { const v = $('factory-transfer-to').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('LaunchFactory',true).transferOwnership(v), '转让已发起'); loadAllState(); }
+async function factoryAcceptOwnership() { await txWrap(getContract('LaunchFactory',true).acceptOwnership(), '已接受管理员权限'); loadAllState(); }
+
+// === LaunchHook ACTIONS ===
+async function hookTransferOwnership() { const v = $('hook-transfer-to').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('LaunchHook',true).transferOwnership(v), '转让已发起'); loadAllState(); }
+async function hookAcceptOwnership() { await txWrap(getContract('LaunchHook',true).acceptOwnership(), '已接受管理员权限'); loadAllState(); }
+async function hookSetTrackerShareBps() { const v = $('hook-bps-input').value; if(v===''||Number(v)<0||Number(v)>10000) return toast('请输入 0-10000 之间的值','error'); await txWrap(getContract('LaunchHook',true).setTrackerShareBps(Number(v)), '分红比例已更新'); loadAllState(); }
+
+// === MuleRouter ACTIONS ===
+async function routerTransferOwnership() { const v = $('router-transfer-to').value.trim(); if(!v) return toast('请输入地址','error'); await txWrap(getContract('MuleRouter',true).transferOwnership(v), '转让已发起'); loadAllState(); }
+async function routerAcceptOwnership() { await txWrap(getContract('MuleRouter',true).acceptOwnership(), '已接受管理员权限'); loadAllState(); }
+async function routerRescue() {
+  const token = $('router-rescue-token').value.trim(), to = $('router-rescue-to').value.trim();
+  if(!token||!to) return toast('请输入代币地址和接收地址','error');
+  await txWrap(getContract('MuleRouter',true).rescue(token, to), '代币已提取');
+}
+
+// Auto-load state on page load (read-only, no wallet needed)
+(function initReadonly() {
+  const p = new ethers.JsonRpcProvider(RPC);
+  // Load all read-only state without wallet
+  const load = async () => {
+    try {
+      const admin = new ethers.Contract(ADDR.FactoryAdmin, ABI_ADMIN, p);
+      const [owner, pending, treasury, router, hook, fee, paused] = await Promise.all([
+        admin.owner(), admin.pendingOwner(), admin.treasury(), admin.router(), admin.hook(), admin.creationFee(), admin.paused()
+      ]);
+      $('admin-owner').innerHTML = explorerAddr(owner);
+      $('admin-pending').textContent = pending === ethers.ZeroAddress ? '-' : shortAddr(pending);
+      $('admin-treasury').innerHTML = explorerAddr(treasury);
+      $('admin-router').innerHTML = explorerAddr(router);
+      $('admin-hook').innerHTML = explorerAddr(hook);
+      $('admin-fee').textContent = ethers.formatEther(fee) + ' BONE';
+      $('admin-paused').innerHTML = paused ? '<span class="badge badge-red">已暂停</span>' : '<span class="badge badge-green">正常</span>';
+    } catch(e) { console.error(e); }
+    try {
+      const escrow = new ethers.Contract(ADDR.FeeEscrow, ABI_ESCROW, p);
+      const [owner, pending, hook, factory, recipient] = await Promise.all([escrow.owner(), escrow.pendingOwner(), escrow.hook(), escrow.factory(), escrow.platformRecipient()]);
+      $('escrow-owner').innerHTML = explorerAddr(owner);
+      $('escrow-pending').textContent = pending === ethers.ZeroAddress ? '-' : shortAddr(pending);
+      $('escrow-hook').innerHTML = explorerAddr(hook);
+      $('escrow-factory').innerHTML = explorerAddr(factory);
+      $('escrow-recipient').innerHTML = explorerAddr(recipient);
+    } catch(e) { console.error(e); }
+    try {
+      const factory = new ethers.Contract(ADDR.LaunchFactory, ABI_FACTORY, p);
+      const [owner, pending, count, tick] = await Promise.all([factory.owner(), factory.pendingOwner(), factory.launchCount(), factory.TICK_SPACING()]);
+      $('factory-owner').innerHTML = explorerAddr(owner);
+      $('factory-pending').textContent = pending === ethers.ZeroAddress ? '-' : shortAddr(pending);
+      $('factory-count').textContent = count.toString();
+      $('factory-tick').textContent = tick.toString();
+    } catch(e) { console.error(e); }
+    try {
+      const hook = new ethers.Contract(ADDR.LaunchHook, ABI_HOOK, p);
+      const [owner, pending, bps] = await Promise.all([hook.owner(), hook.pendingOwner(), hook.trackerShareBps()]);
+      $('hook-owner').innerHTML = explorerAddr(owner);
+      $('hook-pending').textContent = pending === ethers.ZeroAddress ? '-' : shortAddr(pending);
+      $('hook-bps').textContent = `${bps.toString()} (${(Number(bps)/100).toFixed(1)}%)`;
+    } catch(e) { console.error(e); }
+    try {
+      const router = new ethers.Contract(ADDR.MuleRouter, ABI_ROUTER, p);
+      const [owner, pending] = await Promise.all([router.owner(), router.pendingOwner()]);
+      $('router-owner').innerHTML = explorerAddr(owner);
+      $('router-pending').textContent = pending === ethers.ZeroAddress ? '-' : shortAddr(pending);
+    } catch(e) { console.error(e); }
+  };
+  load();
+})();
+</script>
+</body>
+</html>
