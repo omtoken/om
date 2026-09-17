@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mule Launchpad - Hashkey 合约管理面板</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #F0F4FF;
+  --bg2: #FFFFFF;
+  --card: #FFFFFF;
+  --border: #E2E8F4;
+  --text1: #1A2138;
+  --text2: #5A6A8A;
+  --text3: #9AA8C2;
+  --blue: #2563FF;
+  --blue-light: #EBF0FF;
+  --blue-bg: #F5F8FF;
+  --green: #00B87A;
+  --green-light: #E6FAF2;
+  --orange: #FF8C00;
+  --orange-light: #FFF5E6;
+  --red: #FF3B5C;
+  --red-light: #FFF0F3;
+  --purple: #8B5CF6;
+  --purple-light: #F3EEFF;
+  --cyan: #06B6D4;
+  --cyan-light: #E8FAFD;
+  --shadow-sm: 0 1px 3px rgba(37,99,255,0.06);
+  --shadow-md: 0 4px 16px rgba(37,99,255,0.08);
+  --shadow-lg: 0 8px 32px rgba(37,99,255,0.12);
+  --radius: 14px;
+  --radius-sm: 10px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+  background: var(--bg);
+  color: var(--text1);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--blue); text-decoration: none; font-weight: 600; }
+a:hover { text-decoration: underline; }
+
+/* TOP BAR */
+.top-bar {
+  background: linear-gradient(135deg, #2563FF 0%, #1D4ED8 50%, #7C3AED 100%);
+  padding: 0 32px;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 4px 24px rgba(37,99,255,0.25);
+}
+.logo-area { display:flex; align-items:center; gap:14px; }
+.logo-icon {
+  width:42px; height:42px; border-radius:12px;
+  background: rgba(255,255,255,0.2);
+  backdrop-filter: blur(10px);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; font-weight:900; color:#fff;
+  border: 2px solid rgba(255,255,255,0.3);
+}
+.logo-main { display:block; color:#fff; font-size:20px; font-weight:800; letter-spacing:-0.5px; }
+.logo-sub { display:block; color:rgba(255,255,255,0.7); font-size:12px; font-weight:500; margin-top:1px; }
+.top-right { display:flex; align-items:center; gap:14px; }
+.chain-badge {
+  display:flex; align-items:center; gap:8px;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+  padding: 8px 16px; border-radius: 100px;
+  color: #fff; font-size: 13px; font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.chain-dot {
+  width:8px; height:8px; border-radius:50%;
+  background: #4ADE80;
+  box-shadow: 0 0 8px #4ADE80;
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity:1; } 50% { opacity:0.5; }
+}
+.connect-btn {
+  display:flex; align-items:center; gap:8px;
+  background: #fff; color: var(--blue);
+  border: none; padding: 10px 22px; border-radius: 100px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.connect-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,255,255,0.3); }
+.connect-btn.connected { background: var(--green-light); color: var(--green); }
+
+/* WALLET BAR */
+.wallet-bar {
+  background: linear-gradient(90deg, #EBF0FF, #F3EEFF, #E8FAFD);
+  padding: 12px 32px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.wb-label { color: var(--text2); font-weight: 500; }
+.wb-addr { color: var(--blue); font-weight: 700; font-family: 'Outfit', monospace; }
+.wb-role {
+  padding: 3px 12px; border-radius: 100px;
+  font-size: 12px; font-weight: 700;
+}
+.wb-role.is-owner { background: var(--green-light); color: var(--green); }
+.wb-role.not-owner { background: var(--orange-light); color: var(--orange); }
+
+/* TABS */
+.tabs-wrap {
+  padding: 20px 32px 0;
+  overflow-x: auto;
+}
+.tabs {
+  display: flex; gap: 6px;
+  background: var(--bg2);
+  padding: 6px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  width: fit-content;
+  min-width: 100%;
+}
+.tab {
+  display:flex; align-items:center; gap:8px;
+  padding: 12px 22px;
+  border: none; background: transparent;
+  border-radius: 12px;
+  font-size: 14px; font-weight: 600;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.25s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.tab:hover { background: var(--blue-light); color: var(--blue); }
+.tab.active {
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(37,99,255,0.3);
+}
+.tab-icon { font-size: 16px; }
+
+/* PANELS */
+.panels { padding: 20px 32px 40px; }
+.panel { display:none; animation: fadeIn 0.3s ease; }
+.panel.active { display:block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* INFO GRID */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.info-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px;
+  transition: all 0.2s;
+}
+.info-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--blue);
+  transform: translateY(-2px);
+}
+.info-label {
+  font-size: 12px; font-weight: 600;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.info-value {
+  font-size: 15px; font-weight: 700;
+  color: var(--text1);
+  word-break: break-all;
+}
+.info-value a { color: var(--blue); }
+
+/* SECTION */
+.section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-sm);
+}
+.section-title {
+  font-size: 17px; font-weight: 800;
+  margin-bottom: 20px;
+  display: flex; align-items: center; gap: 10px;
+  color: var(--text1);
+}
+.section-title .icon {
+  width: 32px; height: 32px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.icon-blue { background: var(--blue-light); }
+.icon-green { background: var(--green-light); }
+.icon-orange { background: var(--orange-light); }
+.icon-red { background: var(--red-light); }
+.icon-purple { background: var(--purple-light); }
+.icon-cyan { background: var(--cyan-light); }
+
+/* GRID */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+@media (max-width: 768px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .top-bar { padding: 0 16px; }
+  .tabs-wrap, .panels { padding-left: 16px; padding-right: 16px; }
+  .info-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* FORM */
+.form-row { margin-bottom: 12px; }
+.form-group { margin-bottom: 10px; }
+.form-group label {
+  display: block;
+  font-size: 13px; font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+input, textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: 'Outfit', 'Noto Sans SC', monospace;
+  color: var(--text1);
+  background: var(--bg);
+  transition: all 0.2s;
+  outline: none;
+}
+input:focus, textarea:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 4px rgba(37,99,255,0.1);
+  background: #fff;
+}
+input::placeholder { color: var(--text3); }
+
+/* BUTTONS */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 11px 24px;
+  border: none; border-radius: var(--radius-sm);
+  font-size: 14px; font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.97); }
+.btn-blue { background: var(--blue); color: #fff; }
+.btn-blue:hover { background: #1D4ED8; box-shadow: 0 4px 16px rgba(37,99,255,0.3); }
+.btn-green { background: var(--green); color: #fff; }
+.btn-green:hover { background: #009E6A; box-shadow: 0 4px 16px rgba(0,184,122,0.3); }
+.btn-orange { background: var(--orange); color: #fff; }
+.btn-orange:hover { background: #E07B00; box-shadow: 0 4px 16px rgba(255,140,0,0.3); }
+.btn-red { background: var(--red); color: #fff; }
+.btn-red:hover { background: #E0334F; box-shadow: 0 4px 16px rgba(255,59,92,0.3); }
+.btn-purple { background: var(--purple); color: #fff; }
+.btn-purple:hover { background: #7C3AED; box-shadow: 0 4px 16px rgba(139,92,246,0.3); }
+.btn-outline {
+  background: transparent;
+  border: 2px solid var(--border);
+  color: var(--text2);
+}
+.btn-outline:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+/* STATUS BAR */
+.status-bar {
+  margin-top: 14px;
+  padding: 0;
+  font-size: 13px;
+  color: var(--text2);
+  min-height: 20px;
+  transition: all 0.3s;
+  border-radius: 8px;
+}
+.status-bar.has-content {
+  padding: 12px 16px;
+  background: var(--blue-light);
+  border: 1px solid rgba(37,99,255,0.15);
+}
+.status-bar.success { background: var(--green-light); border-color: rgba(0,184,122,0.15); color: var(--green); }
+.status-bar.error { background: var(--red-light); border-color: rgba(255,59,92,0.15); color: var(--red); }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 32px; right: 32px;
+  padding: 16px 28px;
+  border-radius: 14px;
+  font-size: 14px; font-weight: 600;
+  color: #fff;
+  background: var(--blue);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 999;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--red); }
+
+/* BADGE */
+.badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 12px; font-weight: 700;
+}
+.badge-green { background: var(--green-light); color: var(--green); }
+.badge-red { background: var(--red-light); color: var(--red); }
+.badge-blue { background: var(--blue-light); color: var(--blue); }
+.badge-orange { background: var(--orange-light); color: var(--orange); }
+
+/* PAIR CARD */
+.pair-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-bottom: 10px;
+}
+.pair-card .pair-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.pair-card .pair-name { font-weight: 700; font-size: 15px; }
+.pair-card .pair-addr { font-size: 12px; color: var(--text3); font-family: monospace; }
+</style>
+</head>
+<body>
+<!-- === HEADER === -->
+<header class="top-bar">
+  <div class="logo-area">
+    <div class="logo-icon">M</div>
+    <div class="logo-text">
+      <span class="logo-main">Mule Launchpad</span>
+      <span class="logo-sub">Hashkey Chain 管理面板</span>
+    </div>
+  </div>
+  <div class="top-right">
+    <div class="chain-badge" id="chainBadge">
+      <span class="chain-dot"></span>
+      Hashkey Chain (177)
+    </div>
+    <button class="connect-btn" id="connectBtn" onclick="connectWallet()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+      连接钱包
+    </button>
+  </div>
+</header>
+
+<!-- === WALLET BAR === -->
+<div class="wallet-bar" id="walletBar" style="display:none">
+  <span class="wb-label">当前钱包:</span>
+  <span class="wb-addr" id="walletAddr">-</span>
+  <span class="wb-role" id="ownerMatch"></span>
+</div>
+
+<!-- === TABS === -->
+<div class="tabs-wrap">
+  <div class="tabs" id="tabBar">
+    <button class="tab active" data-tab="factoryAdmin"><span class="tab-icon">🏛</span>FactoryAdmin</button>
+    <button class="tab" data-tab="feeEscrow"><span class="tab-icon">💰</span>FeeEscrow</button>
+    <button class="tab" data-tab="launchFactory"><span class="tab-icon">🚀</span>LaunchFactory</button>
+    <button class="tab" data-tab="launchHook"><span class="tab-icon">🪝</span>LaunchHook</button>
+    <button class="tab" data-tab="muleRouter"><span class="tab-icon">🔀</span>MuleRouter</button>
+  </div>
+</div>
+
+<!-- === PANELS === -->
+<div class="panels" id="panels">
+
+  <!-- ===== FACTORY ADMIN PANEL ===== -->
+  <div class="panel active" id="panel-factoryAdmin">
+    <div class="info-grid">
+      <div class="info-card"><div class="info-label">合约地址</div><div class="info-value"><a href="https://hsk.blockscout.com/address/0x49dd1b744d7B70330249092f669408401952A0A5" target="_blank">0x49dd...A0A5</a></div></div>
+      <div class="info-card"><div class="info-label">当前 Owner</div><div class="info-value" id="fa_owner">-</div></div>
+      <div class="info-card"><div class="info-label">Pending Owner</div><div class="info-value" id="fa_pending"><span style="color:var(--text3)">-</span></div></div>
+      <div class="info-card"><div class="info-label">WHSK</div><div class="info-value" id="fa_weth"><a href="https://hsk.blockscout.com/address/0xB210D2120d57b758EE163cFfb43e73728c471Cf1" target="_blank">0xB210...1Cf1</a></div></div>
+      <div class="info-card"><div class="info-label">Treasury</div><div class="info-value" id="fa_treasury">-</div></div>
+      <div class="info-card"><div class="info-label">Router</div><div class="info-value" id="fa_router">-</div></div>
+      <div class="info-card"><div class="info-label">Hook</div><div class="info-value" id="fa_hook"><a href="https://hsk.blockscout.com/address/0x0b752D4aA89e64fDbB3307aa752cdC69b4d41098" target="_blank">0x0b75...1098</a></div></div>
+      <div class="info-card"><div class="info-label">Creation Fee</div><div class="info-value" id="fa_fee">-</div></div>
+      <div class="info-card"><div class="info-label">Paused</div><div class="info-value" id="fa_paused">-</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-blue">🔑</span>所有权管理 (Ownable2Step)</div>
+      <div class="grid-2">
+        <div>
+          <div class="form-group"><label>第一步: 发起转让 (transferOwnership)</label><input id="fa_txAddr" placeholder="新 Owner 地址 0x..."></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="fa_transferOwnership()">发起转让</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>第二步: 接受转让 (acceptOwnership) — 需新Owner钱包</label></div>
+          <div class="form-row"><button class="btn btn-green" onclick="fa_acceptOwnership()">接受所有权</button></div>
+        </div>
+      </div>
+      <div class="status-bar" id="fa_ownSt"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-purple">⚙</span>配置管理</div>
+      <div class="grid-2">
+        <div>
+          <div class="form-group"><label>设置 Hook (仅可设置一次)</label><input id="fa_hookAddr" placeholder="Hook 地址"></div>
+          <div class="form-row"><button class="btn btn-orange" onclick="fa_setHook()">设置 Hook</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>设置 Treasury</label><input id="fa_treasuryAddr" placeholder="Treasury 地址"></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="fa_setTreasury()">设置</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>设置 Router</label><input id="fa_routerAddr" placeholder="Router 地址"></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="fa_setRouter()">设置</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>设置 Creation Fee (HSK)</label><input id="fa_feeVal" placeholder="例如 1.0"></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="fa_setCreationFee()">设置</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>注册 Quote Token</label><input id="fa_qreg" placeholder="Quote Token 地址"></div>
+          <div class="form-row"><button class="btn btn-green" onclick="fa_registerQuote()">注册</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>禁用 Quote Token</label><input id="fa_qdis" placeholder="Quote Token 地址"></div>
+          <div class="form-row"><button class="btn btn-orange" onclick="fa_disableQuote()">禁用</button></div>
+        </div>
+      </div>
+      <div class="status-bar" id="fa_cfgSt"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-red">⚠</span>暂停 / 黑名单</div>
+      <div class="grid-2">
+        <div>
+          <div class="form-group"><label>暂停控制</label></div>
+          <div class="btn-group">
+            <button class="btn btn-red" onclick="fa_setPaused(true)">暂停发币</button>
+            <button class="btn btn-green" onclick="fa_setPaused(false)">恢复发币</button>
+          </div>
+        </div>
+        <div>
+          <div class="form-group"><label>黑名单地址</label><input id="fa_blAddr" placeholder="0x..."></div>
+          <div class="btn-group">
+            <button class="btn btn-red" onclick="fa_setBlacklist(true)">加入黑名单</button>
+            <button class="btn btn-green" onclick="fa_setBlacklist(false)">移出黑名单</button>
+          </div>
+        </div>
+        <div style="grid-column: 1/-1;">
+          <div class="form-group"><label>批量黑名单 (逗号分隔地址)</label><textarea id="fa_blBatch" rows="2" placeholder="0x..., 0x..."></textarea></div>
+          <div class="btn-group">
+            <button class="btn btn-red" onclick="fa_batchBlacklist(true)">批量拉黑</button>
+            <button class="btn btn-green" onclick="fa_batchBlacklist(false)">批量解除</button>
+          </div>
+        </div>
+      </div>
+      <div class="status-bar" id="fa_blSt"></div>
+    </div>
+  </div>
+
+  <!-- ===== FEE ESCROW PANEL ===== -->
+  <div class="panel" id="panel-feeEscrow">
+    <div class="info-grid">
+      <div class="info-card"><div class="info-label">合约地址</div><div class="info-value"><a href="https://hsk.blockscout.com/address/0x9c4bDD79cF4C71d415Ba2bc5c60f57833B2c81Ed" target="_blank">0x9c4b...81Ed</a></div></div>
+      <div class="info-card"><div class="info-label">当前 Owner</div><div class="info-value" id="fe_owner">-</div></div>
+      <div class="info-card"><div class="info-label">Platform Recipient</div><div class="info-value" id="fe_recipient">-</div></div>
+      <div class="info-card"><div class="info-label">Hook</div><div class="info-value" id="fe_hook">-</div></div>
+      <div class="info-card"><div class="info-label">Factory</div><div class="info-value" id="fe_factory"><a href="https://hsk.blockscout.com/address/0x32B869bEaa3A303190B307d4F893D6CcA039E8D4" target="_blank">0x32B8...E8D4</a></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-blue">🔑</span>所有权管理 (Ownable2Step)</div>
+      <div class="grid-2">
+        <div>
+          <div class="form-group"><label>第一步: 发起转让 (transferOwnership)</label><input id="fe_txAddr" placeholder="新 Owner 地址 0x..."></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="fe_transferOwnership()">发起转让</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>第二步: 接受转让 (acceptOwnership)</label></div>
+          <div class="form-row"><button class="btn btn-green" onclick="fe_acceptOwnership()">接受所有权</button></div>
+        </div>
+      </div>
+      <div class="status-bar" id="fe_ownSt"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-green">💰</span>手续费管理</div>
+      <div class="grid-2">
+        <div>
+          <div class="form-group"><label>设置 Hook (仅可设置一次)</label><input id="fe_hookAddr" placeholder="Hook 地址"></div>
+          <div class="form-row"><button class="btn btn-orange" onclick="fe_setHook()">设置 Hook</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>设置 Factory (仅可设置一次)</label><input id="fe_factoryAddr" placeholder="Factory 地址"></div>
+          <div class="form-row"><button class="btn btn-orange" onclick="fe_setFactory()">设置 Factory</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>设置 Platform Recipient</label><input id="fe_recipientAddr" placeholder="接收地址 0x..."></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="fe_setPlatformRecipient()">设置</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>分配全部手续费</label><p style="font-size:13px;color:var(--text2);margin-top:4px;">调用 distribute() 将所有池子的待分配手续费分发</p></div>
+          <div class="form-row"><button class="btn btn-green" onclick="fe_distribute()">分配全部</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>分配指定池子 (索引)</label><input id="fe_distIdx" placeholder="池子索引，例如 0"></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="fe_distributeFor()">分配单个</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>批量分配 (起始索引, 数量)</label>
+            <div style="display:flex;gap:8px;">
+              <input id="fe_distStart" placeholder="起始索引" style="flex:1;">
+              <input id="fe_distCount" placeholder="数量 (最多20)" style="flex:1;">
+            </div>
+          </div>
+          <div class="form-row"><button class="btn btn-blue" onclick="fe_distributeRange()">批量分配</button></div>
+        </div>
+      </div>
+      <div class="status-bar" id="fe_cfgSt"></div>
+    </div>
+  </div>
+
+  <!-- ===== LAUNCH FACTORY PANEL ===== -->
+  <div class="panel" id="panel-launchFactory">
+    <div class="info-grid">
+      <div class="info-card"><div class="info-label">合约地址</div><div class="info-value"><a href="https://hsk.blockscout.com/address/0x32B869bEaa3A303190B307d4F893D6CcA039E8D4" target="_blank">0x32B8...E8D4</a></div></div>
+      <div class="info-card"><div class="info-label">当前 Owner</div><div class="info-value" id="lf_owner">-</div></div>
+      <div class="info-card"><div class="info-label">Admin (FactoryAdmin)</div><div class="info-value" id="lf_admin"><a href="https://hsk.blockscout.com/address/0x49dd1b744d7B70330249092f669408401952A0A5" target="_blank">0x49dd...A0A5</a></div></div>
+      <div class="info-card"><div class="info-label">PoolManager</div><div class="info-value" id="lf_pm"><a href="https://hsk.blockscout.com/address/0xa5ef140471486a25a71cd75AE38A26e945D2E3c4" target="_blank">0xa5ef...E3c4</a></div></div>
+      <div class="info-card"><div class="info-label">发射数量</div><div class="info-value" id="lf_count">-</div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-blue">🔑</span>所有权管理 (Ownable2Step)</div>
+      <div class="grid-2">
+        <div>
+          <div class="form-group"><label>第一步: 发起转让 (transferOwnership)</label><input id="lf_txAddr" placeholder="新 Owner 地址 0x..."></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="lf_transferOwnership()">发起转让</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>第二步: 接受转让 (acceptOwnership)</label></div>
+          <div class="form-row"><button class="btn btn-green" onclick="lf_acceptOwnership()">接受所有权</button></div>
+        </div>
+      </div>
+      <div class="status-bar" id="lf_ownSt"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-orange">🚀</span>发射信息</div>
+      <p style="color:var(--text2);font-size:14px;">LaunchFactory 的暂停/恢复和 Hook 设置请通过 FactoryAdmin 面板操作。</p>
+    </div>
+  </div>
+
+  <!-- ===== LAUNCH HOOK PANEL ===== -->
+  <div class="panel" id="panel-launchHook">
+    <div class="info-grid">
+      <div class="info-card"><div class="info-label">合约地址</div><div class="info-value"><a href="https://hsk.blockscout.com/address/0x0b752D4aA89e64fDbB3307aa752cdC69b4d41098" target="_blank">0x0b75...1098</a></div></div>
+      <div class="info-card"><div class="info-label">当前 Owner</div><div class="info-value" id="lh_owner">-</div></div>
+      <div class="info-card"><div class="info-label">Factory</div><div class="info-value" id="lh_factory"><a href="https://hsk.blockscout.com/address/0x32B869bEaa3A303190B307d4F893D6CcA039E8D4" target="_blank">0x32B8...E8D4</a></div></div>
+      <div class="info-card"><div class="info-label">Escrow</div><div class="info-value" id="lh_escrow"><a href="https://hsk.blockscout.com/address/0x9c4bDD79cF4C71d415Ba2bc5c60f57833B2c81Ed" target="_blank">0x9c4b...81Ed</a></div></div>
+      <div class="info-card"><div class="info-label">Tracker Share BPS</div><div class="info-value" id="lh_bps">-</div></div>
+      <div class="info-card"><div class="info-label">Hook Flags</div><div class="info-value"><span class="badge badge-blue">0x1098</span></div></div>
+      <div class="info-card"><div class="info-label">beforeInitialize</div><div class="info-value"><span class="badge badge-green">✓ 0x1000</span></div></div>
+      <div class="info-card"><div class="info-label">beforeAddLiquidity</div><div class="info-value"><span class="badge badge-green">✓ 0x0080</span></div></div>
+      <div class="info-card"><div class="info-label">beforeSwap</div><div class="info-value"><span class="badge badge-green">✓ 0x0010</span></div></div>
+      <div class="info-card"><div class="info-label">afterSwap</div><div class="info-value"><span class="badge badge-green">✓ 0x0008</span></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-blue">🔑</span>所有权管理 (Ownable2Step)</div>
+      <div class="grid-2">
+        <div>
+          <div class="form-group"><label>第一步: 发起转让 (transferOwnership)</label><input id="lh_txAddr" placeholder="新 Owner 地址 0x..."></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="lh_transferOwnership()">发起转让</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>第二步: 接受转让 (acceptOwnership)</label></div>
+          <div class="form-row"><button class="btn btn-green" onclick="lh_acceptOwnership()">接受所有权</button></div>
+        </div>
+      </div>
+      <div class="status-bar" id="lh_ownSt"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-cyan">🪝</span>Hook 配置</div>
+      <div class="grid-2">
+        <div>
+          <div class="form-group"><label>设置 Tracker 分成比例 (bps)</label><input id="lh_trackerBps" placeholder="例如 7000 = 70%"></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="lh_setTrackerShareBps()">设置</button></div>
+        </div>
+      </div>
+      <div class="status-bar" id="lh_cfgSt"></div>
+    </div>
+  </div>
+
+  <!-- ===== MULE ROUTER PANEL ===== -->
+  <div class="panel" id="panel-muleRouter">
+    <div class="info-grid">
+      <div class="info-card"><div class="info-label">合约地址</div><div class="info-value"><a href="https://hsk.blockscout.com/address/0x742e01f22482956A1437F8dc2aB610a6C4D9da6B" target="_blank">0x742e...dA6B</a></div></div>
+      <div class="info-card"><div class="info-label">当前 Owner</div><div class="info-value" id="mr_owner">-</div></div>
+      <div class="info-card"><div class="info-label">PoolManager</div><div class="info-value"><a href="https://hsk.blockscout.com/address/0xa5ef140471486a25a71cd75AE38A26e945D2E3c4" target="_blank">0xa5ef...E3c4</a></div></div>
+      <div class="info-card"><div class="info-label">WHSK (WETH)</div><div class="info-value" id="mr_weth"><a href="https://hsk.blockscout.com/address/0xB210D2120d57b758EE163cFfb43e73728c471Cf1" target="_blank">0xB210...1Cf1</a></div></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-blue">🔑</span>所有权管理 (Ownable2Step)</div>
+      <div class="grid-2">
+        <div>
+          <div class="form-group"><label>第一步: 发起转让 (transferOwnership)</label><input id="mr_txAddr" placeholder="新 Owner 地址 0x..."></div>
+          <div class="form-row"><button class="btn btn-blue" onclick="mr_transferOwnership()">发起转让</button></div>
+        </div>
+        <div>
+          <div class="form-group"><label>第二步: 接受转让 (acceptOwnership)</label></div>
+          <div class="form-row"><button class="btn btn-green" onclick="mr_acceptOwnership()">接受所有权</button></div>
+        </div>
+      </div>
+      <div class="status-bar" id="mr_ownSt"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="icon icon-orange">🔀</span>紧急操作</div>
+      <div class="grid-2">
+        <div>
+          <div class="form-group"><label>Rescue 代币 (提取卡住的代币)</label></div>
+          <div class="form-group"><input id="mr_rescueToken" placeholder="代币地址 0x..."></div>
+          <div class="form-group"><input id="mr_rescueTo" placeholder="接收地址 0x..."></div>
+          <div class="form-row"><button class="btn btn-orange" onclick="mr_rescue()">紧急提取</button></div>
+        </div>
+      </div>
+      <div class="status-bar" id="mr_cfgSt"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- === TOAST === -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* === JS_PLACEHOLDER === */
+
+// ========== CONFIG ==========
+const CONFIG = {
+  chainId: '0xb1', // 177
+  chainIdDec: 177,
+  rpcUrl: 'https://mainnet.hsk.xyz',
+  explorer: 'https://hsk.blockscout.com',
+  contracts: {
+    factoryAdmin: '0x49dd1b744d7B70330249092f669408401952A0A5',
+    feeEscrow: '0x9c4bDD79cF4C71d415Ba2bc5c60f57833B2c81Ed',
+    launchFactory: '0x32B869bEaa3A303190B307d4F893D6CcA039E8D4',
+    launchHook: '0x0b752D4aA89e64fDbB3307aa752cdC69b4d41098',
+    muleRouter: '0x742e01f22482956A1437F8dc2aB610a6C4D9da6B',
+    whsk: '0xB210D2120d57b758EE163cFfb43e73728c471Cf1',
+  }
+};
+
+// ========== ABIs ==========
+const ABI_OWNABLE2STEP = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function transferOwnership(address)',
+  'function acceptOwnership()',
+  'event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner)',
+  'event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)',
+];
+const ABI_FACTORY_ADMIN = [
+  ...ABI_OWNABLE2STEP,
+  'function weth() view returns (address)',
+  'function treasury() view returns (address)',
+  'function router() view returns (address)',
+  'function hook() view returns (address)',
+  'function creationFee() view returns (uint256)',
+  'function paused() view returns (bool)',
+  'function blacklist(address) view returns (bool)',
+  'function setTreasury(address)',
+  'function setRouter(address)',
+  'function setHook(address)',
+  'function setCreationFee(uint256)',
+  'function registerQuote(address)',
+  'function disableQuote(address)',
+  'function setPaused(bool)',
+  'function setBlacklist(address,bool)',
+  'function setBlacklistBatch(address[],bool)',
+];
+const ABI_FEE_ESCROW = [
+  ...ABI_OWNABLE2STEP,
+  'function hook() view returns (address)',
+  'function factory() view returns (address)',
+  'function platformRecipient() view returns (address)',
+  'function setHook(address)',
+  'function setFactory(address)',
+  'function setPlatformRecipient(address)',
+  'function distribute()',
+  'function distributeFor(uint256)',
+  'function distributeRange(uint256,uint256)',
+];
+const ABI_LAUNCH_FACTORY = [
+  ...ABI_OWNABLE2STEP,
+  'function poolManager() view returns (address)',
+  'function admin() view returns (address)',
+  'function launchCount() view returns (uint256)',
+  'function allLaunches(uint256) view returns (address)',
+];
+const ABI_LAUNCH_HOOK = [
+  ...ABI_OWNABLE2STEP,
+  'function poolManager() view returns (address)',
+  'function escrow() view returns (address)',
+  'function factory() view returns (address)',
+  'function trackerShareBps() view returns (uint256)',
+  'function setTrackerShareBps(uint256)',
+];
+const ABI_MULE_ROUTER = [
+  ...ABI_OWNABLE2STEP,
+  'function poolManager() view returns (address)',
+  'function weth() view returns (address)',
+  'function rescue(address,address)',
+];
+
+// ========== STATE ==========
+let provider = null;
+let signer = null;
+let userAddress = null;
+
+// ========== HELPERS ==========
+function shortAddr(addr) {
+  if (!addr || addr === '0x0000000000000000000000000000000000000000') return '<span style="color:var(--text3)">无</span>';
+  return addr.slice(0,6) + '...' + addr.slice(-4);
+}
+function explorerLink(addr) {
+  if (!addr || addr === '0x0000000000000000000000000000000000000000') return '<span style="color:var(--text3)">无</span>';
+  return `<a href="${CONFIG.explorer}/address/${addr}" target="_blank">${shortAddr(addr)}</a>`;
+}
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+function setStatus(id, msg, type='') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'status-bar has-content ' + type;
+}
+function getContract(addr, abi, useSigner=false) {
+  const p = useSigner ? signer : (provider || new ethers.JsonRpcProvider(CONFIG.rpcUrl));
+  return new ethers.Contract(addr, abi, p);
+}
+function requireSigner() {
+  if (!signer) { showToast('请先连接钱包', 'error'); return false; }
+  return true;
+}
+async function txWrap(promise, statusId, successMsg) {
+  try {
+    setStatus(statusId, '交易提交中...', '');
+    const tx = await promise;
+    setStatus(statusId, '等待确认...', '');
+    const receipt = await tx.wait();
+    setStatus(statusId, successMsg || '交易成功!', 'success');
+    showToast(successMsg || '交易成功!', 'success');
+    return receipt;
+  } catch(e) {
+    const msg = e.reason || e.message || '交易失败';
+    setStatus(statusId, '失败: ' + msg, 'error');
+    showToast('交易失败', 'error');
+    console.error(e);
+  }
+}
+
+// ========== WALLET ==========
+async function connectWallet() {
+  if (!window.ethereum) { showToast('请安装 MetaMask', 'error'); return; }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    // Switch to Hashkey Chain
+    try {
+      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CONFIG.chainId }] });
+    } catch(switchErr) {
+      if (switchErr.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: CONFIG.chainId,
+            chainName: 'Hashkey Chain',
+            rpcUrls: [CONFIG.rpcUrl],
+            blockExplorerUrls: [CONFIG.explorer],
+            nativeCurrency: { name: 'HSK', symbol: 'HSK', decimals: 18 }
+          }]
+        });
+      }
+    }
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
+    document.getElementById('walletAddr').textContent = shortAddr(userAddress);
+    document.getElementById('walletBar').style.display = 'flex';
+    const btn = document.getElementById('connectBtn');
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg>${shortAddr(userAddress)}`;
+    btn.classList.add('connected');
+    showToast('钱包已连接', 'success');
+    loadAllData();
+  } catch(e) {
+    showToast('连接失败: ' + (e.message || e), 'error');
+  }
+}
+
+// ========== TABS ==========
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ========== LOAD DATA ==========
+async function loadAllData() {
+  const readProvider = provider || new ethers.JsonRpcProvider(CONFIG.rpcUrl);
+  const isOwner = {};
+
+  // FactoryAdmin
+  try {
+    const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN);
+    const [owner, pending, weth, treasury, router, hook, fee, paused] = await Promise.all([
+      c.owner(), c.pendingOwner(), c.weth(), c.treasury(), c.router(), c.hook(), c.creationFee(), c.paused()
+    ]);
+    document.getElementById('fa_owner').innerHTML = explorerLink(owner);
+    document.getElementById('fa_pending').innerHTML = explorerLink(pending);
+    document.getElementById('fa_weth').innerHTML = explorerLink(weth);
+    document.getElementById('fa_treasury').innerHTML = explorerLink(treasury);
+    document.getElementById('fa_router').innerHTML = explorerLink(router);
+    document.getElementById('fa_hook').innerHTML = explorerLink(hook);
+    document.getElementById('fa_fee').textContent = ethers.formatEther(fee) + ' HSK';
+    document.getElementById('fa_paused').innerHTML = paused
+      ? '<span class="badge badge-red">已暂停</span>'
+      : '<span class="badge badge-green">正常</span>';
+    isOwner.fa = userAddress && owner.toLowerCase() === userAddress.toLowerCase();
+  } catch(e) { console.error('FactoryAdmin load error:', e); }
+
+  // FeeEscrow
+  try {
+    const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW);
+    const [owner, hook, recipient] = await Promise.all([c.owner(), c.hook(), c.platformRecipient()]);
+    document.getElementById('fe_owner').innerHTML = explorerLink(owner);
+    document.getElementById('fe_hook').innerHTML = explorerLink(hook);
+    document.getElementById('fe_recipient').innerHTML = explorerLink(recipient);
+    isOwner.fe = userAddress && owner.toLowerCase() === userAddress.toLowerCase();
+  } catch(e) { console.error('FeeEscrow load error:', e); }
+
+  // LaunchFactory
+  try {
+    const c = getContract(CONFIG.contracts.launchFactory, ABI_LAUNCH_FACTORY);
+    const [owner, count] = await Promise.all([c.owner(), c.launchCount()]);
+    document.getElementById('lf_owner').innerHTML = explorerLink(owner);
+    document.getElementById('lf_count').textContent = count.toString();
+    isOwner.lf = userAddress && owner.toLowerCase() === userAddress.toLowerCase();
+  } catch(e) { console.error('LaunchFactory load error:', e); }
+
+  // LaunchHook
+  try {
+    const c = getContract(CONFIG.contracts.launchHook, ABI_LAUNCH_HOOK);
+    const [owner, escrow, bps] = await Promise.all([c.owner(), c.escrow(), c.trackerShareBps()]);
+    document.getElementById('lh_owner').innerHTML = explorerLink(owner);
+    document.getElementById('lh_escrow').innerHTML = explorerLink(escrow);
+    document.getElementById('lh_bps').textContent = bps.toString() + ' bps (' + (Number(bps)/100) + '%)';
+    isOwner.lh = userAddress && owner.toLowerCase() === userAddress.toLowerCase();
+  } catch(e) { console.error('LaunchHook load error:', e); }
+
+  // MuleRouter
+  try {
+    const c = getContract(CONFIG.contracts.muleRouter, ABI_MULE_ROUTER);
+    const owner = await c.owner();
+    document.getElementById('mr_owner').innerHTML = explorerLink(owner);
+    isOwner.mr = userAddress && owner.toLowerCase() === userAddress.toLowerCase();
+  } catch(e) { console.error('MuleRouter load error:', e); }
+
+  // Owner match badge
+  const anyOwner = Object.values(isOwner).some(v => v);
+  const matchEl = document.getElementById('ownerMatch');
+  if (anyOwner) {
+    matchEl.className = 'wb-role is-owner';
+    matchEl.textContent = '管理员';
+  } else if (userAddress) {
+    matchEl.className = 'wb-role not-owner';
+    matchEl.textContent = '非管理员';
+  }
+}
+
+// Also load on page load without wallet
+window.addEventListener('load', () => {
+  loadAllData();
+  // Auto-connect if already authorized
+  if (window.ethereum) {
+    window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+      if (accounts.length > 0) connectWallet();
+    });
+  }
+});
+
+// ========== FACTORY ADMIN ACTIONS ==========
+async function fa_transferOwnership() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fa_txAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.transferOwnership(addr), 'fa_ownSt', '转让已发起');
+}
+async function fa_acceptOwnership() {
+  if (!requireSigner()) return;
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.acceptOwnership(), 'fa_ownSt', '所有权已接受');
+}
+async function fa_setTreasury() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fa_treasuryAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.setTreasury(addr), 'fa_cfgSt', 'Treasury 已更新');
+}
+async function fa_setHook() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fa_hookAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.setHook(addr), 'fa_cfgSt', 'Hook 已设置 (注意: 仅可设置一次!)');
+}
+async function fa_setRouter() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fa_routerAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.setRouter(addr), 'fa_cfgSt', 'Router 已更新');
+}
+async function fa_setCreationFee() {
+  if (!requireSigner()) return;
+  const val = document.getElementById('fa_feeVal').value.trim();
+  if (!val) { showToast('请输入费用', 'error'); return; }
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.setCreationFee(ethers.parseEther(val)), 'fa_cfgSt', 'Creation Fee 已更新');
+}
+async function fa_registerQuote() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fa_qreg').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.registerQuote(addr), 'fa_cfgSt', 'Quote Token 已注册');
+}
+async function fa_disableQuote() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fa_qdis').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.disableQuote(addr), 'fa_cfgSt', 'Quote Token 已禁用');
+}
+async function fa_setPaused(val) {
+  if (!requireSigner()) return;
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.setPaused(val), 'fa_blSt', val ? '已暂停发币' : '已恢复发币');
+}
+async function fa_setBlacklist(add) {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fa_blAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.setBlacklist(addr, add), 'fa_blSt', add ? '已加入黑名单' : '已移出黑名单');
+}
+async function fa_batchBlacklist(add) {
+  if (!requireSigner()) return;
+  const raw = document.getElementById('fa_blBatch').value.trim();
+  if (!raw) { showToast('请输入地址', 'error'); return; }
+  const addrs = raw.split(',').map(a => a.trim()).filter(a => a);
+  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
+  await txWrap(c.setBlacklistBatch(addrs, add), 'fa_blSt', `批量${add ? '拉黑' : '解除'}完成 (${addrs.length} 个地址)`);
+}
+
+// ========== FEE ESCROW ACTIONS ==========
+async function fe_transferOwnership() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fe_txAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
+  await txWrap(c.transferOwnership(addr), 'fe_ownSt', '转让已发起');
+}
+async function fe_acceptOwnership() {
+  if (!requireSigner()) return;
+  const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
+  await txWrap(c.acceptOwnership(), 'fe_ownSt', '所有权已接受');
+}
+async function fe_setPlatformRecipient() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fe_recipientAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
+  await txWrap(c.setPlatformRecipient(addr), 'fe_cfgSt', 'Platform Recipient 已更新');
+}
+async function fe_setHook() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fe_hookAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
+  await txWrap(c.setHook(addr), 'fe_cfgSt', 'Hook 已设置 (注意: 仅可设置一次!)');
+}
+async function fe_setFactory() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('fe_factoryAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
+  await txWrap(c.setFactory(addr), 'fe_cfgSt', 'Factory 已设置 (注意: 仅可设置一次!)');
+}
+async function fe_distribute() {
+  if (!requireSigner()) return;
+  const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
+  await txWrap(c.distribute(), 'fe_cfgSt', '全部手续费已分配');
+}
+async function fe_distributeFor() {
+  if (!requireSigner()) return;
+  const idx = document.getElementById('fe_distIdx').value.trim();
+  if (idx === '') { showToast('请输入池子索引', 'error'); return; }
+  const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
+  await txWrap(c.distributeFor(parseInt(idx)), 'fe_cfgSt', `池子 #${idx} 手续费已分配`);
+}
+async function fe_distributeRange() {
+  if (!requireSigner()) return;
+  const start = document.getElementById('fe_distStart').value.trim();
+  const count = document.getElementById('fe_distCount').value.trim();
+  if (start === '' || count === '') { showToast('请输入起始索引和数量', 'error'); return; }
+  const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
+  await txWrap(c.distributeRange(parseInt(start), parseInt(count)), 'fe_cfgSt', `批量分配完成 (${count} 个池子)`);
+}
+
+// ========== LAUNCH FACTORY ACTIONS ==========
+async function lf_transferOwnership() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('lf_txAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.launchFactory, ABI_LAUNCH_FACTORY, true);
+  await txWrap(c.transferOwnership(addr), 'lf_ownSt', '转让已发起');
+}
+async function lf_acceptOwnership() {
+  if (!requireSigner()) return;
+  const c = getContract(CONFIG.contracts.launchFactory, ABI_LAUNCH_FACTORY, true);
+  await txWrap(c.acceptOwnership(), 'lf_ownSt', '所有权已接受');
+}
+// ========== LAUNCH HOOK ACTIONS ==========
+async function lh_transferOwnership() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('lh_txAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.launchHook, ABI_LAUNCH_HOOK, true);
+  await txWrap(c.transferOwnership(addr), 'lh_ownSt', '转让已发起');
+}
+async function lh_acceptOwnership() {
+  if (!requireSigner()) return;
+  const c = getContract(CONFIG.contracts.launchHook, ABI_LAUNCH_HOOK, true);
+  await txWrap(c.acceptOwnership(), 'lh_ownSt', '所有权已接受');
+}
+async function lh_setTrackerShareBps() {
+  if (!requireSigner()) return;
+  const val = document.getElementById('lh_trackerBps').value.trim();
+  if (!val) { showToast('请输入数值', 'error'); return; }
+  const c = getContract(CONFIG.contracts.launchHook, ABI_LAUNCH_HOOK, true);
+  await txWrap(c.setTrackerShareBps(parseInt(val)), 'lh_cfgSt', 'Tracker 分成比例已更新');
+}
+
+// ========== MULE ROUTER ACTIONS ==========
+async function mr_transferOwnership() {
+  if (!requireSigner()) return;
+  const addr = document.getElementById('mr_txAddr').value.trim();
+  if (!addr) { showToast('请输入地址', 'error'); return; }
+  const c = getContract(CONFIG.contracts.muleRouter, ABI_MULE_ROUTER, true);
+  await txWrap(c.transferOwnership(addr), 'mr_ownSt', '转让已发起');
+}
+async function mr_acceptOwnership() {
+  if (!requireSigner()) return;
+  const c = getContract(CONFIG.contracts.muleRouter, ABI_MULE_ROUTER, true);
+  await txWrap(c.acceptOwnership(), 'mr_ownSt', '所有权已接受');
+}
+async function mr_rescue() {
+  if (!requireSigner()) return;
+  const token = document.getElementById('mr_rescueToken').value.trim();
+  const to = document.getElementById('mr_rescueTo').value.trim();
+  if (!token || !to) { showToast('请输入完整信息', 'error'); return; }
+  const c = getContract(CONFIG.contracts.muleRouter, ABI_MULE_ROUTER, true);
+  await txWrap(c.rescue(token, to), 'mr_cfgSt', '代币已紧急提取');
+}
+</script>
+</body>
+</html>
