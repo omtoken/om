@@ -407,11 +407,11 @@ input::placeholder { color: var(--text3); }
       <div class="section-title"><span class="icon icon-blue">🔑</span>所有权管理 (Ownable2Step)</div>
       <div class="grid-2">
         <div>
-          <div class="form-group"><label>第一步: 发起转让 (transferOwnership)</label><input id="fa_txAddr" placeholder="新 Owner 地址 0x..."></div>
+          <div class="form-group"><label>第一步: 发起转让 (把管理权限转给新地址，需要对方接受才生效)</label><input id="fa_txAddr" placeholder="新 Owner 地址 0x..."></div>
           <div class="form-row"><button class="btn btn-blue" onclick="fa_transferOwnership()">发起转让</button></div>
         </div>
         <div>
-          <div class="form-group"><label>第二步: 接受转让 (acceptOwnership) — 需新Owner钱包</label></div>
+          <div class="form-group"><label>第二步: 接受转让 (用新Owner钱包点击这里接受管理权限)</label></div>
           <div class="form-row"><button class="btn btn-green" onclick="fa_acceptOwnership()">接受所有权</button></div>
         </div>
       </div>
@@ -422,27 +422,23 @@ input::placeholder { color: var(--text3); }
       <div class="section-title"><span class="icon icon-purple">⚙</span>配置管理</div>
       <div class="grid-2">
         <div>
-          <div class="form-group"><label>设置 Hook (仅可设置一次)</label><input id="fa_hookAddr" placeholder="Hook 地址"></div>
-          <div class="form-row"><button class="btn btn-orange" onclick="fa_setHook()">设置 Hook</button></div>
-        </div>
-        <div>
-          <div class="form-group"><label>设置 Treasury</label><input id="fa_treasuryAddr" placeholder="Treasury 地址"></div>
+          <div class="form-group"><label>设置 Treasury (国库地址，收取的创建费用会转到这里)</label><input id="fa_treasuryAddr" placeholder="Treasury 地址"></div>
           <div class="form-row"><button class="btn btn-blue" onclick="fa_setTreasury()">设置</button></div>
         </div>
         <div>
-          <div class="form-group"><label>设置 Router</label><input id="fa_routerAddr" placeholder="Router 地址"></div>
+          <div class="form-group"><label>设置 Router (交易路由合约地址)</label><input id="fa_routerAddr" placeholder="Router 地址"></div>
           <div class="form-row"><button class="btn btn-blue" onclick="fa_setRouter()">设置</button></div>
         </div>
         <div>
-          <div class="form-group"><label>设置 Creation Fee (HSK)</label><input id="fa_feeVal" placeholder="例如 1.0"></div>
+          <div class="form-group"><label>设置 Creation Fee (创建代币需要支付的费用，单位 HSK)</label><input id="fa_feeVal" placeholder="例如 1.0"></div>
           <div class="form-row"><button class="btn btn-blue" onclick="fa_setCreationFee()">设置</button></div>
         </div>
         <div>
-          <div class="form-group"><label>注册 Quote Token</label><input id="fa_qreg" placeholder="Quote Token 地址"></div>
+          <div class="form-group"><label>注册 Quote Token (允许作为交易对的代币，比如 WHSK)</label><input id="fa_qreg" placeholder="Quote Token 地址"></div>
           <div class="form-row"><button class="btn btn-green" onclick="fa_registerQuote()">注册</button></div>
         </div>
         <div>
-          <div class="form-group"><label>禁用 Quote Token</label><input id="fa_qdis" placeholder="Quote Token 地址"></div>
+          <div class="form-group"><label>禁用 Quote Token (禁止某个代币作为交易对)</label><input id="fa_qdis" placeholder="Quote Token 地址"></div>
           <div class="form-row"><button class="btn btn-orange" onclick="fa_disableQuote()">禁用</button></div>
         </div>
       </div>
@@ -453,21 +449,21 @@ input::placeholder { color: var(--text3); }
       <div class="section-title"><span class="icon icon-red">⚠</span>暂停 / 黑名单</div>
       <div class="grid-2">
         <div>
-          <div class="form-group"><label>暂停控制</label></div>
+          <div class="form-group"><label>暂停控制 (暂停后所有人都无法创建新代币)</label></div>
           <div class="btn-group">
             <button class="btn btn-red" onclick="fa_setPaused(true)">暂停发币</button>
             <button class="btn btn-green" onclick="fa_setPaused(false)">恢复发币</button>
           </div>
         </div>
         <div>
-          <div class="form-group"><label>黑名单地址</label><input id="fa_blAddr" placeholder="0x..."></div>
+          <div class="form-group"><label>黑名单地址 (被拉黑的地址无法获得持仓分红)</label><input id="fa_blAddr" placeholder="0x..."></div>
           <div class="btn-group">
             <button class="btn btn-red" onclick="fa_setBlacklist(true)">加入黑名单</button>
             <button class="btn btn-green" onclick="fa_setBlacklist(false)">移出黑名单</button>
           </div>
         </div>
         <div style="grid-column: 1/-1;">
-          <div class="form-group"><label>批量黑名单 (逗号分隔地址)</label><textarea id="fa_blBatch" rows="2" placeholder="0x..., 0x..."></textarea></div>
+          <div class="form-group"><label>批量黑名单 (一次拉黑多个地址，用逗号分隔)</label><textarea id="fa_blBatch" rows="2" placeholder="0x..., 0x..."></textarea></div>
           <div class="btn-group">
             <button class="btn btn-red" onclick="fa_batchBlacklist(true)">批量拉黑</button>
             <button class="btn btn-green" onclick="fa_batchBlacklist(false)">批量解除</button>
@@ -492,11 +488,11 @@ input::placeholder { color: var(--text3); }
       <div class="section-title"><span class="icon icon-blue">🔑</span>所有权管理 (Ownable2Step)</div>
       <div class="grid-2">
         <div>
-          <div class="form-group"><label>第一步: 发起转让 (transferOwnership)</label><input id="fe_txAddr" placeholder="新 Owner 地址 0x..."></div>
+          <div class="form-group"><label>第一步: 发起转让 (把管理权限转给新地址，需要对方接受才生效)</label><input id="fe_txAddr" placeholder="新 Owner 地址 0x..."></div>
           <div class="form-row"><button class="btn btn-blue" onclick="fe_transferOwnership()">发起转让</button></div>
         </div>
         <div>
-          <div class="form-group"><label>第二步: 接受转让 (acceptOwnership)</label></div>
+          <div class="form-group"><label>第二步: 接受转让 (用新Owner钱包点击这里接受管理权限)</label></div>
           <div class="form-row"><button class="btn btn-green" onclick="fe_acceptOwnership()">接受所有权</button></div>
         </div>
       </div>
@@ -507,27 +503,19 @@ input::placeholder { color: var(--text3); }
       <div class="section-title"><span class="icon icon-green">💰</span>手续费管理</div>
       <div class="grid-2">
         <div>
-          <div class="form-group"><label>设置 Hook (仅可设置一次)</label><input id="fe_hookAddr" placeholder="Hook 地址"></div>
-          <div class="form-row"><button class="btn btn-orange" onclick="fe_setHook()">设置 Hook</button></div>
-        </div>
-        <div>
-          <div class="form-group"><label>设置 Factory (仅可设置一次)</label><input id="fe_factoryAddr" placeholder="Factory 地址"></div>
-          <div class="form-row"><button class="btn btn-orange" onclick="fe_setFactory()">设置 Factory</button></div>
-        </div>
-        <div>
-          <div class="form-group"><label>设置 Platform Recipient</label><input id="fe_recipientAddr" placeholder="接收地址 0x..."></div>
+          <div class="form-group"><label>设置 Platform Recipient (平台手续费收款地址)</label><input id="fe_recipientAddr" placeholder="接收地址 0x..."></div>
           <div class="form-row"><button class="btn btn-blue" onclick="fe_setPlatformRecipient()">设置</button></div>
         </div>
         <div>
-          <div class="form-group"><label>分配全部手续费</label><p style="font-size:13px;color:var(--text2);margin-top:4px;">调用 distribute() 将所有池子的待分配手续费分发</p></div>
+          <div class="form-group"><label>分配全部手续费 (把所有池子的手续费分发给平台和持仓者)</label></div>
           <div class="form-row"><button class="btn btn-green" onclick="fe_distribute()">分配全部</button></div>
         </div>
         <div>
-          <div class="form-group"><label>分配指定池子 (索引)</label><input id="fe_distIdx" placeholder="池子索引，例如 0"></div>
+          <div class="form-group"><label>分配指定池子 (只分配某个池子的手续费)</label><input id="fe_distIdx" placeholder="池子索引，例如 0"></div>
           <div class="form-row"><button class="btn btn-blue" onclick="fe_distributeFor()">分配单个</button></div>
         </div>
         <div>
-          <div class="form-group"><label>批量分配 (起始索引, 数量)</label>
+          <div class="form-group"><label>批量分配 (分配一段范围内的池子手续费，最多20个)</label>
             <div style="display:flex;gap:8px;">
               <input id="fe_distStart" placeholder="起始索引" style="flex:1;">
               <input id="fe_distCount" placeholder="数量 (最多20)" style="flex:1;">
@@ -551,23 +539,8 @@ input::placeholder { color: var(--text3); }
     </div>
 
     <div class="section">
-      <div class="section-title"><span class="icon icon-blue">🔑</span>所有权管理 (Ownable2Step)</div>
-      <div class="grid-2">
-        <div>
-          <div class="form-group"><label>第一步: 发起转让 (transferOwnership)</label><input id="lf_txAddr" placeholder="新 Owner 地址 0x..."></div>
-          <div class="form-row"><button class="btn btn-blue" onclick="lf_transferOwnership()">发起转让</button></div>
-        </div>
-        <div>
-          <div class="form-group"><label>第二步: 接受转让 (acceptOwnership)</label></div>
-          <div class="form-row"><button class="btn btn-green" onclick="lf_acceptOwnership()">接受所有权</button></div>
-        </div>
-      </div>
-      <div class="status-bar" id="lf_ownSt"></div>
-    </div>
-
-    <div class="section">
       <div class="section-title"><span class="icon icon-orange">🚀</span>发射信息</div>
-      <p style="color:var(--text2);font-size:14px;">LaunchFactory 的暂停/恢复和 Hook 设置请通过 FactoryAdmin 面板操作。</p>
+      <p style="color:var(--text2);font-size:14px;">LaunchFactory 没有管理函数。所有管理操作（暂停、Hook 设置等）请通过 FactoryAdmin 面板操作。</p>
     </div>
   </div>
 
@@ -590,11 +563,11 @@ input::placeholder { color: var(--text3); }
       <div class="section-title"><span class="icon icon-blue">🔑</span>所有权管理 (Ownable2Step)</div>
       <div class="grid-2">
         <div>
-          <div class="form-group"><label>第一步: 发起转让 (transferOwnership)</label><input id="lh_txAddr" placeholder="新 Owner 地址 0x..."></div>
+          <div class="form-group"><label>第一步: 发起转让 (把管理权限转给新地址，需要对方接受才生效)</label><input id="lh_txAddr" placeholder="新 Owner 地址 0x..."></div>
           <div class="form-row"><button class="btn btn-blue" onclick="lh_transferOwnership()">发起转让</button></div>
         </div>
         <div>
-          <div class="form-group"><label>第二步: 接受转让 (acceptOwnership)</label></div>
+          <div class="form-group"><label>第二步: 接受转让 (用新Owner钱包点击这里接受管理权限)</label></div>
           <div class="form-row"><button class="btn btn-green" onclick="lh_acceptOwnership()">接受所有权</button></div>
         </div>
       </div>
@@ -605,7 +578,7 @@ input::placeholder { color: var(--text3); }
       <div class="section-title"><span class="icon icon-cyan">🪝</span>Hook 配置</div>
       <div class="grid-2">
         <div>
-          <div class="form-group"><label>设置 Tracker 分成比例 (bps)</label><input id="lh_trackerBps" placeholder="例如 7000 = 70%"></div>
+          <div class="form-group"><label>设置 Tracker 分成比例 (持仓分红占总手续费的比例，单位 bps，10000=100%)</label><input id="lh_trackerBps" placeholder="例如 7000 = 70%"></div>
           <div class="form-row"><button class="btn btn-blue" onclick="lh_setTrackerShareBps()">设置</button></div>
         </div>
       </div>
@@ -626,11 +599,11 @@ input::placeholder { color: var(--text3); }
       <div class="section-title"><span class="icon icon-blue">🔑</span>所有权管理 (Ownable2Step)</div>
       <div class="grid-2">
         <div>
-          <div class="form-group"><label>第一步: 发起转让 (transferOwnership)</label><input id="mr_txAddr" placeholder="新 Owner 地址 0x..."></div>
+          <div class="form-group"><label>第一步: 发起转让 (把管理权限转给新地址，需要对方接受才生效)</label><input id="mr_txAddr" placeholder="新 Owner 地址 0x..."></div>
           <div class="form-row"><button class="btn btn-blue" onclick="mr_transferOwnership()">发起转让</button></div>
         </div>
         <div>
-          <div class="form-group"><label>第二步: 接受转让 (acceptOwnership)</label></div>
+          <div class="form-group"><label>第二步: 接受转让 (用新Owner钱包点击这里接受管理权限)</label></div>
           <div class="form-row"><button class="btn btn-green" onclick="mr_acceptOwnership()">接受所有权</button></div>
         </div>
       </div>
@@ -641,7 +614,7 @@ input::placeholder { color: var(--text3); }
       <div class="section-title"><span class="icon icon-orange">🔀</span>紧急操作</div>
       <div class="grid-2">
         <div>
-          <div class="form-group"><label>Rescue 代币 (提取卡住的代币)</label></div>
+          <div class="form-group"><label>Rescue 代币 (提取卡在合约里的代币，紧急情况下使用)</label></div>
           <div class="form-group"><input id="mr_rescueToken" placeholder="代币地址 0x..."></div>
           <div class="form-group"><input id="mr_rescueTo" placeholder="接收地址 0x..."></div>
           <div class="form-row"><button class="btn btn-orange" onclick="mr_rescue()">紧急提取</button></div>
@@ -695,7 +668,6 @@ const ABI_FACTORY_ADMIN = [
   'function blacklist(address) view returns (bool)',
   'function setTreasury(address)',
   'function setRouter(address)',
-  'function setHook(address)',
   'function setCreationFee(uint256)',
   'function registerQuote(address)',
   'function disableQuote(address)',
@@ -708,15 +680,13 @@ const ABI_FEE_ESCROW = [
   'function hook() view returns (address)',
   'function factory() view returns (address)',
   'function platformRecipient() view returns (address)',
-  'function setHook(address)',
-  'function setFactory(address)',
   'function setPlatformRecipient(address)',
   'function distribute()',
   'function distributeFor(uint256)',
   'function distributeRange(uint256,uint256)',
 ];
 const ABI_LAUNCH_FACTORY = [
-  ...ABI_OWNABLE2STEP,
+  'function owner() view returns (address)',
   'function poolManager() view returns (address)',
   'function admin() view returns (address)',
   'function launchCount() view returns (uint256)',
@@ -939,13 +909,6 @@ async function fa_setTreasury() {
   const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
   await txWrap(c.setTreasury(addr), 'fa_cfgSt', 'Treasury 已更新');
 }
-async function fa_setHook() {
-  if (!requireSigner()) return;
-  const addr = document.getElementById('fa_hookAddr').value.trim();
-  if (!addr) { showToast('请输入地址', 'error'); return; }
-  const c = getContract(CONFIG.contracts.factoryAdmin, ABI_FACTORY_ADMIN, true);
-  await txWrap(c.setHook(addr), 'fa_cfgSt', 'Hook 已设置 (注意: 仅可设置一次!)');
-}
 async function fa_setRouter() {
   if (!requireSigner()) return;
   const addr = document.getElementById('fa_routerAddr').value.trim();
@@ -1015,20 +978,6 @@ async function fe_setPlatformRecipient() {
   const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
   await txWrap(c.setPlatformRecipient(addr), 'fe_cfgSt', 'Platform Recipient 已更新');
 }
-async function fe_setHook() {
-  if (!requireSigner()) return;
-  const addr = document.getElementById('fe_hookAddr').value.trim();
-  if (!addr) { showToast('请输入地址', 'error'); return; }
-  const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
-  await txWrap(c.setHook(addr), 'fe_cfgSt', 'Hook 已设置 (注意: 仅可设置一次!)');
-}
-async function fe_setFactory() {
-  if (!requireSigner()) return;
-  const addr = document.getElementById('fe_factoryAddr').value.trim();
-  if (!addr) { showToast('请输入地址', 'error'); return; }
-  const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
-  await txWrap(c.setFactory(addr), 'fe_cfgSt', 'Factory 已设置 (注意: 仅可设置一次!)');
-}
 async function fe_distribute() {
   if (!requireSigner()) return;
   const c = getContract(CONFIG.contracts.feeEscrow, ABI_FEE_ESCROW, true);
@@ -1050,19 +999,6 @@ async function fe_distributeRange() {
   await txWrap(c.distributeRange(parseInt(start), parseInt(count)), 'fe_cfgSt', `批量分配完成 (${count} 个池子)`);
 }
 
-// ========== LAUNCH FACTORY ACTIONS ==========
-async function lf_transferOwnership() {
-  if (!requireSigner()) return;
-  const addr = document.getElementById('lf_txAddr').value.trim();
-  if (!addr) { showToast('请输入地址', 'error'); return; }
-  const c = getContract(CONFIG.contracts.launchFactory, ABI_LAUNCH_FACTORY, true);
-  await txWrap(c.transferOwnership(addr), 'lf_ownSt', '转让已发起');
-}
-async function lf_acceptOwnership() {
-  if (!requireSigner()) return;
-  const c = getContract(CONFIG.contracts.launchFactory, ABI_LAUNCH_FACTORY, true);
-  await txWrap(c.acceptOwnership(), 'lf_ownSt', '所有权已接受');
-}
 // ========== LAUNCH HOOK ACTIONS ==========
 async function lh_transferOwnership() {
   if (!requireSigner()) return;
