@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shibfun Launchpad - Robinhood Chain 合约管理后台</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.1/dist/ethers.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e1e4e8;line-height:1.6;min-height:100vh}
+.container{max-width:900px;margin:0 auto;padding:20px}
+header{text-align:center;padding:30px 0 20px;border-bottom:1px solid #21262d;margin-bottom:24px}
+header h1{font-size:28px;color:#58a6ff;margin-bottom:4px;letter-spacing:1px}
+.subtitle{color:#8b949e;font-size:14px;margin-bottom:16px}
+.network-info{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap}
+.chain-badge{background:#1f6feb22;color:#58a6ff;padding:4px 12px;border-radius:20px;font-size:12px;border:1px solid #1f6feb44}
+.wallet-addr{color:#8b949e;font-size:13px;font-family:monospace}
+.btn{padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;transition:all .2s}
+.btn-primary{background:#238636;color:#fff}.btn-primary:hover{background:#2ea043}
+.btn-danger{background:#da3633;color:#fff}.btn-danger:hover{background:#f85149}
+.btn-warning{background:#d29922;color:#fff}.btn-warning:hover{background:#e3b341}
+.btn-secondary{background:#21262d;color:#c9d1d9;border:1px solid #30363d}.btn-secondary:hover{background:#30363d}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid #21262d;padding-bottom:0;overflow-x:auto}
+.tab{padding:10px 16px;background:transparent;color:#8b949e;border:none;cursor:pointer;font-size:13px;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap}
+.tab:hover{color:#c9d1d9}.tab.active{color:#58a6ff;border-bottom-color:#58a6ff}
+.tab-content{display:none}.tab-content.active{display:block}
+.card{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:20px;margin-bottom:16px}
+.card h3{color:#c9d1d9;font-size:16px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.card .desc{color:#8b949e;font-size:13px;margin-bottom:16px}
+.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:600px){.status-grid{grid-template-columns:1fr}}
+.status-item{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:12px}
+.status-item .label{color:#8b949e;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.status-item .value{color:#c9d1d9;font-size:13px;font-family:monospace;word-break:break-all}
+.status-item .value a{color:#58a6ff;text-decoration:none}.status-item .value a:hover{text-decoration:underline}
+.input-group{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.input-group input{flex:1;min-width:200px;padding:8px 12px;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;font-size:13px;font-family:monospace}
+.input-group input:focus{outline:none;border-color:#58a6ff}
+.input-group label{display:block;color:#8b949e;font-size:12px;margin-bottom:4px;width:100%}
+.section-title{font-size:18px;color:#c9d1d9;margin:24px 0 12px;padding-bottom:8px;border-bottom:1px solid #21262d;display:flex;align-items:center;gap:8px}
+.badge-ok{background:#23863622;color:#3fb950;padding:2px 8px;border-radius:10px;font-size:11px}
+.badge-warn{background:#d2992222;color:#d29922;padding:2px 8px;border-radius:10px;font-size:11px}
+.badge-err{background:#da363322;color:#f85149;padding:2px 8px;border-radius:10px;font-size:11px}
+.badge-readonly{background:#1f6feb22;color:#58a6ff;padding:2px 8px;border-radius:10px;font-size:11px}
+.contract-addr{background:#0d1117;border:1px solid #21262d;border-radius:6px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.contract-addr .ca-label{color:#8b949e;font-size:12px;min-width:80px}
+.contract-addr .ca-addr{color:#58a6ff;font-family:monospace;font-size:13px;word-break:break-all}
+.contract-addr .ca-addr a{color:#58a6ff;text-decoration:none}
+.owner-section{background:#161b22;border:1px solid #21262d;border-radius:8px;padding:20px;margin-bottom:16px}
+.owner-section h4{color:#c9d1d9;font-size:14px;margin-bottom:4px}
+.owner-section .note{color:#8b949e;font-size:12px;margin-bottom:12px}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.toast{position:fixed;bottom:20px;right:20px;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:12px 20px;color:#c9d1d9;font-size:13px;transform:translateY(100px);opacity:0;transition:all .3s;z-index:999;max-width:400px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:#238636}.toast.error{border-color:#da3633}
+.loading{display:inline-block;width:14px;height:14px;border:2px solid #30363d;border-top-color:#58a6ff;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Shibfun Launchpad</h1>
+    <p class="subtitle">Robinhood Chain 合约管理后台</p>
+    <div class="network-info">
+      <span class="chain-badge">Robinhood Chain (4663)</span>
+      <button id="connectBtn" class="btn btn-primary">连接钱包</button>
+      <span id="walletAddr" class="wallet-addr"></span>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="admin">工厂管理</button>
+    <button class="tab" data-tab="escrow">费用托管</button>
+    <button class="tab" data-tab="factory">发射工厂</button>
+    <button class="tab" data-tab="hook">交易钩子</button>
+    <button class="tab" data-tab="router">路由器</button>
+  </nav>
+
+  <!-- ===== FactoryAdmin Tab ===== -->
+  <div id="tab-admin" class="tab-content active">
+    <div class="contract-addr">
+      <span class="ca-label">工厂管理合约</span>
+      <span class="ca-addr"><a href="https://robinhoodchain.blockscout.com/address/0xd091930EA265A4e7f780aDfB52651b3941480Df2" target="_blank">0xd091930EA265A4e7f780aDfB52651b3941480Df2</a></span>
+    </div>
+    <div class="status-grid" id="adminStatus">
+      <div class="status-item"><div class="label">当前管理员</div><div class="value" id="admin-owner">-</div></div>
+      <div class="status-item"><div class="label">待确认管理员</div><div class="value" id="admin-pending">-</div></div>
+      <div class="status-item"><div class="label">金库地址</div><div class="value" id="admin-treasury">-</div></div>
+      <div class="status-item"><div class="label">路由器地址</div><div class="value" id="admin-router">-</div></div>
+      <div class="status-item"><div class="label">交易钩子地址</div><div class="value" id="admin-hook">-</div></div>
+      <div class="status-item"><div class="label">创建费用</div><div class="value" id="admin-fee">-</div></div>
+      <div class="status-item"><div class="label">暂停状态</div><div class="value" id="admin-paused">-</div></div>
+      <div class="status-item"><div class="label">WETH 地址</div><div class="value" id="admin-weth">-</div></div>
+    </div>
+
+    <div class="owner-section">
+      <h4>🔑 管理员权限 <span class="badge-warn">两步验证</span></h4>
+      <p class="note">管理权转让需要两步：第一步由当前管理员发起，第二步由新管理员确认接受。</p>
+      <h4 style="margin-top:12px">第一步：发起转让</h4>
+      <p class="note">输入新管理员的钱包地址，发起转让请求。转让不会立即生效，需要对方确认。</p>
+      <div class="input-group"><div style="width:100%"><label>新管理员地址</label><input id="admin-transferTo" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-warning btn-sm" onclick="adminTransfer()">发起转让</button></div>
+      <h4 style="margin-top:16px">第二步：接受转让</h4>
+      <p class="note">用新管理员的钱包连接，点击接受完成转让。注意：只有被指定的地址才能接受。</p>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="adminAccept()">接受管理员权限</button></div>
+    </div>
+
+    <div class="section-title">⚙️ 基础配置</div>
+    <p style="color:#8b949e;font-size:13px;margin-bottom:16px">这些是平台的核心配置，修改后会立即生效，请谨慎操作。</p>
+
+    <div class="card">
+      <h3>设置金库地址</h3>
+      <p class="desc">金库用来接收创建代币时收取的 ETH 费用。所有创建费用都会转到这个地址。</p>
+      <div class="input-group"><div style="width:100%"><label>金库钱包地址</label><input id="admin-treasuryAddr" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="adminSetTreasury()">设置</button></div>
+    </div>
+
+    <div class="card">
+      <h3>设置路由器地址</h3>
+      <p class="desc">路由器负责处理代币买卖交易。必须设置后才能支持创建时购买功能。</p>
+      <div class="input-group"><div style="width:100%"><label>路由器合约地址</label><input id="admin-routerAddr" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="adminSetRouter()">设置</button></div>
+    </div>
+
+    <div class="card">
+      <h3>设置创建费用</h3>
+      <p class="desc">用户创建新代币时需要支付的费用（单位：ETH）。这笔费用会转到金库。</p>
+      <div class="input-group"><div style="width:100%"><label>费用金额（ETH）</label><input id="admin-feeAmt" placeholder="0.001" type="number" step="0.0001"></div></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="adminSetFee()">设置</button></div>
+    </div>
+
+    <div class="card">
+      <h3>注册报价代币</h3>
+      <p class="desc">注册后可以作为交易对的报价代币。必须先注册才能在创建代币时使用。</p>
+      <div class="input-group"><div style="width:100%"><label>报价代币地址</label><input id="admin-quoteAddr" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="adminRegisterQuote()">注册</button></div>
+    </div>
+
+    <div class="card">
+      <h3>禁用报价代币</h3>
+      <p class="desc">禁用后，新创建的代币不能再使用这个报价代币，但已创建的池子不受影响。</p>
+      <div class="input-group"><div style="width:100%"><label>报价代币地址</label><input id="admin-disableQuoteAddr" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-danger btn-sm" onclick="adminDisableQuote()">禁用</button></div>
+    </div>
+
+    <div class="section-title">⚠️ 紧急控制</div>
+    <p style="color:#8b949e;font-size:13px;margin-bottom:16px">遇到紧急情况时可以使用这些功能。暂停会阻止所有新代币创建，黑名单可以禁止特定地址参与。</p>
+
+    <div class="card">
+      <h3>全局暂停</h3>
+      <p class="desc">暂停后所有用户无法创建新代币。恢复后正常。</p>
+      <div class="btn-row">
+        <button class="btn btn-danger btn-sm" onclick="adminSetPaused(true)">暂停所有创建</button>
+        <button class="btn btn-primary btn-sm" onclick="adminSetPaused(false)">恢复创建</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>单个地址黑名单</h3>
+      <p class="desc">加入黑名单后，该地址不能创建代币，其持有的代币也不参与分红。</p>
+      <div class="input-group"><div style="width:100%"><label>钱包地址</label><input id="admin-blAddr" placeholder="0x..."></div></div>
+      <div class="btn-row">
+        <button class="btn btn-danger btn-sm" onclick="adminBlacklist(true)">加入黑名单</button>
+        <button class="btn btn-primary btn-sm" onclick="adminBlacklist(false)">移出黑名单</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>批量黑名单</h3>
+      <p class="desc">一次处理多个地址，用逗号分隔。适合批量处理恶意地址。</p>
+      <div class="input-group"><div style="width:100%"><label>地址列表（逗号分隔）</label><input id="admin-blBatch" placeholder="0x...,0x..."></div></div>
+      <div class="btn-row">
+        <button class="btn btn-danger btn-sm" onclick="adminBlacklistBatch(true)">批量拉黑</button>
+        <button class="btn btn-primary btn-sm" onclick="adminBlacklistBatch(false)">批量解除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FeeEscrow Tab ===== -->
+  <div id="tab-escrow" class="tab-content">
+    <div class="contract-addr">
+      <span class="ca-label">费用托管合约</span>
+      <span class="ca-addr"><a href="https://robinhoodchain.blockscout.com/address/0xe285CAA9B8E0a481286fB8b8babE76C701F921A6" target="_blank">0xe285CAA9B8E0a481286fB8b8babE76C701F921A6</a></span>
+    </div>
+    <div class="status-grid" id="escrowStatus">
+      <div class="status-item"><div class="label">当前管理员</div><div class="value" id="escrow-owner">-</div></div>
+      <div class="status-item"><div class="label">待确认管理员</div><div class="value" id="escrow-pending">-</div></div>
+      <div class="status-item"><div class="label">交易钩子地址</div><div class="value" id="escrow-hook">-</div></div>
+      <div class="status-item"><div class="label">发射工厂地址</div><div class="value" id="escrow-factory">-</div></div>
+      <div class="status-item"><div class="label">平台收款地址</div><div class="value" id="escrow-platform">-</div></div>
+    </div>
+
+    <div class="owner-section">
+      <h4>🔑 管理员权限 <span class="badge-warn">两步验证</span></h4>
+      <p class="note">管理权转让需要两步：第一步由当前管理员发起，第二步由新管理员确认接受。</p>
+      <h4 style="margin-top:12px">第一步：发起转让</h4>
+      <div class="input-group"><div style="width:100%"><label>新管理员地址</label><input id="escrow-transferTo" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-warning btn-sm" onclick="escrowTransfer()">发起转让</button></div>
+      <h4 style="margin-top:16px">第二步：接受转让</h4>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="escrowAccept()">接受管理员权限</button></div>
+    </div>
+
+    <div class="section-title">⚙️ 收款配置</div>
+    <div class="card">
+      <h3>设置平台收款地址</h3>
+      <p class="desc">交易手续费的一部分会转到这个地址。这是平台的收入来源。</p>
+      <div class="input-group"><div style="width:100%"><label>收款钱包地址</label><input id="escrow-platformAddr" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="escrowSetPlatform()">设置</button></div>
+    </div>
+
+    <div class="section-title">💰 手续费分发</div>
+    <p style="color:#8b949e;font-size:13px;margin-bottom:16px">交易产生的手续费会暂存在合约里，需要手动触发分发。分发后按比例分配给平台和持币人分红。</p>
+
+    <div class="card">
+      <h3>分发所有池子</h3>
+      <p class="desc">遍历所有已创建的代币池子，把待分配的手续费全部分发出去。池子多的时候可能消耗较多 Gas。</p>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="escrowDistributeAll()">全部分发</button></div>
+    </div>
+
+    <div class="card">
+      <h3>分发指定池子</h3>
+      <p class="desc">只分发某一个池子的手续费。池子编号从 0 开始。</p>
+      <div class="input-group"><div style="width:100%"><label>池子编号</label><input id="escrow-poolIdx" placeholder="0" type="number" min="0"></div></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="escrowDistributeOne()">分发</button></div>
+    </div>
+
+    <div class="card">
+      <h3>批量分发</h3>
+      <p class="desc">一次分发多个池子，最多 20 个。适合池子很多时分批处理。</p>
+      <div class="input-group">
+        <div style="flex:1;min-width:120px"><label>起始编号</label><input id="escrow-batchStart" placeholder="0" type="number" min="0"></div>
+        <div style="flex:1;min-width:120px"><label>数量（最多 20）</label><input id="escrow-batchCount" placeholder="10" type="number" min="1" max="20"></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="escrowDistributeRange()">批量分发</button></div>
+    </div>
+  </div>
+
+  <!-- ===== LaunchFactory Tab ===== -->
+  <div id="tab-factory" class="tab-content">
+    <div class="contract-addr">
+      <span class="ca-label">发射工厂合约</span>
+      <span class="ca-addr"><a href="https://robinhoodchain.blockscout.com/address/0x02Ea169BF87876c8FacB9cF02bB94371cd433FFf" target="_blank">0x02Ea169BF87876c8FacB9cF02bB94371cd433FFf</a></span>
+    </div>
+    <div class="status-grid" id="factoryStatus">
+      <div class="status-item"><div class="label">当前管理员</div><div class="value" id="factory-owner">-</div></div>
+      <div class="status-item"><div class="label">待确认管理员</div><div class="value" id="factory-pending">-</div></div>
+      <div class="status-item"><div class="label">V4 池管理器</div><div class="value" id="factory-pm">-</div></div>
+      <div class="status-item"><div class="label">工厂管理合约</div><div class="value" id="factory-admin">-</div></div>
+      <div class="status-item"><div class="label">已创建代币数</div><div class="value" id="factory-count">-</div></div>
+      <div class="status-item"><div class="label">价格刻度</div><div class="value" id="factory-tick">-</div></div>
+    </div>
+    <p style="margin-top:12px"><span class="badge-readonly">只读</span> <span style="color:#8b949e;font-size:13px">这个合约没有可配置项，只能查看状态和转移管理权。</span></p>
+
+    <div class="owner-section" style="margin-top:16px">
+      <h4>🔑 管理员权限 <span class="badge-warn">两步验证</span></h4>
+      <p class="note">管理权转让需要两步：第一步由当前管理员发起，第二步由新管理员确认接受。</p>
+      <h4 style="margin-top:12px">第一步：发起转让</h4>
+      <div class="input-group"><div style="width:100%"><label>新管理员地址</label><input id="factory-transferTo" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-warning btn-sm" onclick="factoryTransfer()">发起转让</button></div>
+      <h4 style="margin-top:16px">第二步：接受转让</h4>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="factoryAccept()">接受管理员权限</button></div>
+    </div>
+  </div>
+
+  <!-- ===== LaunchHook Tab ===== -->
+  <div id="tab-hook" class="tab-content">
+    <div class="contract-addr">
+      <span class="ca-label">交易钩子合约</span>
+      <span class="ca-addr"><a href="https://robinhoodchain.blockscout.com/address/0xa9c896ad21C5Ee85710e40aDaFDE5537f8151098" target="_blank">0xa9c896ad21C5Ee85710e40aDaFDE5537f8151098</a></span>
+    </div>
+    <div class="status-grid" id="hookStatus">
+      <div class="status-item"><div class="label">当前管理员</div><div class="value" id="hook-owner">-</div></div>
+      <div class="status-item"><div class="label">待确认管理员</div><div class="value" id="hook-pending">-</div></div>
+      <div class="status-item"><div class="label">V4 池管理器</div><div class="value" id="hook-pm">-</div></div>
+      <div class="status-item"><div class="label">费用托管地址</div><div class="value" id="hook-escrow">-</div></div>
+      <div class="status-item"><div class="label">发射工厂地址</div><div class="value" id="hook-factory">-</div></div>
+      <div class="status-item"><div class="label">分红比例</div><div class="value" id="hook-bps">-</div></div>
+    </div>
+
+    <div class="owner-section" style="margin-top:16px">
+      <h4>🔑 管理员权限 <span class="badge-warn">两步验证</span></h4>
+      <p class="note">管理权转让需要两步：第一步由当前管理员发起，第二步由新管理员确认接受。</p>
+      <h4 style="margin-top:12px">第一步：发起转让</h4>
+      <div class="input-group"><div style="width:100%"><label>新管理员地址</label><input id="hook-transferTo" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-warning btn-sm" onclick="hookTransfer()">发起转让</button></div>
+      <h4 style="margin-top:16px">第二步：接受转让</h4>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="hookAccept()">接受管理员权限</button></div>
+    </div>
+
+    <div class="section-title">⚙️ 分红配置</div>
+    <div class="card">
+      <h3>设置持币人分红比例</h3>
+      <p class="desc">交易手续费的分配比例。10000 = 100% 给持币人分红，0 = 100% 归平台。比如 7000 表示 70% 给持币人，30% 给平台。默认是 7000。</p>
+      <div class="input-group"><div style="width:100%"><label>分红比例（0-10000）</label><input id="hook-bpsVal" placeholder="7000" type="number" min="0" max="10000"></div></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="hookSetBps()">设置</button></div>
+    </div>
+  </div>
+
+  <!-- ===== ShibfunRouter Tab ===== -->
+  <div id="tab-router" class="tab-content">
+    <div class="contract-addr">
+      <span class="ca-label">路由器合约</span>
+      <span class="ca-addr"><a href="https://robinhoodchain.blockscout.com/address/0xeDCbdAb8A800af2E759CF9D00750aAA10195FD6E" target="_blank">0xeDCbdAb8A800af2E759CF9D00750aAA10195FD6E</a></span>
+    </div>
+    <div class="status-grid" id="routerStatus">
+      <div class="status-item"><div class="label">当前管理员</div><div class="value" id="router-owner">-</div></div>
+      <div class="status-item"><div class="label">待确认管理员</div><div class="value" id="router-pending">-</div></div>
+      <div class="status-item"><div class="label">V4 池管理器</div><div class="value" id="router-pm">-</div></div>
+      <div class="status-item"><div class="label">WETH 地址</div><div class="value" id="router-weth">-</div></div>
+      <div class="status-item"><div class="label">SwapRouter 地址</div><div class="value" id="router-swap">-</div></div>
+    </div>
+
+    <div class="owner-section" style="margin-top:16px">
+      <h4>🔑 管理员权限 <span class="badge-warn">两步验证</span></h4>
+      <p class="note">管理权转让需要两步：第一步由当前管理员发起，第二步由新管理员确认接受。</p>
+      <h4 style="margin-top:12px">第一步：发起转让</h4>
+      <div class="input-group"><div style="width:100%"><label>新管理员地址</label><input id="router-transferTo" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-warning btn-sm" onclick="routerTransfer()">发起转让</button></div>
+      <h4 style="margin-top:16px">第二步：接受转让</h4>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="routerAccept()">接受管理员权限</button></div>
+    </div>
+
+    <div class="section-title">⚙️ 路由配置</div>
+    <div class="card">
+      <h3>设置 SwapRouter 地址</h3>
+      <p class="desc">设置 Uniswap V4 SwapRouter02 地址，用于非 WETH 报价代币的路由交易。</p>
+      <div class="input-group"><div style="width:100%"><label>SwapRouter 合约地址</label><input id="router-swapAddr" placeholder="0x..."></div></div>
+      <div class="btn-row"><button class="btn btn-primary btn-sm" onclick="routerSetSwap()">设置</button></div>
+    </div>
+
+    <div class="card">
+      <h3>救援代币</h3>
+      <p class="desc">将合约中误转入的代币转到指定地址。仅限管理员操作。</p>
+      <div class="input-group">
+        <div style="flex:1;min-width:180px"><label>代币地址</label><input id="router-rescueToken" placeholder="0x..."></div>
+        <div style="flex:1;min-width:180px"><label>接收地址</label><input id="router-rescueTo" placeholder="0x..."></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-warning btn-sm" onclick="routerRescue()">救援</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ─────────── Config ───────────
+const RPC = 'https://rpc.mainnet.chain.robinhood.com';
+const CHAIN_ID = 4663;
+const EXPLORER = 'https://robinhoodchain.blockscout.com';
+const ADDR = {
+  FactoryAdmin: '0xd091930EA265A4e7f780aDfB52651b3941480Df2',
+  FeeEscrow:    '0xe285CAA9B8E0a481286fB8b8babE76C701F921A6',
+  LaunchFactory:'0x02Ea169BF87876c8FacB9cF02bB94371cd433FFf',
+  LaunchHook:   '0xa9c896ad21C5Ee85710e40aDaFDE5537f8151098',
+  ShibfunRouter:'0xeDCbdAb8A800af2E759CF9D00750aAA10195FD6E',
+};
+
+// ─────────── ABIs ───────────
+const ABI_ADMIN = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function treasury() view returns (address)',
+  'function router() view returns (address)',
+  'function hook() view returns (address)',
+  'function creationFee() view returns (uint256)',
+  'function paused() view returns (bool)',
+  'function weth() view returns (address)',
+  'function transferOwnership(address)',
+  'function acceptOwnership()',
+  'function setTreasury(address)',
+  'function setRouter(address)',
+  'function setCreationFee(uint256)',
+  'function registerQuote(address)',
+  'function disableQuote(address)',
+  'function setPaused(bool)',
+  'function setBlacklist(address,bool)',
+  'function setBlacklistBatch(address[],bool)',
+];
+const ABI_ESCROW = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function hook() view returns (address)',
+  'function factory() view returns (address)',
+  'function platformRecipient() view returns (address)',
+  'function transferOwnership(address)',
+  'function acceptOwnership()',
+  'function setPlatformRecipient(address)',
+  'function distribute()',
+  'function distributeFor(uint256)',
+  'function distributeRange(uint256,uint256)',
+];
+const ABI_FACTORY = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function poolManager() view returns (address)',
+  'function admin() view returns (address)',
+  'function launchCount() view returns (uint256)',
+  'function TICK_SPACING() view returns (int24)',
+  'function transferOwnership(address)',
+  'function acceptOwnership()',
+];
+const ABI_HOOK = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function poolManager() view returns (address)',
+  'function escrow() view returns (address)',
+  'function factory() view returns (address)',
+  'function trackerShareBps() view returns (uint256)',
+  'function transferOwnership(address)',
+  'function acceptOwnership()',
+  'function setTrackerShareBps(uint256)',
+];
+const ABI_ROUTER = [
+  'function owner() view returns (address)',
+  'function pendingOwner() view returns (address)',
+  'function poolManager() view returns (address)',
+  'function weth() view returns (address)',
+  'function swapRouter() view returns (address)',
+  'function transferOwnership(address)',
+  'function acceptOwnership()',
+  'function setSwapRouter(address)',
+  'function rescue(address,address)',
+];
+
+// ─────────── State ───────────
+let provider, signer, userAddr;
+let cAdmin, cEscrow, cFactory, cHook, cRouter;
+let sAdmin, sEscrow, sFactory, sHook, sRouter;
+
+function shortAddr(a) {
+  if (!a || a === '0x0000000000000000000000000000000000000000') return '-';
+  return a.slice(0,6) + '...' + a.slice(-4);
+}
+function explorerAddr(a) {
+  if (!a || a === '0x0000000000000000000000000000000000000000') return '-';
+  return '<a href="'+EXPLORER+'/address/'+a+'" target="_blank">'+shortAddr(a)+'</a>';
+}
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type||'');
+  setTimeout(() => t.className = 'toast', 3500);
+}
+
+// ─────────── Tabs ───────────
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ─────────── Connect ───────────
+document.getElementById('connectBtn').addEventListener('click', async () => {
+  try {
+    if (!window.ethereum) { toast('请先安装 MetaMask', 'error'); return; }
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner();
+    userAddr = await signer.getAddress();
+    document.getElementById('walletAddr').textContent = shortAddr(userAddr);
+    document.getElementById('connectBtn').textContent = '已连接';
+
+    // Switch network
+    try {
+      await provider.send('wallet_switchEthereumChain', [{chainId: ethers.toQuantity(CHAIN_ID)}]);
+    } catch(e) {
+      if (e.code === 4902) {
+        await provider.send('wallet_addEthereumChain', [{
+          chainId: ethers.toQuantity(CHAIN_ID),
+          chainName: 'Robinhood Chain',
+          rpcUrls: [RPC],
+          blockExplorerUrls: [EXPLORER],
+          nativeCurrency: {name:'ETH',symbol:'ETH',decimals:18}
+        }]);
+      }
+    }
+
+    const sp = new ethers.JsonRpcProvider(RPC, CHAIN_ID);
+    cAdmin   = new ethers.Contract(ADDR.FactoryAdmin, ABI_ADMIN, sp);
+    cEscrow  = new ethers.Contract(ADDR.FeeEscrow, ABI_ESCROW, sp);
+    cFactory = new ethers.Contract(ADDR.LaunchFactory, ABI_FACTORY, sp);
+    cHook    = new ethers.Contract(ADDR.LaunchHook, ABI_HOOK, sp);
+    cRouter  = new ethers.Contract(ADDR.ShibfunRouter, ABI_ROUTER, sp);
+
+    sAdmin   = cAdmin.connect(signer);
+    sEscrow  = cEscrow.connect(signer);
+    sFactory = cFactory.connect(signer);
+    sHook    = cHook.connect(signer);
+    sRouter  = cRouter.connect(signer);
+
+    toast('钱包已连接', 'success');
+    loadAllStatus();
+  } catch(e) {
+    console.error(e);
+    toast('连接失败: ' + (e.shortMessage || e.message), 'error');
+  }
+});
+
+// ─────────── Load Status ───────────
+async function loadAllStatus() {
+  try {
+    // Admin
+    const [ao, ap, at, ar, ah, af, ap2, aw] = await Promise.all([
+      cAdmin.owner(), cAdmin.pendingOwner(), cAdmin.treasury(), cAdmin.router(),
+      cAdmin.hook(), cAdmin.creationFee(), cAdmin.paused(), cAdmin.weth()
+    ]);
+    document.getElementById('admin-owner').innerHTML = explorerAddr(ao);
+    document.getElementById('admin-pending').innerHTML = explorerAddr(ap);
+    document.getElementById('admin-treasury').innerHTML = explorerAddr(at);
+    document.getElementById('admin-router').innerHTML = explorerAddr(ar);
+    document.getElementById('admin-hook').innerHTML = explorerAddr(ah);
+    document.getElementById('admin-fee').textContent = ethers.formatEther(af) + ' ETH';
+    document.getElementById('admin-paused').innerHTML = ap2 ? '<span class="badge-err">已暂停</span>' : '<span class="badge-ok">正常</span>';
+    document.getElementById('admin-weth').innerHTML = explorerAddr(aw);
+
+    // Escrow
+    const [eo, ep, eh, ef, epr] = await Promise.all([
+      cEscrow.owner(), cEscrow.pendingOwner(), cEscrow.hook(), cEscrow.factory(), cEscrow.platformRecipient()
+    ]);
+    document.getElementById('escrow-owner').innerHTML = explorerAddr(eo);
+    document.getElementById('escrow-pending').innerHTML = explorerAddr(ep);
+    document.getElementById('escrow-hook').innerHTML = explorerAddr(eh);
+    document.getElementById('escrow-factory').innerHTML = explorerAddr(ef);
+    document.getElementById('escrow-platform').innerHTML = explorerAddr(epr);
+
+    // Factory
+    const [fo, fp, fpm, fa, fc, ft] = await Promise.all([
+      cFactory.owner(), cFactory.pendingOwner(), cFactory.poolManager(), cFactory.admin(),
+      cFactory.launchCount(), cFactory.TICK_SPACING()
+    ]);
+    document.getElementById('factory-owner').innerHTML = explorerAddr(fo);
+    document.getElementById('factory-pending').innerHTML = explorerAddr(fp);
+    document.getElementById('factory-pm').innerHTML = explorerAddr(fpm);
+    document.getElementById('factory-admin').innerHTML = explorerAddr(fa);
+    document.getElementById('factory-count').textContent = fc.toString();
+    document.getElementById('factory-tick').textContent = ft.toString();
+
+    // Hook
+    const [ho, hp, hpm, he, hf, hb] = await Promise.all([
+      cHook.owner(), cHook.pendingOwner(), cHook.poolManager(), cHook.escrow(),
+      cHook.factory(), cHook.trackerShareBps()
+    ]);
+    document.getElementById('hook-owner').innerHTML = explorerAddr(ho);
+    document.getElementById('hook-pending').innerHTML = explorerAddr(hp);
+    document.getElementById('hook-pm').innerHTML = explorerAddr(hpm);
+    document.getElementById('hook-escrow').innerHTML = explorerAddr(he);
+    document.getElementById('hook-factory').innerHTML = explorerAddr(hf);
+    const bpsPct = (Number(hb) / 100).toFixed(0);
+    document.getElementById('hook-bps').textContent = hb.toString() + ' (' + bpsPct + '%)';
+
+    // Router
+    const [ro, rp, rpm, rw, rs] = await Promise.all([
+      cRouter.owner(), cRouter.pendingOwner(), cRouter.poolManager(), cRouter.weth(), cRouter.swapRouter()
+    ]);
+    document.getElementById('router-owner').innerHTML = explorerAddr(ro);
+    document.getElementById('router-pending').innerHTML = explorerAddr(rp);
+    document.getElementById('router-pm').innerHTML = explorerAddr(rpm);
+    document.getElementById('router-weth').innerHTML = explorerAddr(rw);
+    document.getElementById('router-swap').innerHTML = explorerAddr(rs);
+
+    toast('状态已刷新', 'success');
+  } catch(e) {
+    console.error(e);
+    toast('读取状态失败: ' + (e.shortMessage || e.message), 'error');
+  }
+}
+
+// ─────────── Helper: send tx ───────────
+async function sendTx(promise, successMsg) {
+  try {
+    toast('交易发送中...', '');
+    const tx = await promise;
+    toast('等待确认...', '');
+    await tx.wait();
+    toast(successMsg || '交易成功', 'success');
+    setTimeout(loadAllStatus, 1500);
+  } catch(e) {
+    console.error(e);
+    toast('交易失败: ' + (e.shortMessage || e.reason || e.message), 'error');
+  }
+}
+
+// ─────────── FactoryAdmin Functions ───────────
+function adminTransfer() {
+  const to = document.getElementById('admin-transferTo').value.trim();
+  if (!to) return toast('请输入地址', 'error');
+  sendTx(sAdmin.transferOwnership(to), '转让已发起');
+}
+function adminAccept() { sendTx(sAdmin.acceptOwnership(), '已接受管理员权限'); }
+function adminSetTreasury() {
+  const v = document.getElementById('admin-treasuryAddr').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  sendTx(sAdmin.setTreasury(v), '金库地址已设置');
+}
+function adminSetRouter() {
+  const v = document.getElementById('admin-routerAddr').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  sendTx(sAdmin.setRouter(v), '路由器已设置');
+}
+function adminSetFee() {
+  const v = document.getElementById('admin-feeAmt').value.trim();
+  if (!v) return toast('请输入金额', 'error');
+  sendTx(sAdmin.setCreationFee(ethers.parseEther(v)), '创建费用已设置');
+}
+function adminRegisterQuote() {
+  const v = document.getElementById('admin-quoteAddr').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  sendTx(sAdmin.registerQuote(v), '报价代币已注册');
+}
+function adminDisableQuote() {
+  const v = document.getElementById('admin-disableQuoteAddr').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  sendTx(sAdmin.disableQuote(v), '报价代币已禁用');
+}
+function adminSetPaused(v) {
+  sendTx(sAdmin.setPaused(v), v ? '已暂停' : '已恢复');
+}
+function adminBlacklist(add) {
+  const v = document.getElementById('admin-blAddr').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  sendTx(sAdmin.setBlacklist(v, add), add ? '已加入黑名单' : '已移出黑名单');
+}
+function adminBlacklistBatch(add) {
+  const raw = document.getElementById('admin-blBatch').value.trim();
+  if (!raw) return toast('请输入地址列表', 'error');
+  const addrs = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (addrs.length === 0) return toast('请输入有效地址', 'error');
+  sendTx(sAdmin.setBlacklistBatch(addrs, add), add ? '批量拉黑完成' : '批量解除完成');
+}
+
+// ─────────── FeeEscrow Functions ───────────
+function escrowTransfer() {
+  const to = document.getElementById('escrow-transferTo').value.trim();
+  if (!to) return toast('请输入地址', 'error');
+  sendTx(sEscrow.transferOwnership(to), '转让已发起');
+}
+function escrowAccept() { sendTx(sEscrow.acceptOwnership(), '已接受管理员权限'); }
+function escrowSetPlatform() {
+  const v = document.getElementById('escrow-platformAddr').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  sendTx(sEscrow.setPlatformRecipient(v), '平台收款地址已设置');
+}
+function escrowDistributeAll() { sendTx(sEscrow.distribute(), '全部分发完成'); }
+function escrowDistributeOne() {
+  const idx = document.getElementById('escrow-poolIdx').value.trim();
+  if (idx === '') return toast('请输入池子编号', 'error');
+  sendTx(sEscrow.distributeFor(Number(idx)), '池子 #' + idx + ' 分发完成');
+}
+function escrowDistributeRange() {
+  const s = document.getElementById('escrow-batchStart').value.trim();
+  const c = document.getElementById('escrow-batchCount').value.trim();
+  if (s === '' || c === '') return toast('请输入起始编号和数量', 'error');
+  sendTx(sEscrow.distributeRange(Number(s), Number(c)), '批量分发完成');
+}
+
+// ─────────── LaunchFactory Functions ───────────
+function factoryTransfer() {
+  const to = document.getElementById('factory-transferTo').value.trim();
+  if (!to) return toast('请输入地址', 'error');
+  sendTx(sFactory.transferOwnership(to), '转让已发起');
+}
+function factoryAccept() { sendTx(sFactory.acceptOwnership(), '已接受管理员权限'); }
+
+// ─────────── LaunchHook Functions ───────────
+function hookTransfer() {
+  const to = document.getElementById('hook-transferTo').value.trim();
+  if (!to) return toast('请输入地址', 'error');
+  sendTx(sHook.transferOwnership(to), '转让已发起');
+}
+function hookAccept() { sendTx(sHook.acceptOwnership(), '已接受管理员权限'); }
+function hookSetBps() {
+  const v = document.getElementById('hook-bpsVal').value.trim();
+  if (v === '') return toast('请输入比例', 'error');
+  const n = Number(v);
+  if (n < 0 || n > 10000) return toast('比例范围 0-10000', 'error');
+  sendTx(sHook.setTrackerShareBps(n), '分红比例已设置');
+}
+
+// ─────────── ShibfunRouter Functions ───────────
+function routerTransfer() {
+  const to = document.getElementById('router-transferTo').value.trim();
+  if (!to) return toast('请输入地址', 'error');
+  sendTx(sRouter.transferOwnership(to), '转让已发起');
+}
+function routerAccept() { sendTx(sRouter.acceptOwnership(), '已接受管理员权限'); }
+function routerSetSwap() {
+  const v = document.getElementById('router-swapAddr').value.trim();
+  if (!v) return toast('请输入地址', 'error');
+  sendTx(sRouter.setSwapRouter(v), 'SwapRouter 已设置');
+}
+function routerRescue() {
+  const token = document.getElementById('router-rescueToken').value.trim();
+  const to = document.getElementById('router-rescueTo').value.trim();
+  if (!token || !to) return toast('请输入代币地址和接收地址', 'error');
+  sendTx(sRouter.rescue(token, to), '救援完成');
+}
+</script>
+</body>
+</html>
+vvvvvvvvvvvvvvvvvv
