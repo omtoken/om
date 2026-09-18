@@ -461,12 +461,8 @@ document.getElementById('connectBtn').addEventListener('click', async () => {
     if (!window.ethereum) { toast('请先安装 MetaMask', 'error'); return; }
     provider = new ethers.BrowserProvider(window.ethereum);
     const accounts = await provider.send('eth_requestAccounts', []);
-    signer = await provider.getSigner();
-    userAddr = await signer.getAddress();
-    document.getElementById('walletAddr').textContent = shortAddr(userAddr);
-    document.getElementById('connectBtn').textContent = '已连接';
 
-    // Switch network
+    // Switch network FIRST
     try {
       await provider.send('wallet_switchEthereumChain', [{chainId: ethers.toQuantity(CHAIN_ID)}]);
     } catch(e) {
@@ -480,6 +476,13 @@ document.getElementById('connectBtn').addEventListener('click', async () => {
         }]);
       }
     }
+
+    // Get signer AFTER network switch
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    userAddr = await signer.getAddress();
+    document.getElementById('walletAddr').textContent = shortAddr(userAddr);
+    document.getElementById('connectBtn').textContent = '已连接';
 
     const sp = new ethers.JsonRpcProvider(RPC, CHAIN_ID);
     cAdmin   = new ethers.Contract(ADDR.FactoryAdmin, ABI_ADMIN, sp);
