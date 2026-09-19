@@ -241,13 +241,13 @@ const CFG = {
   L1_RPC_FALLBACK: 'https://eth.llamarpc.com',
   L2_RPC: 'https://rpc.shib.world/',
   L2_RPC_FALLBACK: 'https://rpc.shib.club/',
-  L2_CHAIN_ID: '0x16B8',
+  L2_CHAIN_ID: '0x16b8',
   L1_CHAIN_ID: '0x1',
   SHIB_L1: '0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce',
   L1_INBOX: '0xc470cff8a2e3f99e18d9b3899073653670ecb228',
   L2_CUSTOM_GATEWAY: '0xff1085ee9e76f3d3be8035cd4b28c7b56674839a',
   L2_NETWORK: {
-    chainId: '0x16B8',
+    chainId: '0x16b8',
     chainName: 'Shib Mainnet',
     nativeCurrency: { name: 'SHIB', symbol: 'SHIB', decimals: 18 },
     rpcUrls: ['https://rpc.shib.world/'],
@@ -317,7 +317,7 @@ async function connectWallet() {
     state.connected = true;
     
     // 获取当前网络
-    state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
+    state.currentChain = (await window.ethereum.request({ method: 'eth_chainId' })).toLowerCase();
     
     // 确保 L2 网络配置已添加（不切换）
     if (state.currentChain !== CFG.L1_CHAIN_ID && state.currentChain !== CFG.L2_CHAIN_ID) {
@@ -327,7 +327,7 @@ async function connectWallet() {
           params: [CFG.L2_NETWORK]
         });
         // 重新获取链 ID
-        state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
+        state.currentChain = (await window.ethereum.request({ method: 'eth_chainId' })).toLowerCase();
       } catch (e) {
         console.warn('添加 L2 网络失败:', e.message);
       }
@@ -408,7 +408,7 @@ function updateBridgeButton() {
   // 每次更新按钮时都重新获取链 ID
   if (typeof window.ethereum !== 'undefined') {
     window.ethereum.request({ method: 'eth_chainId' }).then(chainId => {
-      state.currentChain = chainId;
+      state.currentChain = chainId.toLowerCase();
       
       if (state.currentChain !== need) {
         btn.textContent = '切换到' + (is ? '以太坊 L1' : 'Shib Mainnet');
@@ -520,9 +520,9 @@ async function mainAction() {
   const need = is ? CFG.L1_CHAIN_ID : CFG.L2_CHAIN_ID;
   const needName = is ? '以太坊 L1' : 'Shib Mainnet';
   
-  // 获取当前链 ID
+  // 获取当前链 ID（统一转小写比较）
   try {
-    state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
+    state.currentChain = (await window.ethereum.request({ method: 'eth_chainId' })).toLowerCase();
   } catch (e) {
     console.error('获取链 ID 失败:', e);
     showMsg('bridgeStatus', '无法获取当前网络，请刷新页面重试', 'error');
@@ -680,8 +680,8 @@ if (typeof window.ethereum !== 'undefined') {
       
       window.ethereum.on('chainChanged', c => {
         console.log('Chain changed to:', c);
-        state.currentChain = c;
-        updateWalletUI(c);
+        state.currentChain = c.toLowerCase();
+        updateWalletUI(state.currentChain);
         // 刷新余额
         if (state.connected && state.account) {
           refreshBridgeBalances();
