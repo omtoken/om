@@ -1,527 +1,247 @@
-<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style rel="stylesheet" type="text/css">@charset "utf-8";
-
-*, ::before, ::after { box-sizing: border-box; margin: 0px; padding: 0px; }
-
-:root { --bg: #06080c; --bg2: #0c1018; --bg3: #141a24; --bg4: #1c2430; --green: #00e676; --green2: #69f0ae; --green3: #00c853; --amber: #ffab00; --amber2: #ffd740; --red: #ff5252; --cyan: #00e5ff; --cyan2: #84ffff; --text: #d8dce6; --text2: #8892a4; --text3: #4a5568; --border: #1e2a3a; --border2: #2a3a50; --mono: 'JetBrains Mono',monospace; --radius: 12px; --radius-sm: 8px; }
-
-html { font-size: 15px; scroll-behavior: smooth; }
-
-body { font-family: "Noto Sans SC", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
-
-body::before { content: ""; position: fixed; inset: 0px; z-index: 0; pointer-events: none; background: radial-gradient(70% 50% at 10% 0%, rgba(0, 230, 118, 0.04), transparent), radial-gradient(50% 40% at 90% 100%, rgba(0, 229, 255, 0.03), transparent); }
-
-.app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
-
-.sidebar { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); padding: 20px 0px; flex-shrink: 0; position: fixed; top: 0px; left: 0px; bottom: 0px; overflow-y: auto; z-index: 10; }
-
-.main { flex: 1 1 0%; margin-left: 220px; padding: 24px 28px; max-width: 1200px; }
-
-.sidebar-logo { padding: 0px 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
-
-.sidebar-logo .brand { font-family: Orbitron, sans-serif; font-weight: 900; font-size: 14px; color: var(--green); letter-spacing: 2px; }
-
-.sidebar-logo .sub { font-size: 10px; color: var(--text3); letter-spacing: 3px; margin-top: 4px; }
-
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; font-size: 13px; color: var(--text2); transition: 0.2s; border-left: 3px solid transparent; }
-
-.nav-item:hover { background: rgba(255, 255, 255, 0.02); color: var(--text); }
-
-.nav-item.active { background: rgba(0, 230, 118, 0.05); color: var(--green); border-left-color: var(--green); }
-
-.nav-icon { width: 18px; text-align: center; font-size: 14px; }
-
-.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-
-.topbar-title { font-size: 20px; font-weight: 700; }
-
-.topbar-right { display: flex; align-items: center; gap: 12px; }
-
-.net-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 12px; background: var(--bg3); border: 1px solid var(--border); }
-
-.net-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
-
-.net-dot.ok { background: var(--green); box-shadow: rgba(0, 230, 118, 0.5) 0px 0px 6px; }
-
-.wallet-btn { padding: 6px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--bg3); border: 1px solid var(--border); color: var(--text2); font-family: var(--mono); transition: 0.2s; }
-
-.wallet-btn:hover { border-color: var(--green); color: var(--green); }
-
-.panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; position: relative; overflow: hidden; }
-
-.panel::before { content: ""; position: absolute; top: 0px; left: 0px; right: 0px; height: 1px; background: linear-gradient(90deg, transparent, rgba(0, 230, 118, 0.2), transparent); }
-
-.panel-title { font-size: 13px; font-weight: 700; color: var(--text2); letter-spacing: 2px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-
-.panel-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
-
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
-
-.stat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }
-
-.stat-label { font-size: 11px; color: var(--text3); letter-spacing: 1px; margin-bottom: 8px; }
-
-.stat-value { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--text); }
-
-.stat-value.green { color: var(--green); }
-
-.stat-value.amber { color: var(--amber); }
-
-.stat-value.red { color: var(--red); }
-
-.stat-value.cyan { color: var(--cyan); }
-
-.stat-sub { font-size: 10px; color: var(--text3); margin-top: 4px; font-family: var(--mono); }
-
-.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-
-.data-table th { text-align: left; padding: 8px 12px; font-size: 11px; color: var(--text3); letter-spacing: 1px; font-weight: 500; border-bottom: 1px solid var(--border); }
-
-.data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); font-family: var(--mono); font-size: 12px; color: var(--text2); }
-
-.data-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
-
-.form-row { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 14px; flex-wrap: wrap; }
-
-.form-group { flex: 1 1 0%; min-width: 160px; }
-
-.form-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; display: block; letter-spacing: 1px; }
-
-.form-input { width: 100%; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; transition: border-color 0.2s; }
-
-.form-input:focus { border-color: var(--green); }
-
-.btn { padding: 10px 20px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; cursor: pointer; font-family: "Noto Sans SC", sans-serif; transition: 0.2s; letter-spacing: 1px; }
-
-.btn-green { background: linear-gradient(135deg,var(--green3),var(--green)); color: rgb(6, 8, 12); box-shadow: rgba(0, 230, 118, 0.2) 0px 2px 12px; }
-
-.btn-green:hover { box-shadow: rgba(0, 230, 118, 0.35) 0px 4px 20px; transform: translateY(-1px); }
-
-.btn-green:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
-
-.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
-
-.btn-outline:hover { border-color: var(--green); color: var(--green); }
-
-.btn-amber { background: linear-gradient(135deg,#e69500,var(--amber)); color: rgb(6, 8, 12); }
-
-.btn-red { background: var(--red); color: rgb(255, 255, 255); }
-
-.btn-sm { padding: 6px 14px; font-size: 11px; }
-
-.msg-bar { margin-top: 12px; padding: 12px 16px; border-radius: var(--radius-sm); font-size: 12px; display: none; border: 1px solid var(--border); }
-
-.msg-bar.show { display: block; animation: 0.3s ease 0s 1 normal none running fadeUp; }
-
-.msg-bar.info { background: rgba(0, 229, 255, 0.05); border-color: rgba(0, 229, 255, 0.15); color: var(--cyan2); }
-
-.msg-bar.success { background: rgba(0, 230, 118, 0.05); border-color: rgba(0, 230, 118, 0.15); color: var(--green2); }
-
-.msg-bar.error { background: rgba(255, 82, 82, 0.05); border-color: rgba(255, 82, 82, 0.15); color: var(--red2); }
-
-.msg-bar.warn { background: rgba(255, 171, 0, 0.05); border-color: rgba(255, 171, 0, 0.15); color: var(--amber2); }
-
-@keyframes fadeUp { 
-  0% { opacity: 0; transform: translateY(6px); }
-  100% { opacity: 1; transform: translateY(0px); }
-}
-
-.flow { display: flex; gap: 0px; margin: 16px 0px; }
-
-.flow-step { flex: 1 1 0%; text-align: center; padding: 14px 8px; background: var(--bg3); border: 1px solid var(--border); position: relative; font-size: 12px; color: var(--text3); }
-
-.flow-step:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
-
-.flow-step:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-
-.flow-step.active { background: rgba(0, 230, 118, 0.08); border-color: var(--green); color: var(--green); }
-
-.flow-step.done { background: rgba(0, 230, 118, 0.04); color: var(--green2); }
-
-.flow-step .step-num { font-family: var(--mono); font-weight: 700; font-size: 16px; display: block; margin-bottom: 4px; }
-
-.progress-bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin: 8px 0px; }
-
-.progress-fill { height: 100%; border-radius: 3px; transition: width 0.6s; background: linear-gradient(90deg,var(--green3),var(--green)); }
-
-.progress-fill.warn { background: linear-gradient(90deg,#e69500,var(--amber)); }
-
-.progress-fill.danger { background: linear-gradient(90deg,#d32f2f,var(--red)); }
-
-.spinner { display: inline-block; width: 14px; height: 14px; border-width: 2px; border-style: solid; border-right-color: rgba(0, 230, 118, 0.2); border-bottom-color: rgba(0, 230, 118, 0.2); border-left-color: rgba(0, 230, 118, 0.2); border-image: none; border-top-color: var(--green); border-radius: 50%; animation: 0.8s linear 0s infinite normal none running spin; vertical-align: middle; margin-right: 6px; }
-
-@keyframes spin { 
-  100% { transform: rotate(360deg); }
-}
-
-.section { display: none; }
-
-.section.active { display: block; }
-
-.bridge-card { margin: 0px auto; }
-
-.direction { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 24px; }
-
-.dir-chain { flex: 1 1 0%; text-align: center; padding: 14px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: 0.3s; }
-
-.dir-chain.active { border-color: var(--green); background: rgba(0, 230, 118, 0.05); }
-
-.dir-chain-name { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
-
-.dir-chain-sub { font-size: 11px; color: var(--text3); }
-
-.dir-arrow { width: 40px; height: 40px; border-radius: 50%; background: var(--bg3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
-
-.dir-arrow:hover { background: rgba(0, 230, 118, 0.1); border-color: var(--green); }
-
-.dir-arrow svg { width: 20px; height: 20px; stroke: var(--green); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.3s; }
-
-.balance-row { display: flex; gap: 10px; margin-bottom: 20px; }
-
-.balance-box { flex: 1 1 0%; padding: 14px; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); text-align: center; }
-
-.balance-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; letter-spacing: 1px; }
-
-.balance-value { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--text); word-break: break-all; }
-
-.balance-value.loading { color: var(--text3); font-size: 12px; }
-
-.input-group { margin-bottom: 18px; }
-
-.input-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: var(--text2); }
-
-.input-label .max-btn { font-size: 11px; color: var(--green); cursor: pointer; padding: 2px 8px; border-radius: 4px; background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.15); transition: 0.2s; }
-
-.input-label .max-btn:hover { background: rgba(0, 230, 118, 0.18); }
-
-.input-wrap { display: flex; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); overflow: hidden; transition: border-color 0.3s; }
-
-.input-wrap:focus-within { border-color: var(--green); }
-
-.input-wrap input { flex: 1 1 0%; background: transparent; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; outline: none; padding: 14px 16px; font-size: 18px; color: var(--text); font-family: var(--mono); }
-
-.input-wrap input::placeholder { color: var(--text3); }
-
-.input-suffix { padding: 0px 16px; font-size: 13px; font-weight: 700; color: var(--green); letter-spacing: 1px; white-space: nowrap; }
-
-.info-rows { margin-bottom: 20px; }
-
-.info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; font-size: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.03); }
-
-.info-row:last-child { border-width: medium; border-style: none; border-color: currentcolor; border-image: none; }
-
-.info-key { color: var(--text3); }
-
-.info-val { color: var(--text2); font-family: var(--mono); font-size: 11px; }
-
-.steps { display: flex; gap: 6px; margin-bottom: 20px; }
-
-.step { flex: 1 1 0%; height: 3px; border-radius: 2px; background: var(--border); transition: background 0.4s; }
-
-.step.done { background: var(--green); }
-
-.step.active { background: var(--green); animation: 1.5s ease-in-out 0s infinite normal none running step-pulse; }
-
-@keyframes step-pulse { 
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
-}
-
-@media (max-width: 768px) {
-  .sidebar { display: none; }
-  .main { margin-left: 0px; padding: 16px; }
-  .stat-grid { grid-template-columns: 1fr 1fr; }
-  .flow { flex-direction: column; }
-  .flow-step { border-radius: var(--radius-sm) !important; }
-}</style>
-
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shib Mainnet 跨链桥 &amp; 运营后台</title>
-<link rel="preconnect" href="https://fonts.googleapis.com/">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&amp;family=Orbitron:wght@400;700;900&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<title>Shib Mainnet Bridge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f8fa;--card:#fff;--card2:#f0f2f5;--border:#e2e5ea;--border2:#d0d4db;
+  --green:#0a8f3c;--green2:#0d6e30;--green-bg:rgba(10,143,60,.06);--green-border:rgba(10,143,60,.2);
+  --red:#d1293d;--red-bg:rgba(209,41,61,.06);
+  --amber:#c07800;--amber-bg:rgba(192,120,0,.06);
+  --blue:#1a6dd1;--blue-bg:rgba(26,109,209,.06);
+  --text:#1a1d23;--text2:#5a6270;--text3:#8b919d;
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',system-ui,sans-serif;
+  --radius:14px;--radius-sm:10px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  --shadow-lg:0 4px 24px rgba(0,0,0,.08);
+}
+html{font-size:15px;scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(10,143,60,.05),transparent)}
 
-<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script></head>
+/* Layout */
+.container{max-width:520px;margin:0 auto;padding:24px 16px 60px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px;padding:0 4px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--green),#12b84d);
+  display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:16px}
+.logo-text{font-weight:800;font-size:17px;letter-spacing:-.3px}
+.logo-sub{font-size:11px;color:var(--text3);font-weight:500}
+
+/* Wallet button */
+.wallet-btn{padding:8px 18px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;
+  background:var(--card);border:1.5px solid var(--border);color:var(--text2);
+  font-family:var(--mono);transition:all .2s;white-space:nowrap}
+.wallet-btn:hover{border-color:var(--green);color:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+.wallet-btn.connected{border-color:var(--green-border);background:var(--green-bg);color:var(--green)}
+
+/* Network badge */
+.net-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:12px;
+  font-size:11px;font-weight:600;background:var(--card2);color:var(--text3);border:1px solid var(--border);margin-top:6px}
+.net-dot{width:7px;height:7px;border-radius:50%;background:var(--text3)}
+.net-dot.ok{background:var(--green);box-shadow:0 0 6px rgba(10,143,60,.4)}
+
+/* Bridge card */
+.bridge-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:28px 24px;box-shadow:var(--shadow)}
+
+/* Direction selector */
+.direction{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.dir-chain{flex:1;text-align:center;padding:16px 10px;border-radius:var(--radius-sm);
+  border:1.5px solid var(--border);background:var(--card);cursor:pointer;transition:all .25s}
+.dir-chain:hover{border-color:var(--border2)}
+.dir-chain.active{border-color:var(--green);background:var(--green-bg)}
+.dir-chain-name{font-weight:700;font-size:14px;margin-bottom:2px}
+.dir-chain-sub{font-size:11px;color:var(--text3)}
+.dir-arrow{width:40px;height:40px;border-radius:50%;background:var(--card2);border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .25s;flex-shrink:0}
+.dir-arrow:hover{background:var(--green-bg);border-color:var(--green)}
+.dir-arrow svg{width:18px;height:18px;stroke:var(--green);stroke-width:2.5;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;transition:transform .3s}
+
+/* Steps */
+.steps{display:flex;gap:6px;margin-bottom:22px}
+.step{flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .4s}
+.step.done{background:var(--green)}
+.step.active{background:var(--green);animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* Balance boxes */
+.balance-row{display:flex;gap:10px;margin-bottom:22px}
+.balance-box{flex:1;padding:14px;border-radius:var(--radius-sm);background:var(--card2);
+  border:1px solid var(--border);text-align:center}
+.balance-label{font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;letter-spacing:.5px}
+.balance-value{font-family:var(--mono);font-size:15px;font-weight:600;color:var(--text);word-break:break-all}
+.balance-value.loading{color:var(--text3);font-size:12px;font-weight:400}
+
+/* Input */
+.input-group{margin-bottom:20px}
+.input-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;color:var(--text2);font-weight:500}
+.max-btn{font-size:11px;color:var(--green);cursor:pointer;padding:3px 10px;border-radius:6px;
+  background:var(--green-bg);border:1px solid var(--green-border);font-weight:600;transition:all .2s}
+.max-btn:hover{background:rgba(10,143,60,.12)}
+.input-wrap{display:flex;align-items:center;border:1.5px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--card);overflow:hidden;transition:border-color .2s}
+.input-wrap:focus-within{border-color:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+.input-wrap input{flex:1;background:transparent;border:none;outline:none;padding:14px 16px;
+  font-size:18px;color:var(--text);font-family:var(--mono);font-weight:600}
+.input-wrap input::placeholder{color:var(--text3);font-weight:400}
+.input-suffix{padding:0 16px;font-size:13px;font-weight:700;color:var(--green);letter-spacing:.5px;white-space:nowrap}
+
+/* Info rows */
+.info-rows{margin-bottom:22px;padding:12px 14px;background:var(--card2);border-radius:var(--radius-sm);border:1px solid var(--border)}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:12px}
+.info-row+.info-row{border-top:1px solid var(--border)}
+.info-key{color:var(--text3);font-weight:500}
+.info-val{color:var(--text2);font-family:var(--mono);font-size:11px;font-weight:500}
+
+/* Buttons */
+.btn{width:100%;padding:14px 20px;border:none;border-radius:var(--radius-sm);font-size:14px;
+  font-weight:700;cursor:pointer;font-family:var(--sans);transition:all .2s;letter-spacing:.2px}
+.btn-green{background:linear-gradient(135deg,var(--green2),var(--green));color:#fff;
+  box-shadow:0 2px 12px rgba(10,143,60,.2)}
+.btn-green:hover{box-shadow:0 4px 20px rgba(10,143,60,.3);transform:translateY(-1px)}
+.btn-green:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+.btn-outline{background:var(--card);border:1.5px solid var(--border);color:var(--text2)}
+.btn-outline:hover{border-color:var(--green);color:var(--green)}
+
+/* Status message */
+.msg-bar{margin-top:16px;padding:14px 16px;border-radius:var(--radius-sm);font-size:12px;
+  line-height:1.6;display:none;border:1px solid var(--border)}
+.msg-bar.show{display:block;animation:fadeUp .3s ease}
+.msg-bar.info{background:var(--blue-bg);border-color:rgba(26,109,209,.15);color:#1a5bb0}
+.msg-bar.success{background:var(--green-bg);border-color:var(--green-border);color:var(--green2)}
+.msg-bar.error{background:var(--red-bg);border-color:rgba(209,41,61,.15);color:#a31d2e}
+.msg-bar.warn{background:var(--amber-bg);border-color:rgba(192,120,0,.15);color:#8a5600}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* Spinner */
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(10,143,60,.25);
+  border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Footer */
+.footer{margin-top:32px;text-align:center;font-size:11px;color:var(--text3);line-height:1.8}
+.footer a{color:var(--text2);text-decoration:none}
+.footer a:hover{color:var(--green)}
+
+/* Warning banner */
+.warn-banner{padding:12px 16px;border-radius:var(--radius-sm);background:var(--amber-bg);
+  border:1px solid rgba(192,120,0,.15);font-size:12px;color:#8a5600;margin-bottom:20px;line-height:1.5}
+
+/* Responsive */
+@media(max-width:560px){
+  .container{padding:16px 12px 40px}
+  .bridge-card{padding:20px 16px}
+  .direction{gap:8px}
+  .dir-chain{padding:12px 6px}
+  .dir-chain-name{font-size:13px}
+}
+</style>
+</head>
 <body>
-<div class="app">
-  <div class="sidebar">
-    <div class="sidebar-logo">
-      <div class="brand">SHIB ADMIN</div>
-      <div class="sub">跨链桥 &amp; 运营后台</div>
+<div class="container">
+  <header>
+    <div>
+      <div class="logo">
+        <div class="logo-icon">S</div>
+        <div>
+          <div class="logo-text">Shib Bridge</div>
+        </div>
+      </div>
+      <div class="net-badge" id="netBadge">
+        <span class="net-dot" id="netDot"></span>
+        <span id="netLabel">未连接</span>
+      </div>
     </div>
-    <div class="nav-item active"><span class="nav-icon">⇄</span>跨链桥</div>
-    <div class="nav-item"><span class="nav-icon">◉</span>系统概览</div>
-    <div class="nav-item"><span class="nav-icon">◈</span>收益经济</div>
-    <div class="nav-item"><span class="nav-icon">⚙</span>Owner 控制</div>
-    <div class="nav-item"><span class="nav-icon">◐</span>余额管理</div>
-    <div class="nav-item"><span class="nav-icon">↗</span>资金提取</div>
-    <div class="nav-item"><span class="nav-icon">▣</span>Batch Poster</div>
+    <button class="wallet-btn" id="walletBtn" onclick="connectWallet()">连接钱包</button>
+  </header>
+
+  <div class="bridge-card">
+    <!-- Direction -->
+    <div class="direction">
+      <div class="dir-chain active" id="dirFrom" onclick="setDirection('l1tol2')">
+        <div class="dir-chain-name" id="fromName">以太坊</div>
+        <div class="dir-chain-sub" id="fromSub">L1 · ETH 主网</div>
+      </div>
+      <div class="dir-arrow" id="dirArrow" onclick="toggleDirection()">
+        <svg viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+      </div>
+      <div class="dir-chain" id="dirTo" onclick="setDirection('l2tol1')">
+        <div class="dir-chain-name" id="toName">Shib Mainnet</div>
+        <div class="dir-chain-sub" id="toSub">L2 · Chain ID 5816</div>
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div class="steps" id="stepsBar">
+      <div class="step" id="step1"></div>
+      <div class="step" id="step2"></div>
+      <div class="step" id="step3"></div>
+    </div>
+
+    <!-- Balances -->
+    <div class="balance-row">
+      <div class="balance-box">
+        <div class="balance-label" id="balLabel1">L1 SHIB 余额</div>
+        <div class="balance-value loading" id="bal1">连接钱包查看</div>
+      </div>
+      <div class="balance-box">
+        <div class="balance-label" id="balLabel2">L2 SHIB 余额</div>
+        <div class="balance-value loading" id="bal2">连接钱包查看</div>
+      </div>
+    </div>
+
+    <!-- Amount -->
+    <div class="input-group">
+      <div class="input-label">
+        <span>跨链数量</span>
+        <span class="max-btn" onclick="setMax()">全部</span>
+      </div>
+      <div class="input-wrap">
+        <input type="text" id="amountInput" placeholder="0.00" oninput="formatInput(this)">
+        <span class="input-suffix">SHIB</span>
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="info-rows">
+      <div class="info-row"><span class="info-key">操作类型</span><span class="info-val" id="infoType">存款 (L1 → L2)</span></div>
+      <div class="info-row"><span class="info-key">预计时间</span><span class="info-val" id="infoTime">约 10-15 分钟</span></div>
+      <div class="info-row"><span class="info-key">Gas 费用</span><span class="info-val" id="infoGas">L1 Gas + L2 Gas (SHIB)</span></div>
+    </div>
+
+    <!-- Action -->
+    <button class="btn btn-outline" id="mainBtn" onclick="mainAction()">连接钱包开始</button>
+    <div class="msg-bar" id="bridgeStatus"></div>
   </div>
 
-  <div class="main">
-    <div class="topbar">
-      <div class="topbar-title" id="sectionTitle">跨链桥</div>
-      <div class="topbar-right">
-        <div class="net-badge"><span class="net-dot" id="netDot"></span><span id="netLabel">未连接</span></div>
-        <div class="wallet-btn" id="walletBtn">连接钱包</div>
-      </div>
-    </div>
-
-    <!-- SECTION: Bridge -->
-    <div class="section active" id="sec-bridge">
-      <div class="bridge-card">
-        <div class="panel">
-          <div class="direction">
-            <div class="dir-chain active" id="dirFrom">
-              <div class="dir-chain-name" id="fromName">以太坊 L1</div>
-              <div class="dir-chain-sub" id="fromSub">ETH 主网</div>
-            </div>
-            <div class="dir-arrow" id="dirArrow">
-              <svg viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"></path></svg>
-            </div>
-            <div class="dir-chain" id="dirTo">
-              <div class="dir-chain-name" id="toName">Shib Mainnet</div>
-              <div class="dir-chain-sub" id="toSub">Chain ID 5816</div>
-            </div>
-          </div>
-
-          <div class="steps" id="stepsBar">
-            <div class="step" id="step1"></div>
-            <div class="step" id="step2"></div>
-            <div class="step" id="step3"></div>
-          </div>
-
-          <div class="balance-row">
-            <div class="balance-box">
-              <div class="balance-label" id="balLabel1">L1 SHIB 余额</div>
-              <div class="balance-value loading" id="bal1">--</div>
-            </div>
-            <div class="balance-box">
-              <div class="balance-label" id="balLabel2">L2 SHIB 余额</div>
-              <div class="balance-value loading" id="bal2">--</div>
-            </div>
-          </div>
-
-          <div class="input-group">
-            <div class="input-label">
-              <span>跨链数量</span>
-              <span class="max-btn">全部</span>
-            </div>
-            <div class="input-wrap">
-              <input type="text" id="amountInput" placeholder="0.00">
-              <span class="input-suffix">SHIB</span>
-            </div>
-          </div>
-
-          <div class="info-rows">
-            <div class="info-row"><span class="info-key">预计时间</span><span class="info-val" id="infoTime">约 10-15 分钟</span></div>
-            <div class="info-row"><span class="info-key">Gas 费用</span><span class="info-val" id="infoGas">~$5-20 (L1)</span></div>
-            <div class="info-row"><span class="info-key">操作类型</span><span class="info-val" id="infoType">存款 (L1 → L2)</span></div>
-          </div>
-
-          <button class="btn btn-outline" id="mainBtn" style="width:100%">连接钱包</button>
-          <div class="msg-bar" id="bridgeStatus"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SECTION: Overview -->
-    <div class="section" id="sec-overview">
-      <div class="panel">
-        <div class="panel-title"><span class="dot"></span>链状态</div>
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-label">区块高度</div>
-            <div class="stat-value" id="blockHeight">--</div>
-            <div class="stat-sub">L2 Chain ID: 5816</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Gas Price</div>
-            <div class="stat-value cyan" id="gasPrice">--</div>
-            <div class="stat-sub">L2 base fee</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">同步状态</div>
-            <div class="stat-value green" id="syncStatus">--</div>
-            <div class="stat-sub">syncing 字段</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">RPC 状态</div>
-            <div class="stat-value red" id="rpcStatus">异常</div>
-            <div class="stat-sub">rpc.shib.world</div>
-          </div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-title"><span class="dot"></span>L1 以太坊状态</div>
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-label">L1 Gas Price</div>
-            <div class="stat-value amber" id="l1GasPrice">0.08 gwei</div>
-            <div class="stat-sub">以太坊主网</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">L1 区块高度</div>
-            <div class="stat-value" id="l1BlockHeight">26,009,648</div>
-            <div class="stat-sub">Chain ID: 1</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Batch Poster Nonce</div>
-            <div class="stat-value" id="bpNonce">134</div>
-            <div class="stat-sub">L1 交易计数</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SECTION: Economics -->
-    <div class="section" id="sec-economics">
-      <div class="panel">
-        <div class="panel-title"><span class="dot"></span>定价参数</div>
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-label">L1PricePerUnit</div>
-            <div class="stat-value green" id="l1PriceUnit">查询失败</div>
-            <div class="stat-sub">ArbOwner 预编译 0x70</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">每笔 L1 数据费</div>
-            <div class="stat-value cyan" id="l1DataFee">--</div>
-            <div class="stat-sub">SHIB / 笔</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">预估利润率</div>
-            <div class="stat-value green" id="profitMargin">--</div>
-            <div class="stat-sub">基于当前 L1 gas</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">安全边际</div>
-            <div class="stat-value" id="safetyMargin">--</div>
-            <div class="stat-sub">L1 gas 涨多少倍才亏</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SECTION: Owner -->
-    <div class="section" id="sec-owner">
-      <div class="panel">
-        <div class="panel-title"><span class="dot"></span>ArbOwner 预编译 (0x70)</div>
-        <div style="font-size:12px;color:var(--text3);margin-bottom:16px">
-          只有 chain owner 地址 (0x77B2...f62C) 可以调用。
-        </div>
-        <div style="margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border)">
-          <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">setL1PricePerUnit</div>
-          <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">当前值</label>
-              <input class="form-input" id="currentL1PPU" readonly="" value="--">
-            </div>
-            <div class="form-group">
-              <label class="form-label">新值 (wei)</label>
-              <input class="form-input" id="newL1PPU" placeholder="139788888825">
-            </div>
-            <button class="btn btn-amber">执行</button>
-          </div>
-          <div class="msg-bar" id="ownerMsg1"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- SECTION: Balances -->
-    <div class="section" id="sec-balances">
-      <div class="panel">
-        <div class="panel-title"><span class="dot"></span>运营者余额</div>
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-label">L1 ETH 余额</div>
-            <div class="stat-value amber" id="l1EthBal">--</div>
-            <div class="stat-sub">Batch Poster 用</div>
-            <div class="progress-bar"><div class="progress-fill warn" id="l1EthBar" style="width:0%"></div></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">L2 SHIB 余额</div>
-            <div class="stat-value green" id="l2ShibBal">--</div>
-            <div class="stat-sub">运营者地址</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">L1 SHIB 余额</div>
-            <div class="stat-value" id="l1ShibBal">--</div>
-            <div class="stat-sub">运营者地址</div>
-          </div>
-        </div>
-        <div style="margin-top:16px">
-          <button class="btn btn-outline btn-sm">刷新余额</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- SECTION: Withdraw -->
-    <div class="section" id="sec-withdraw">
-      <div class="panel">
-        <div class="panel-title"><span class="dot"></span>资金提取全流程</div>
-        <div class="flow">
-          <div class="flow-step" id="wf1"><span class="step-num">1</span>L2 发起提款</div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step" id="wf2"><span class="step-num">2</span>等待挑战期<br>(约7天)</div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step" id="wf3"><span class="step-num">3</span>L1 确认收款</div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step" id="wf4"><span class="step-num">4</span>DEX 换 ETH</div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-step" id="wf5"><span class="step-num">5</span>补充 Batch Poster</div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-title"><span class="dot"></span>步骤 1：L2 → L1 提款</div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">提款数量 (SHIB)</label>
-            <input class="form-input" id="wdAmount" placeholder="输入提款数量">
-          </div>
-          <button class="btn btn-green" id="wdBtn">发起提款</button>
-        </div>
-        <div class="msg-bar" id="wdMsg"></div>
-      </div>
-    </div>
-
-    <!-- SECTION: Batch Poster -->
-    <div class="section" id="sec-batch">
-      <div class="panel">
-        <div class="panel-title"><span class="dot"></span>Batch Poster 状态</div>
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-label">L1 ETH 余额</div>
-            <div class="stat-value amber" id="bpEth">--</div>
-            <div class="stat-sub">用于发布数据到 L1</div>
-            <div class="progress-bar"><div class="progress-fill warn" id="bpEthBar" style="width:0%"></div></div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">L1 Nonce</div>
-            <div class="stat-value" id="bpNonceDetail">--</div>
-            <div class="stat-sub">已发送交易数</div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div class="footer">
+    <div>Shib Mainnet · Chain ID 5816 · RPC: rpc.shib.world</div>
+    <div>L1 Router: <a href="https://etherscan.io/address/0x1B0988B45b4F700Ec0b8A15524D7A025b79AC13E" target="_blank">0x1B09...C13E</a>
+    &nbsp;·&nbsp; L2 Router: <a href="https://rpc.shib.world/" target="_blank">0xe5b5...10bB</a></div>
   </div>
 </div>
-
 <script>
-// ===== Config =====
+// ===== CONFIG =====
 const CFG = {
   L1_RPC: 'https://ethereum-rpc.publicnode.com',
   L2_RPC: 'https://rpc.shib.world/',
-  L2_CHAIN_ID: '0x16B8',
-  L1_CHAIN_ID: '0x1',
+  L2_CHAIN_ID_HEX: '0x16B8',  // 5816
+  L1_CHAIN_ID_HEX: '0x1',
   SHIB_L1: '0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce',
   SHIB_L2: '0x2dbf635e1589b3ec0d04aa8d94cce0551e81a8a2',
-  OWNER: '0x77B25ace2eb0Bdc7B4DbB064A79cEd4d9b6Ef62C',
-  ARB_OWNER: '0x0000000000000000000000000000000000000070',
-  ARB_GAS_INFO: '0x000000000000000000000000000000000000006c',
   // Bridge contracts
   L1_ROUTER: '0x1B0988B45b4F700Ec0b8A15524D7A025b79AC13E',
+  L1_STD_GW: '0x08cEf5036f1E29894932E1181d0cec79fDc330Ce',
   L2_ROUTER: '0xe5b5893E040fD80e7e53EE38058e6C34B8E510bB',
-  L1_CUSTOM_GW: '0x7a016eddB7E7a3004D639dd28bCEa6c6799d16CD',
-  L2_CUSTOM_GW: '0xff1085ee9E76F3D3Be8035cD4b28C7B56674839A',
+  L2_STD_GW: '0xDE4ba78D1105Ad20c466e9366A2d12b9fBe25d20',
   L2_NETWORK: {
     chainId: '0x16B8',
     chainName: 'Shib Mainnet',
@@ -538,30 +258,20 @@ const ERC20_ABI = [
   'function allowance(address,address) view returns (uint256)',
   'function decimals() view returns (uint8)'
 ];
-// L1 Router: 6-param outboundTransfer (delegates to CustomGateway)
+// L1 Router: outboundTransfer(l1Token, to, amount, maxGas, gasPriceBid, maxSubmissionCost) payable
 const L1_ROUTER_ABI = [
   'function outboundTransfer(address l1Token, address to, uint256 amount, uint256 maxGas, uint256 gasPriceBid, uint256 maxSubmissionCost) payable returns (bytes)'
 ];
-// L2 CustomGateway: 7-param outboundTransfer (bytes data)
-const L2_GW_ABI = [
+// L2 Router: outboundTransfer(l1Token, to, amount, maxGas, gasPriceBid, data)
+const L2_ROUTER_ABI = [
   'function outboundTransfer(address l1Token, address to, uint256 amount, uint256 maxGas, uint256 gasPriceBid, bytes data) returns (bytes)'
 ];
-const ARB_OWNER_ABI = [
-  'function setL1PricePerUnit(uint256)',
-  'function getL1PricePerUnit() view returns (uint256)'
-];
-const ARB_GAS_INFO_ABI = [
-  'function getL1PricePerUnit() view returns (uint256)',
-  'function getCurrentTxL1GasFees() view returns (uint256)',
-  'function getL1GasPriceEstimate() view returns (uint256)'
-];
 
-// ===== State =====
+// ===== STATE =====
 let state = {
   connected: false,
   account: null,
-  isOwner: false,
-  section: 'bridge',
+  currentChain: null,
   bridgeDir: 'l1tol2',
   l1Balance: '0',
   l2Balance: '0'
@@ -569,72 +279,7 @@ let state = {
 
 const $ = id => document.getElementById(id);
 
-// ===== Navigation =====
-function showSection(name, el) {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  $('sec-' + name).classList.add('active');
-  if (el) el.classList.add('active');
-  state.section = name;
-  const titles = {
-    bridge: '跨链桥', overview: '系统概览', economics: '收益经济',
-    owner: 'Owner 控制', balances: '余额管理', withdraw: '资金提取', batch: 'Batch Poster'
-  };
-  $('sectionTitle').textContent = titles[name] || name;
-  if (name === 'overview') refreshOverview();
-  if (name === 'economics') refreshEconomics();
-  if (name === 'balances') refreshAllBalances();
-  if (name === 'batch') refreshBatchPoster();
-  if (name === 'bridge' && state.connected) refreshBridgeBalances();
-}
-
-// ===== Wallet =====
-async function connectWallet() {
-  if (typeof window.ethereum === 'undefined') {
-    alert('未检测到 MetaMask 钱包');
-    return;
-  }
-  try {
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    state.account = accounts[0].toLowerCase();
-    state.connected = true;
-    state.isOwner = state.account === CFG.OWNER.toLowerCase();
-    try {
-      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: CFG.L2_CHAIN_ID }] });
-    } catch (e) {
-      if (e.code === 4902) {
-        await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [CFG.L2_NETWORK] });
-      }
-    }
-    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-    state.currentChain = chainId;
-    updateWalletUI(chainId);
-    if (state.section === 'bridge') refreshBridgeBalances();
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-function updateWalletUI(chainId) {
-  if (!state.connected) return;
-  $('netDot').className = 'net-dot ok';
-  $('netLabel').textContent = chainId === CFG.L2_CHAIN_ID ? 'Shib Mainnet (L2)' :
-    chainId === CFG.L1_CHAIN_ID ? '以太坊 (L1)' : '未知网络';
-  $('walletBtn').textContent = shortAddr(state.account) + (state.isOwner ? ' (Owner)' : '');
-  $('walletBtn').style.borderColor = state.isOwner ? 'var(--green)' : 'var(--border)';
-  $('walletBtn').style.color = state.isOwner ? 'var(--green)' : 'var(--text2)';
-  if (state.section === 'bridge') updateBridgeButton();
-  if (!state.isOwner) {
-    document.querySelectorAll('#sec-owner .btn').forEach(b => {
-      b.disabled = true;
-      b.title = '仅 chain owner 可操作';
-    });
-  }
-}
-
-function shortAddr(a) { return a.slice(0, 6) + '...' + a.slice(-4); }
-
-// ===== RPC helpers =====
+// ===== RPC HELPERS (FIXED) =====
 async function rpc(url, method, params) {
   const res = await fetch(url, {
     method: 'POST',
@@ -646,8 +291,9 @@ async function rpc(url, method, params) {
   return json.result;
 }
 
-function encodeCall(abi, funcName, args) {
-  const iface = new ethers.utils.Interface([abi.find(a => a.includes(funcName))]);
+// FIXED: encodeCall now correctly creates Interface from full ABI array
+function encodeCall(abiArr, funcName, args) {
+  const iface = new ethers.utils.Interface(abiArr);
   return iface.encodeFunctionData(funcName, args);
 }
 
@@ -658,15 +304,10 @@ async function ethCall(url, to, data) {
 function fmtSHIB(wei) {
   const n = BigInt(wei);
   const w = n / BigInt(10 ** 18);
-  const f = (n % BigInt(10 ** 18)).toString().padStart(18, '0').slice(0, 2);
-  return Number(w.toString() + '.' + f).toLocaleString(undefined, { maximumFractionDigits: 2 });
-}
-
-function fmtETH(wei) {
-  const n = BigInt(wei);
-  const w = n / BigInt(10 ** 18);
   const f = (n % BigInt(10 ** 18)).toString().padStart(18, '0').slice(0, 4);
-  return w.toString() + '.' + f;
+  const num = parseFloat(w.toString() + '.' + f);
+  if (num === 0 && n > 0n) return '<0.0001';
+  return num.toLocaleString(undefined, { maximumFractionDigits: 4 });
 }
 
 function showMsg(id, msg, type) {
@@ -675,7 +316,66 @@ function showMsg(id, msg, type) {
   el.innerHTML = msg;
 }
 
-// ===== Bridge =====
+function clearMsg(id) {
+  const el = $(id);
+  el.className = 'msg-bar';
+  el.innerHTML = '';
+}
+
+function setSteps(n) {
+  for (let i = 1; i <= 3; i++) {
+    $('step' + i).className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+  }
+}
+
+function shortAddr(a) { return a.slice(0, 6) + '...' + a.slice(-4); }
+
+// ===== WALLET (FIXED) =====
+async function connectWallet() {
+  if (typeof window.ethereum === 'undefined') {
+    alert('未检测到钱包，请安装 MetaMask');
+    return;
+  }
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    state.account = accounts[0].toLowerCase();
+    state.connected = true;
+
+    // FIXED: Don't force switch chain. Just detect current chain.
+    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+    state.currentChain = chainId;
+
+    updateWalletUI();
+    refreshBridgeBalances();
+  } catch (e) {
+    console.error('Connect error:', e);
+    showMsg('bridgeStatus', '连接失败: ' + (e.message || ''), 'error');
+  }
+}
+
+function updateWalletUI() {
+  if (!state.connected) return;
+  const chainId = state.currentChain;
+  const btn = $('walletBtn');
+  btn.textContent = shortAddr(state.account);
+  btn.className = 'wallet-btn connected';
+
+  const dot = $('netDot');
+  const label = $('netLabel');
+  if (chainId === CFG.L1_CHAIN_ID_HEX) {
+    dot.className = 'net-dot ok';
+    label.textContent = '以太坊 L1';
+  } else if (chainId === CFG.L2_CHAIN_ID_HEX) {
+    dot.className = 'net-dot ok';
+    label.textContent = 'Shib Mainnet L2';
+  } else {
+    dot.className = 'net-dot';
+    label.textContent = '未知网络';
+  }
+  updateBridgeButton();
+}
+
+// ===== BRIDGE UI =====
 function setDirection(dir) {
   state.bridgeDir = dir;
   updateBridgeUI();
@@ -690,14 +390,14 @@ function updateBridgeUI() {
   const isL1toL2 = state.bridgeDir === 'l1tol2';
   $('dirFrom').className = 'dir-chain' + (isL1toL2 ? ' active' : '');
   $('dirTo').className = 'dir-chain' + (isL1toL2 ? '' : ' active');
-  $('fromName').textContent = isL1toL2 ? '以太坊 L1' : 'Shib Mainnet';
-  $('fromSub').textContent = isL1toL2 ? 'ETH 主网' : 'Chain ID 5816';
-  $('toName').textContent = isL1toL2 ? 'Shib Mainnet' : '以太坊 L1';
-  $('toSub').textContent = isL1toL2 ? 'Chain ID 5816' : 'ETH 主网';
+  $('fromName').textContent = isL1toL2 ? '以太坊' : 'Shib Mainnet';
+  $('fromSub').textContent = isL1toL2 ? 'L1 · ETH 主网' : 'L2 · Chain ID 5816';
+  $('toName').textContent = isL1toL2 ? 'Shib Mainnet' : '以太坊';
+  $('toSub').textContent = isL1toL2 ? 'L2 · Chain ID 5816' : 'L1 · ETH 主网';
   $('balLabel1').textContent = isL1toL2 ? 'L1 SHIB 余额' : 'L2 SHIB 余额';
   $('balLabel2').textContent = isL1toL2 ? 'L2 SHIB 余额' : 'L1 SHIB 余额';
-  $('infoTime').textContent = isL1toL2 ? '约 10-15 分钟' : '约 7 天（含挑战期）';
-  $('infoGas').textContent = isL1toL2 ? '~$5-20 (L1 Gas) + ~0.01 ETH (L2 铸造)' : '~$0.01 (L2 Gas)';
+  $('infoTime').textContent = isL1toL2 ? '约 10-15 分钟' : '即时发起，7 天挑战期';
+  $('infoGas').textContent = isL1toL2 ? 'L1 Gas (ETH) + L2 Gas (SHIB)' : 'L2 Gas (SHIB)';
   $('infoType').textContent = isL1toL2 ? '存款 (L1 → L2)' : '提款 (L2 → L1)';
   $('dirArrow').querySelector('svg').style.transform = isL1toL2 ? 'rotate(0deg)' : 'rotate(180deg)';
   if (state.connected) {
@@ -709,35 +409,27 @@ function updateBridgeUI() {
 function updateBridgeButton() {
   const btn = $('mainBtn');
   if (!state.connected) {
-    btn.textContent = '连接钱包';
+    btn.textContent = '连接钱包开始';
     btn.className = 'btn btn-outline';
-    btn.style.width = '100%';
     btn.disabled = false;
     return;
   }
   const isL1toL2 = state.bridgeDir === 'l1tol2';
-  const needChain = isL1toL2 ? CFG.L1_CHAIN_ID : CFG.L2_CHAIN_ID;
+  const needChain = isL1toL2 ? CFG.L1_CHAIN_ID_HEX : CFG.L2_CHAIN_ID_HEX;
   const chainId = state.currentChain;
   if (chainId !== needChain) {
-    btn.textContent = '切换到' + (isL1toL2 ? '以太坊 L1' : 'Shib Mainnet');
+    const needName = isL1toL2 ? '以太坊 L1' : 'Shib Mainnet L2';
+    btn.textContent = '切换到 ' + needName;
     btn.className = 'btn btn-green';
-    btn.style.width = '100%';
     btn.disabled = false;
-    return;
-  }
-  if (typeof ethers === 'undefined') {
-    btn.textContent = '加载依赖中...';
-    btn.className = 'btn btn-green';
-    btn.style.width = '100%';
-    btn.disabled = true;
     return;
   }
   btn.textContent = isL1toL2 ? '授权并存款' : '授权并提款';
   btn.className = 'btn btn-green';
-  btn.style.width = '100%';
   btn.disabled = false;
 }
 
+// ===== BALANCE QUERIES (FIXED) =====
 async function refreshBridgeBalances() {
   if (!state.account) return;
   $('bal1').className = 'balance-value loading';
@@ -746,20 +438,29 @@ async function refreshBridgeBalances() {
   $('bal2').textContent = '查询中...';
 
   try {
-    const l1Data = encodeCall(ERC20_ABI, 'balanceOf', [state.account]);
-    const l1Bal = await ethCall(CFG.L1_RPC, CFG.SHIB_L1, l1Data);
-    state.l1Balance = l1Bal;
+    // FIXED: use correct ABI array for encodeCall
+    const balOfData = encodeCall(ERC20_ABI, 'balanceOf', [state.account]);
 
-    const l2Data = encodeCall(ERC20_ABI, 'balanceOf', [state.account]);
-    const l2Bal = await ethCall(CFG.L2_RPC, CFG.SHIB_L2, l2Data);
-    state.l2Balance = l2Bal;
+    // Use Promise.allSettled to handle L2 token not existing yet
+    const [l1Result, l2Result] = await Promise.allSettled([
+      ethCall(CFG.L1_RPC, CFG.SHIB_L1, balOfData),
+      ethCall(CFG.L2_RPC, CFG.SHIB_L2, balOfData)
+    ]);
+
+    if (l1Result.status === 'fulfilled') {
+      state.l1Balance = l1Result.value;
+    }
+    if (l2Result.status === 'fulfilled') {
+      state.l2Balance = l2Result.value;
+    }
 
     const isL1toL2 = state.bridgeDir === 'l1tol2';
     $('bal1').textContent = fmtSHIB(isL1toL2 ? state.l1Balance : state.l2Balance);
-    $('bal2').textContent = fmtSHIB(isL1toL2 ? state.l2Balance : state.l1Balance);
+    $('bal2').textContent = l2Result.status === 'rejected' ? '尚未激活' : fmtSHIB(isL1toL2 ? state.l2Balance : state.l1Balance);
     $('bal1').className = 'balance-value';
     $('bal2').className = 'balance-value';
   } catch (e) {
+    console.error('Balance error:', e);
     $('bal1').textContent = '查询失败';
     $('bal2').textContent = '查询失败';
     $('bal1').className = 'balance-value';
@@ -780,37 +481,52 @@ function setMax() {
   $('amountInput').value = fmtSHIB(bal).replace(/,/g, '');
 }
 
-function setSteps(n) {
-  for (let i = 1; i <= 3; i++) {
-    const el = $('step' + i);
-    el.className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
-  }
-}
-
+// ===== MAIN ACTION =====
 async function mainAction() {
   if (!state.connected) {
     await connectWallet();
     return;
   }
   const isL1toL2 = state.bridgeDir === 'l1tol2';
-  const needChain = isL1toL2 ? CFG.L1_CHAIN_ID : CFG.L2_CHAIN_ID;
+  const needChain = isL1toL2 ? CFG.L1_CHAIN_ID_HEX : CFG.L2_CHAIN_ID_HEX;
   const chainId = state.currentChain;
 
+  // If on wrong chain, switch
   if (chainId !== needChain) {
     showMsg('bridgeStatus', '<span class="spinner"></span>正在切换网络...', 'info');
+    $('mainBtn').disabled = true;
     try {
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: needChain }]
       });
       state.currentChain = needChain;
-      updateBridgeButton();
+      updateWalletUI();
+      clearMsg('bridgeStatus');
     } catch (e) {
-      showMsg('bridgeStatus', '切换网络失败: ' + (e.message || ''), 'error');
+      if (e.code === 4902) {
+        // Chain not added, try to add it
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [CFG.L2_NETWORK]
+          });
+          state.currentChain = needChain;
+          updateWalletUI();
+          clearMsg('bridgeStatus');
+        } catch (e2) {
+          showMsg('bridgeStatus', '添加网络失败: ' + (e2.message || ''), 'error');
+          $('mainBtn').disabled = false;
+        }
+      } else {
+        showMsg('bridgeStatus', '切换网络失败: ' + (e.message || ''), 'error');
+        $('mainBtn').disabled = false;
+      }
     }
     return;
   }
 
+  // Validate amount
   const amountStr = $('amountInput').value.trim();
   if (!amountStr || parseFloat(amountStr) <= 0) {
     showMsg('bridgeStatus', '请输入有效的跨链数量', 'error');
@@ -826,47 +542,34 @@ async function mainAction() {
 
 // ===== DEPOSIT L1 → L2 (FIXED) =====
 async function doDeposit(amountStr) {
-  if (typeof ethers === 'undefined') {
-    showMsg('bridgeStatus', 'ethers.js 尚未加载完成，请稍后再试', 'error');
-    return;
-  }
   const amount = toWei(amountStr);
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
 
   try {
-    // Step 1: Approve L1 CustomGateway (it does the transferFrom)
+    // Step 1: Approve L1 StandardGateway
     setSteps(1);
-    showMsg('bridgeStatus', '<span class="spinner"></span>第 1 步：检查并授权 L1 CustomGateway 使用 SHIB...', 'info');
+    showMsg('bridgeStatus', '<span class="spinner"></span>检查 SHIB 授权额度...', 'info');
     $('mainBtn').disabled = true;
 
     const shibContract = new ethers.Contract(CFG.SHIB_L1, ERC20_ABI, signer);
-    const allowance = await shibContract.allowance(state.account, CFG.L1_CUSTOM_GW);
+    const allowance = await shibContract.allowance(state.account, CFG.L1_STD_GW);
     if (allowance.lt(amount)) {
-      showMsg('bridgeStatus', '<span class="spinner"></span>授权中，请在钱包中确认交易...', 'info');
-      const approveTx = await shibContract.approve(CFG.L1_CUSTOM_GW, amount);
-      showMsg('bridgeStatus', '<span class="spinner"></span>等待授权交易上链确认...', 'info');
+      showMsg('bridgeStatus', '<span class="spinner"></span>请在钱包中确认授权交易...', 'info');
+      const approveTx = await shibContract.approve(CFG.L1_STD_GW, amount);
+      showMsg('bridgeStatus', '<span class="spinner"></span>等待授权上链确认...', 'info');
       await approveTx.wait();
-      showMsg('bridgeStatus', '<span class="spinner"></span>授权成功！', 'success');
-    } else {
-      showMsg('bridgeStatus', '<span class="spinner"></span>已有足够授权额度，跳过授权步骤', 'info');
     }
 
-    // Step 2: Deposit via L1 Router (NOT CustomGateway directly!)
-    // Router.outboundTransfer delegates to CustomGateway with correct encoding
+    // Step 2: Deposit via L1 Router
+    // FIXED: value = 0 for custom fee token chains (SHIB is native gas on L2)
     setSteps(2);
-    showMsg('bridgeStatus', '<span class="spinner"></span>第 2 步：发起存款交易，请在钱包中确认...', 'info');
+    showMsg('bridgeStatus', '<span class="spinner"></span>请在钱包中确认存款交易...', 'info');
 
     const l1Router = new ethers.Contract(CFG.L1_ROUTER, L1_ROUTER_ABI, signer);
     const maxGas = 200000;
     const gasPriceBid = ethers.utils.parseUnits('0.1', 'gwei');
-    // 重试票创建需要 ETH（用于 L2 铸造操作），即使桥接的是自定义费用代币
-    // 多余的部分会退还给用户
-    const maxSubmissionCost = ethers.utils.parseEther('0.01');
-    const totalEthCost = maxSubmissionCost.add(gasPriceBid.mul(maxGas));
-
-    showMsg('bridgeStatus',
-      '<span class="spinner"></span>第 2 步：发起存款交易（需 ~0.01 ETH 用于 L2 铸造）...', 'info');
+    const maxSubmissionCost = ethers.utils.parseEther('0');
 
     const depositTx = await l1Router.outboundTransfer(
       CFG.SHIB_L1,
@@ -875,7 +578,7 @@ async function doDeposit(amountStr) {
       maxGas,
       gasPriceBid,
       maxSubmissionCost,
-      { value: totalEthCost }
+      { value: 0 }  // FIXED: custom fee token chain, no ETH needed
     );
 
     showMsg('bridgeStatus', '<span class="spinner"></span>等待 L1 确认（约 10-15 分钟）...', 'info');
@@ -884,59 +587,57 @@ async function doDeposit(amountStr) {
     setSteps(3);
     showMsg(
       'bridgeStatus',
-      '存款成功！交易哈希: <a href="https://etherscan.io/tx/' + receipt.transactionHash +
-      '" target="_blank" style="color:var(--cyan)">' + receipt.transactionHash.slice(0, 16) + '...</a>' +
+      '✅ 存款成功！<br>TX: <a href="https://etherscan.io/tx/' + receipt.transactionHash +
+      '" target="_blank" style="color:var(--blue);font-family:var(--mono)">' + receipt.transactionHash.slice(0, 20) + '...</a>' +
       '<br>L2 将在约 10-15 分钟内收到 SHIB',
       'success'
     );
     $('mainBtn').disabled = false;
-    setTimeout(() => refreshBridgeBalances(), 3000);
+    setTimeout(() => refreshBridgeBalances(), 5000);
   } catch (e) {
-    showMsg('bridgeStatus', '存款失败: ' + (e.reason || e.message || '未知错误'), 'error');
+    console.error('Deposit error:', e);
+    const reason = e.reason || e.data?.message || e.message || '未知错误';
+    showMsg('bridgeStatus', '存款失败: ' + reason, 'error');
     $('mainBtn').disabled = false;
+    setSteps(0);
   }
 }
 
-// ===== WITHDRAW L2 → L1 =====
+// ===== WITHDRAW L2 → L1 (FIXED) =====
 async function doWithdraw(amountStr) {
-  if (typeof ethers === 'undefined') {
-    showMsg('bridgeStatus', 'ethers.js 尚未加载完成，请稍后再试', 'error');
-    return;
-  }
   const amount = toWei(amountStr);
   const provider = new ethers.providers.Web3Provider(window.ethereum);
   const signer = provider.getSigner();
 
   try {
+    // Step 1: Approve L2 StandardGateway
     setSteps(1);
-    showMsg('bridgeStatus', '<span class="spinner"></span>第 1 步：检查并授权 L2 CustomGateway 使用 L2 SHIB...', 'info');
+    showMsg('bridgeStatus', '<span class="spinner"></span>检查 L2 SHIB 授权额度...', 'info');
     $('mainBtn').disabled = true;
 
     const l2Shib = new ethers.Contract(CFG.SHIB_L2, ERC20_ABI, signer);
-    const l2Allowance = await l2Shib.allowance(state.account, CFG.L2_CUSTOM_GW);
-    if (l2Allowance.lt(amount)) {
-      showMsg('bridgeStatus', '<span class="spinner"></span>授权中，请在钱包中确认交易...', 'info');
-      const approveTx = await l2Shib.approve(CFG.L2_CUSTOM_GW, amount);
-      showMsg('bridgeStatus', '<span class="spinner"></span>等待 L2 授权交易确认...', 'info');
+    const allowance = await l2Shib.allowance(state.account, CFG.L2_STD_GW);
+    if (allowance.lt(amount)) {
+      showMsg('bridgeStatus', '<span class="spinner"></span>请在钱包中确认 L2 授权交易...', 'info');
+      const approveTx = await l2Shib.approve(CFG.L2_STD_GW, amount);
+      showMsg('bridgeStatus', '<span class="spinner"></span>等待 L2 授权确认...', 'info');
       await approveTx.wait();
-      showMsg('bridgeStatus', '<span class="spinner"></span>L2 授权成功！', 'success');
-    } else {
-      showMsg('bridgeStatus', '<span class="spinner"></span>已有足够 L2 授权额度，跳过授权', 'info');
     }
 
+    // Step 2: Withdraw via L2 Router (FIXED: was calling L2_CUSTOM_GW directly)
     setSteps(2);
-    showMsg('bridgeStatus', '<span class="spinner"></span>第 2 步：发起 L2 提款交易，请在钱包中确认...', 'info');
+    showMsg('bridgeStatus', '<span class="spinner"></span>请在钱包中确认提款交易...', 'info');
 
-    const l2Gateway = new ethers.Contract(CFG.L2_CUSTOM_GW, L2_GW_ABI, signer);
+    const l2Router = new ethers.Contract(CFG.L2_ROUTER, L2_ROUTER_ABI, signer);
     const encodedData = ethers.utils.defaultAbiCoder.encode(['uint256'], [0]);
 
-    const withdrawTx = await l2Gateway.outboundTransfer(
-      CFG.SHIB_L1,
-      state.account,
-      amount,
-      0,
-      0,
-      encodedData
+    const withdrawTx = await l2Router.outboundTransfer(
+      CFG.SHIB_L1,       // l1Token address
+      state.account,     // to
+      amount,            // amount
+      0,                 // maxGas (0 = auto)
+      0,                 // gasPriceBid
+      encodedData        // data
     );
 
     showMsg('bridgeStatus', '<span class="spinner"></span>等待 L2 确认...', 'info');
@@ -945,18 +646,21 @@ async function doWithdraw(amountStr) {
     setSteps(3);
     showMsg(
       'bridgeStatus',
-      '提款发起成功！交易哈希: ' + receipt.transactionHash.slice(0, 16) + '...<br>' +
-      '<br>请保存此交易哈希，后续步骤：<br>' +
+      '✅ 提款发起成功！<br>TX: <span style="font-family:var(--mono)">' + receipt.transactionHash.slice(0, 20) + '...</span>' +
+      '<br><br>后续步骤：<br>' +
       '1. 等待挑战期（约 7 天，Arbitrum 安全机制）<br>' +
-      '2. 挑战期结束后，切换到以太坊 L1 网络<br>' +
-      '3. 在 L1 Outbox 执行最终确认，SHIB 将释放到你的 L1 钱包',
+      '2. 挑战期结束后，切换到以太坊 L1<br>' +
+      '3. 在 L1 Outbox 执行最终确认领取 SHIB',
       'success'
     );
     $('mainBtn').disabled = false;
-    setTimeout(() => refreshBridgeBalances(), 3000);
+    setTimeout(() => refreshBridgeBalances(), 5000);
   } catch (e) {
-    showMsg('bridgeStatus', '提款失败: ' + (e.reason || e.message || '未知错误'), 'error');
+    console.error('Withdraw error:', e);
+    const reason = e.reason || e.data?.message || e.message || '未知错误';
+    showMsg('bridgeStatus', '提款失败: ' + reason, 'error');
     $('mainBtn').disabled = false;
+    setSteps(0);
   }
 }
 
@@ -967,223 +671,40 @@ function toWei(str) {
   return BigInt(whole) * BigInt(10 ** 18) + BigInt(frac);
 }
 
-// ===== Overview =====
-async function refreshOverview() {
-  try {
-    const [blockHex, gasHex, syncResult] = await Promise.all([
-      rpc(CFG.L2_RPC, 'eth_blockNumber', []),
-      rpc(CFG.L2_RPC, 'eth_gasPrice', []),
-      rpc(CFG.L2_RPC, 'eth_syncing', [])
-    ]);
-    $('blockHeight').textContent = parseInt(blockHex).toLocaleString();
-    $('gasPrice').textContent = (parseInt(gasHex) / 1e9).toFixed(2) + ' gwei';
-    $('syncStatus').textContent = syncResult === false ? '已同步' : '同步中';
-    $('syncStatus').className = 'stat-value ' + (syncResult === false ? 'green' : 'amber');
-    $('rpcStatus').textContent = '正常';
-  } catch (e) {
-    $('rpcStatus').textContent = '异常';
-    $('rpcStatus').className = 'stat-value red';
-  }
-  try {
-    const [l1Block, l1Gas] = await Promise.all([
-      rpc(CFG.L1_RPC, 'eth_blockNumber', []),
-      rpc(CFG.L1_RPC, 'eth_gasPrice', [])
-    ]);
-    $('l1BlockHeight').textContent = parseInt(l1Block).toLocaleString();
-    $('l1GasPrice').textContent = (parseInt(l1Gas) / 1e9).toFixed(2) + ' gwei';
-    try {
-      const nonce = await rpc(CFG.L1_RPC, 'eth_getTransactionCount', [CFG.OWNER, 'latest']);
-      $('bpNonce').textContent = parseInt(nonce);
-    } catch (e) { $('bpNonce').textContent = '--'; }
-  } catch (e) {
-    $('l1GasPrice').textContent = '查询失败';
-  }
-}
-
-// ===== Economics =====
-async function refreshEconomics() {
-  try {
-    const data = encodeCall(ARB_GAS_INFO_ABI, 'getL1PricePerUnit', []);
-    const result = await ethCall(CFG.L2_RPC, CFG.ARB_GAS_INFO, data);
-    const l1ppu = BigInt(result);
-    $('l1PriceUnit').textContent = l1ppu.toLocaleString();
-    if ($('currentL1PPU')) $('currentL1PPU').value = l1ppu.toString();
-
-    const feeData = encodeCall(ARB_GAS_INFO_ABI, 'getCurrentTxL1GasFees', []);
-    const feeResult = await ethCall(CFG.L2_RPC, CFG.ARB_GAS_INFO, feeData);
-    const txFee = BigInt(feeResult);
-    $('l1DataFee').textContent = fmtSHIB(txFee.toString());
-
-    const txFeeSHIB = Number(txFee);
-    $('profitMargin').textContent = '75%';
-    $('safetyMargin').textContent = '4.0x';
-    $('safetyMargin').className = 'stat-value green';
-  } catch (e) {
-    console.error('Economics error:', e);
-    $('l1PriceUnit').textContent = '查询失败';
-  }
-}
-
-// ===== Owner Controls =====
-async function setL1PricePerUnit() {
-  if (!state.isOwner) { showMsg('ownerMsg1', '仅 chain owner 可操作', 'error'); return; }
-  if (typeof ethers === 'undefined') { showMsg('ownerMsg1', 'ethers.js 未加载', 'error'); return; }
-  const newVal = $('newL1PPU').value.trim();
-  if (!newVal || isNaN(newVal)) { showMsg('ownerMsg1', '请输入有效的数值', 'error'); return; }
-
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  const signer = provider.getSigner();
-  const arbOwner = new ethers.Contract(CFG.ARB_OWNER, ARB_OWNER_ABI, signer);
-
-  try {
-    showMsg('ownerMsg1', '<span class="spinner"></span>发送交易...', 'info');
-    const tx = await arbOwner.setL1PricePerUnit(BigInt(newVal));
-    showMsg('ownerMsg1', '<span class="spinner"></span>等待确认... TX: ' + tx.hash.slice(0, 16) + '...', 'info');
-    await tx.wait();
-    showMsg('ownerMsg1', 'L1PricePerUnit 已更新为 ' + BigInt(newVal).toLocaleString(), 'success');
-    refreshEconomics();
-  } catch (e) {
-    showMsg('ownerMsg1', '失败: ' + (e.reason || e.message), 'error');
-  }
-}
-
-// ===== Balances =====
-async function refreshAllBalances() {
-  if (!state.account) return;
-  try {
-    const l1Eth = await rpc(CFG.L1_RPC, 'eth_getBalance', [CFG.OWNER, 'latest']);
-    $('l1EthBal').textContent = fmtETH(l1Eth) + ' ETH';
-    const ethNum = Number(BigInt(l1Eth)) / 1e18;
-    const ethPct = Math.min(100, (ethNum / 0.5) * 100);
-    $('l1EthBar').style.width = ethPct + '%';
-    $('l1EthBar').className = 'progress-fill ' + (ethNum < 0.05 ? 'danger' : ethNum < 0.1 ? 'warn' : '');
-
-    const l2Data = encodeCall(ERC20_ABI, 'balanceOf', [state.account]);
-    const l2Bal = await ethCall(CFG.L2_RPC, CFG.SHIB_L2, l2Data);
-    $('l2ShibBal').textContent = fmtSHIB(l2Bal) + ' SHIB';
-
-    const l1Data = encodeCall(ERC20_ABI, 'balanceOf', [CFG.OWNER]);
-    const l1Bal = await ethCall(CFG.L1_RPC, CFG.SHIB_L1, l1Data);
-    $('l1ShibBal').textContent = fmtSHIB(l1Bal) + ' SHIB';
-  } catch (e) {
-    console.error('Balance error:', e);
-  }
-}
-
-// ===== Withdraw Flow =====
-async function startWithdraw() {
-  if (!state.connected) { alert('请先连接钱包'); return; }
-  if (typeof ethers === 'undefined') { showMsg('wdMsg', 'ethers.js 未加载', 'error'); return; }
-  const amountStr = $('wdAmount').value.trim();
-  if (!amountStr || parseFloat(amountStr) <= 0) { showMsg('wdMsg', '请输入提款数量', 'error'); return; }
-
-  const amount = toWei(amountStr);
-  const provider = new ethers.providers.Web3Provider(window.ethereum);
-  const signer = provider.getSigner();
-
-  try {
-    $('wdBtn').disabled = true;
-    setFlowStep(1);
-    showMsg('wdMsg', '<span class="spinner"></span>步骤 1/2：授权 L2 CustomGateway...', 'info');
-
-    const l2Shib = new ethers.Contract(CFG.SHIB_L2, ERC20_ABI, signer);
-    const allowance = await l2Shib.allowance(state.account, CFG.L2_CUSTOM_GW);
-    if (allowance.lt(amount)) {
-      const approveTx = await l2Shib.approve(CFG.L2_CUSTOM_GW, amount);
-      await approveTx.wait();
-    }
-
-    setFlowStep(2);
-    showMsg('wdMsg', '<span class="spinner"></span>步骤 2/2：发起 L2 提款交易...', 'info');
-
-    const l2Gw = new ethers.Contract(CFG.L2_CUSTOM_GW, L2_GW_ABI, signer);
-    const encodedData = ethers.utils.defaultAbiCoder.encode(['uint256'], [0]);
-    const withdrawTx = await l2Gw.outboundTransfer(
-      CFG.SHIB_L1, state.account, amount, 0, 0, encodedData
-    );
-    const receipt = await withdrawTx.wait();
-
-    setFlowStep(3);
-    showMsg(
-      'wdMsg',
-      '提款成功！TX: ' + receipt.transactionHash +
-      '<br>请保存此哈希，7 天后到「步骤 3」执行最终确认',
-      'success'
-    );
-    $('wdBtn').disabled = false;
-  } catch (e) {
-    showMsg('wdMsg', '提款失败: ' + (e.reason || e.message), 'error');
-    $('wdBtn').disabled = false;
-  }
-}
-
-function setFlowStep(n) {
-  for (let i = 1; i <= 5; i++) {
-    const el = $('wf' + i);
-    el.className = 'flow-step' + (i < n ? ' done' : i === n ? ' active' : '');
-  }
-}
-
-// ===== Batch Poster =====
-async function refreshBatchPoster() {
-  try {
-    const [ethBal, nonce] = await Promise.all([
-      rpc(CFG.L1_RPC, 'eth_getBalance', [CFG.OWNER, 'latest']),
-      rpc(CFG.L1_RPC, 'eth_getTransactionCount', [CFG.OWNER, 'latest'])
-    ]);
-    const ethNum = Number(BigInt(ethBal)) / 1e18;
-    $('bpEth').textContent = fmtETH(ethBal) + ' ETH';
-    $('bpNonceDetail').textContent = parseInt(nonce);
-
-    const pct = Math.min(100, (ethNum / 0.5) * 100);
-    $('bpEthBar').style.width = pct + '%';
-    $('bpEthBar').className = 'progress-fill ' + (ethNum < 0.05 ? 'danger' : ethNum < 0.1 ? 'warn' : '');
-  } catch (e) {
-    console.error('Batch poster error:', e);
-  }
-}
-
-// ===== Event listeners =====
+// ===== EVENT LISTENERS =====
 if (typeof window.ethereum !== 'undefined') {
-  try {
-    if (typeof window.ethereum.on === 'function') {
-      window.ethereum.on('accountsChanged', accounts => {
-        if (accounts.length === 0) {
-          state.connected = false;
-          state.account = null;
-          $('netDot').className = 'net-dot';
-          $('netLabel').textContent = '未连接';
-          $('walletBtn').textContent = '连接钱包';
-        } else {
-          state.account = accounts[0].toLowerCase();
-          state.isOwner = state.account === CFG.OWNER.toLowerCase();
-          connectWallet();
-        }
-      });
-      window.ethereum.on('chainChanged', chainId => {
-        state.currentChain = chainId;
-        updateWalletUI(chainId);
-      });
-    }
-  } catch (e) { console.warn(e); }
+  if (typeof window.ethereum.on === 'function') {
+    window.ethereum.on('accountsChanged', accounts => {
+      if (accounts.length === 0) {
+        state.connected = false;
+        state.account = null;
+        state.currentChain = null;
+        $('netDot').className = 'net-dot';
+        $('netLabel').textContent = '未连接';
+        $('walletBtn').textContent = '连接钱包';
+        $('walletBtn').className = 'wallet-btn';
+        $('bal1').textContent = '连接钱包查看';
+        $('bal2').textContent = '连接钱包查看';
+        $('bal1').className = 'balance-value loading';
+        $('bal2').className = 'balance-value loading';
+        updateBridgeButton();
+      } else {
+        state.account = accounts[0].toLowerCase();
+        state.connected = true;
+        window.ethereum.request({ method: 'eth_chainId' }).then(chainId => {
+          state.currentChain = chainId;
+          updateWalletUI();
+          refreshBridgeBalances();
+        });
+      }
+    });
+    window.ethereum.on('chainChanged', chainId => {
+      state.currentChain = chainId;
+      updateWalletUI();
+      if (state.connected) refreshBridgeBalances();
+    });
+  }
 }
-
-// ===== Load ethers.js =====
-(function loadEthers() {
-  const s = document.createElement('script');
-  s.src = 'https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js';
-  s.onload = () => {
-    console.log('ethers.js loaded');
-    refreshOverview();
-    refreshEconomics();
-  };
-  s.onerror = () => console.warn('ethers.js CDN failed');
-  document.head.appendChild(s);
-})();
-
-// Initial load
-refreshOverview();
 </script>
-
-
-</body></html>
+</body>
+</html>
