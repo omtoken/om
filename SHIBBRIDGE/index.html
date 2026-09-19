@@ -692,15 +692,15 @@
 
   <!-- ========== JavaScript ========== -->
   <script>
-    /* ---------- Configuration ---------- */
-    const CFG = {
-      L1_RPC:        'https://ethereum-rpc.publicnode.com',
-      L1_RPC_FALLBACK: 'https://eth.drpc.org',
-      L2_RPC:        'https://rpc.shib.world/',
-      L2_CHAIN_ID:   '0x16B8',
-      L1_CHAIN_ID:   '0x1',
-      SHIB_L1:       '0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce',
-      L1_INBOX:      '0xC470cFF8a2e3f99E18D9B3899073653670eCB228',
+    // ========== 配置 ==========
+    var CFG = {
+      L1_RPC:          'https://ethereum-rpc.publicnode.com',
+      L1_RPC_BACKUP:   'https://eth.drpc.org',
+      L2_RPC:          'https://rpc.shib.world/',
+      L2_CHAIN_ID:     '0x16B8',
+      L1_CHAIN_ID:     '0x1',
+      SHIB_L1:         '0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce',
+      L1_INBOX:        '0xC470cFF8a2e3F99E18D9B3899073653670eCB228',
       L2_NETWORK: {
         chainId:          '0x16B8',
         chainName:        'Shib Mainnet',
@@ -710,374 +710,304 @@
       }
     };
 
-    /* ---------- ABI Definitions ---------- */
-    const ERC20_ABI = [
+    // ========== ABI ==========
+    var ERC20_ABI = [
       'function balanceOf(address) view returns (uint256)',
       'function approve(address,uint256) returns (bool)',
       'function allowance(address,address) view returns (uint256)'
     ];
-
-    const INBOX_ABI = [
+    var INBOX_ABI = [
       'function depositERC20(uint256 amount) external returns (uint256)'
     ];
 
-    /* ---------- State ---------- */
-    let state = {
-      connected:   false,
-      account:     null,
-      bridgeDir:   'l1tol2',
-      l1Balance:   '0',
-      l2Balance:   '0',
+    // ========== 状态 ==========
+    var state = {
+      connected: false,
+      account: null,
+      bridgeDir: 'l1tol2',
+      l1Balance: '0',
+      l2Balance: '0',
       currentChain: null
     };
 
-    /* ---------- DOM Helper ---------- */
-    const $ = (id) => document.getElementById(id);
+    // ========== DOM ==========
+    function $(id) { return document.getElementById(id); }
 
-    /* ---------- Wallet Connection ---------- */
-    async function connectWallet() {
-      if (typeof window.ethereum === 'undefined') {
-        alert('未检测到钱包，请安装 MetaMask 或 OKX Wallet');
-        return;
-      }
-      if (typeof ethers === 'undefined') {
-        alert('ethers.js 尚未加载，请刷新页面重试');
-        return;
-      }
-      try {
-        const accounts = await window.ethereum.request({
-          method: 'eth_requestAccounts'
-        });
-        state.account = ethers.utils.getAddress(accounts[0]); // 保留 EIP-55 校验和格式
-        state.connected = true;
-
-        // 根据跨链方向决定目标链：L1→L2 存款时保持 L1，L2→L1 提款时切到 L2
-        const isL1toL2 = state.bridgeDir === 'l1tol2';
-        if (!isL1toL2) {
-          try {
-            await window.ethereum.request({
-              method: 'wallet_switchEthereumChain',
-              params: [{ chainId: CFG.L2_CHAIN_ID }]
-            });
-          } catch (e) {
-            if (e.code === 4902) {
-              await window.ethereum.request({
-                method: 'wallet_addEthereumChain',
-                params: [CFG.L2_NETWORK]
-              });
-            }
-          }
-        }
-
-        state.currentChain = await window.ethereum.request({
-          method: 'eth_chainId'
-        });
-        updateWalletUI(state.currentChain);
-        refreshBridgeBalances();
-      } catch (e) {
-        console.error('连接钱包失败:', e);
-        showMsg('bridgeStatus', '连接失败: ' + (e.message || ''), 'error');
-      }
-    }
-
-    /* ---------- Wallet UI ---------- */
-    function updateWalletUI(chainId) {
-      if (!state.connected) return;
-      $('netDot').className = 'net-dot ok';
-
-      if (chainId === CFG.L2_CHAIN_ID) {
-        $('netLabel').textContent = 'Shib Mainnet';
-      } else if (chainId === CFG.L1_CHAIN_ID) {
-        $('netLabel').textContent = '以太坊 L1';
-      } else {
-        $('netLabel').textContent = '未知网络';
-      }
-
-      $('walletBtn').textContent =
-        state.account.slice(0, 6) + '...' + state.account.slice(-4);
-      updateBridgeButton();
-    }
-
-    /* ---------- RPC Helper ---------- */
-    async function rpc(url, method, params) {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
-      });
-      const json = await res.json();
-      if (json.error) throw new Error(json.error.message);
-      return json.result;
-    }
-
-    // 带备用节点的 RPC 查询
-    async function rpcWithFallback(primaryUrl, fallbackUrl, method, params) {
-      try {
-        return await rpc(primaryUrl, method, params);
-      } catch (e) {
-        console.warn('主 RPC 失败，切换备用节点:', e.message);
-        return await rpc(fallbackUrl, method, params);
-      }
-    }
-
-    function encodeCall(abi, funcName, args) {
-      const sig = abi.find(a => a.includes(funcName));
-      return new ethers.utils.Interface([sig]).encodeFunctionData(funcName, args);
-    }
-
-    async function ethCall(url, to, data) {
-      return rpc(url, 'eth_call', [{ to, data }, 'latest']);
-    }
-
-    async function ethCallWithFallback(primaryUrl, fallbackUrl, to, data) {
-      try {
-        return await ethCall(primaryUrl, to, data);
-      } catch (e) {
-        console.warn('主 RPC 失败，切换备用节点:', e.message);
-        return await ethCall(fallbackUrl, to, data);
-      }
-    }
-
-    /* ---------- Formatting ---------- */
-    function fmtSHIB(wei) {
-      const n = BigInt(wei);
-      const d = BigInt(10 ** 18);
-      const w = n / d;
-      const f = (n % d).toString().padStart(18, '0').slice(0, 2);
-      return Number(w + '.' + f).toLocaleString(undefined, {
-        maximumFractionDigits: 2
-      });
-    }
-
-    function toWei(str) {
-      const p = str.split('.');
-      const w = p[0] || '0';
-      const f = (p[1] || '').padEnd(18, '0').slice(0, 18);
-      return BigInt(w) * BigInt(10 ** 18) + BigInt(f);
-    }
-
-    /* ---------- Status Message ---------- */
-    function showMsg(id, msg, type) {
-      const el = $(id);
+    function showMsg(msg, type) {
+      var el = $('bridgeStatus');
       el.className = 'msg-bar show ' + type;
       el.innerHTML = msg;
     }
 
-    /* ---------- Direction Toggle ---------- */
-    function setDirection(dir) {
-      state.bridgeDir = dir;
-      updateBridgeUI();
+    function setSteps(n) {
+      for (var i = 1; i <= 3; i++) {
+        $('step' + i).className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
+      }
     }
 
+    // ========== RPC ==========
+    function rpcCall(url, method, params) {
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: method, params: params })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(j) {
+        if (j.error) throw new Error(j.error.message);
+        return j.result;
+      });
+    }
+
+    function rpcSafe(url, method, params) {
+      return rpcCall(url, method, params).catch(function() { return null; });
+    }
+
+    // ========== 格式化 ==========
+    function fmtSHIB(weiHex) {
+      try {
+        var n = BigInt(weiHex);
+        var d = BigInt('1000000000000000000');
+        var w = n / d;
+        var f = (n % d).toString().padStart(18, '0').slice(0, 2);
+        return Number(w + '.' + f).toLocaleString(undefined, { maximumFractionDigits: 2 });
+      } catch (e) {
+        return '0';
+      }
+    }
+
+    function toWei(str) {
+      var p = str.split('.');
+      var w = p[0] || '0';
+      var f = (p[1] || '').padEnd(18, '0').slice(0, 18);
+      return BigInt(w) * BigInt('1000000000000000000') + BigInt(f);
+    }
+
+    // ========== 余额查询 ==========
+    function refreshBalances() {
+      if (!state.account) return;
+      var isL1 = state.bridgeDir === 'l1tol2';
+
+      $('bal1').textContent = '查询中...';
+      $('bal2').textContent = '查询中...';
+      $('bal1').className = 'balance-value loading';
+      $('bal2').className = 'balance-value loading';
+
+      // L1 SHIB 余额 (ERC20 balanceOf)
+      var balanceOfSig = '0x70a08231' + state.account.slice(2).toLowerCase().padStart(64, '0');
+      rpcSafe(CFG.L1_RPC, 'eth_call', [{ to: CFG.SHIB_L1, data: balanceOfSig }, 'latest'])
+        .then(function(result) {
+          if (result) {
+            state.l1Balance = result;
+            $('bal' + (isL1 ? '1' : '2')).textContent = fmtSHIB(result);
+          } else {
+            $('bal' + (isL1 ? '1' : '2')).textContent = '0';
+          }
+          $('bal' + (isL1 ? '1' : '2')).className = 'balance-value';
+        });
+
+      // L2 原生余额 (eth_getBalance)
+      rpcSafe(CFG.L2_RPC, 'eth_getBalance', [state.account, 'latest'])
+        .then(function(result) {
+          if (result) {
+            state.l2Balance = result;
+            $('bal' + (isL1 ? '2' : '1')).textContent = fmtSHIB(result);
+          } else {
+            $('bal' + (isL1 ? '2' : '1')).textContent = '0';
+          }
+          $('bal' + (isL1 ? '2' : '1')).className = 'balance-value';
+        });
+    }
+
+    // ========== 连接钱包 ==========
+    function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        alert('未检测到钱包，请安装 MetaMask 或 OKX Wallet');
+        return;
+      }
+      window.ethereum.request({ method: 'eth_requestAccounts' })
+        .then(function(accounts) {
+          // 校验和格式地址
+          state.account = ethers.utils.getAddress(accounts[0]);
+          state.connected = true;
+
+          // L1→L2 存款时不切链，保持在 L1
+          // L2→L1 提款时才切到 L2
+          if (state.bridgeDir !== 'l1tol2') {
+            return window.ethereum.request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: CFG.L2_CHAIN_ID }]
+            }).catch(function(e) {
+              if (e.code === 4902) {
+                return window.ethereum.request({
+                  method: 'wallet_addEthereumChain',
+                  params: [CFG.L2_NETWORK]
+                });
+              }
+            });
+          }
+        })
+        .then(function() {
+          return window.ethereum.request({ method: 'eth_chainId' });
+        })
+        .then(function(chainId) {
+          state.currentChain = chainId;
+          updateWalletUI();
+          refreshBalances();
+        })
+        .catch(function(e) {
+          console.error('连接失败:', e);
+          showMsg('连接失败: ' + (e.message || ''), 'error');
+        });
+    }
+
+    // ========== 更新钱包 UI ==========
+    function updateWalletUI() {
+      if (!state.connected) return;
+      $('netDot').className = 'net-dot ok';
+
+      var label = '未知网络';
+      if (state.currentChain === CFG.L1_CHAIN_ID) label = '以太坊 L1';
+      else if (state.currentChain === CFG.L2_CHAIN_ID) label = 'Shib Mainnet';
+      $('netLabel').textContent = label;
+
+      $('walletBtn').textContent = state.account.slice(0, 6) + '...' + state.account.slice(-4);
+      updateBridgeButton();
+    }
+
+    // ========== 方向切换 ==========
     function toggleDirection() {
-      state.bridgeDir = state.bridgeDir === 'l1tol2' ? 'l2tol1' : 'l1tol2';
+      state.bridgeDir = (state.bridgeDir === 'l1tol2') ? 'l2tol1' : 'l1tol2';
       updateBridgeUI();
     }
 
     function updateBridgeUI() {
-      const is = state.bridgeDir === 'l1tol2';
+      var is = state.bridgeDir === 'l1tol2';
 
       $('dirFrom').className = 'dir-chain' + (is ? ' active' : '');
-      $('dirTo').className   = 'dir-chain' + (is ? '' : ' active');
-
-      $('fromName').textContent = is ? '以太坊 L1'     : 'Shib Mainnet';
-      $('fromSub').textContent  = is ? 'ETH 主网'      : 'Chain ID 5816';
-      $('toName').textContent   = is ? 'Shib Mainnet'  : '以太坊 L1';
-      $('toSub').textContent    = is ? 'Chain ID 5816' : 'ETH 主网';
-
-      $('balLabel1').textContent = is ? 'L1 SHIB 余额'       : 'L2 SHIB 余额（原生）';
+      $('dirTo').className = 'dir-chain' + (is ? '' : ' active');
+      $('fromName').textContent = is ? '以太坊 L1' : 'Shib Mainnet';
+      $('fromSub').textContent = is ? 'ETH 主网' : 'Chain ID 5816';
+      $('toName').textContent = is ? 'Shib Mainnet' : '以太坊 L1';
+      $('toSub').textContent = is ? 'Chain ID 5816' : 'ETH 主网';
+      $('balLabel1').textContent = is ? 'L1 SHIB 余额' : 'L2 SHIB 余额（原生）';
       $('balLabel2').textContent = is ? 'L2 SHIB 余额（原生）' : 'L1 SHIB 余额';
-
-      $('infoTime').textContent   = is ? '约 10-15 分钟'      : '暂不支持';
-      $('infoGas').textContent    = is ? '~$5-20 (L1 Gas)'    : '--';
-      $('infoType').textContent   = is ? '存款 (L1 → L2)'    : '提款 (L2 → L1)';
+      $('infoTime').textContent = is ? '约 10-15 分钟' : '暂不支持';
+      $('infoGas').textContent = is ? '~$5-20 (L1 Gas)' : '--';
+      $('infoType').textContent = is ? '存款 (L1 → L2)' : '提款 (L2 → L1)';
       $('infoMethod').textContent = is ? 'Inbox.depositERC20()' : '暂不支持';
-
-      $('dirArrow').querySelector('svg').style.transform =
-        is ? 'rotate(0deg)' : 'rotate(180deg)';
+      $('dirArrow').querySelector('svg').style.transform = is ? 'rotate(0deg)' : 'rotate(180deg)';
 
       if (state.connected) {
         updateBridgeButton();
-        refreshBridgeBalances();
+        refreshBalances();
       }
     }
 
-    /* ---------- Bridge Button State ---------- */
+    // ========== 按钮状态 ==========
     function updateBridgeButton() {
-      const btn = $('mainBtn');
-
+      var btn = $('mainBtn');
       if (!state.connected) {
         btn.textContent = '连接钱包';
         btn.className = 'btn btn-outline';
         btn.disabled = false;
         return;
       }
-
-      const is = state.bridgeDir === 'l1tol2';
-      const need = is ? CFG.L1_CHAIN_ID : CFG.L2_CHAIN_ID;
-
+      var is = state.bridgeDir === 'l1tol2';
+      var need = is ? CFG.L1_CHAIN_ID : CFG.L2_CHAIN_ID;
       if (state.currentChain !== need) {
         btn.textContent = '切换到' + (is ? '以太坊 L1' : 'Shib Mainnet');
         btn.className = 'btn btn-green';
         btn.disabled = false;
         return;
       }
-
       if (!is) {
         btn.textContent = 'L2→L1 提款暂不支持';
         btn.className = 'btn btn-outline';
         btn.disabled = true;
         return;
       }
-
       btn.textContent = '授权并存款';
       btn.className = 'btn btn-green';
       btn.disabled = false;
     }
 
-    /* ---------- Balance Query ---------- */
-    async function refreshBridgeBalances() {
-      if (!state.account) return;
-
-      const is = state.bridgeDir === 'l1tol2';
-
-      $('bal1').className = 'balance-value loading';
-      $('bal2').className = 'balance-value loading';
-      $('bal1').textContent = '查询中...';
-      $('bal2').textContent = '查询中...';
-
-      // L1 SHIB 余额查询（独立处理，带备用节点）
-      (async () => {
-        try {
-          const l1Data = encodeCall(ERC20_ABI, 'balanceOf', [state.account]);
-          state.l1Balance = await ethCallWithFallback(CFG.L1_RPC, CFG.L1_RPC_FALLBACK, CFG.SHIB_L1, l1Data);
-          $('bal' + (is ? '1' : '2')).textContent = fmtSHIB(state.l1Balance);
-          $('bal' + (is ? '1' : '2')).className = 'balance-value';
-        } catch (e) {
-          console.error('L1 余额查询失败:', e);
-          $('bal' + (is ? '1' : '2')).textContent = '查询失败';
-          $('bal' + (is ? '1' : '2')).className = 'balance-value';
-        }
-      })();
-
-      // L2 原生余额查询（独立处理）
-      (async () => {
-        try {
-          state.l2Balance = await rpc(CFG.L2_RPC, 'eth_getBalance', [state.account, 'latest']);
-          $('bal' + (is ? '2' : '1')).textContent = fmtSHIB(state.l2Balance);
-          $('bal' + (is ? '2' : '1')).className = 'balance-value';
-        } catch (e) {
-          console.error('L2 余额查询失败:', e);
-          $('bal' + (is ? '2' : '1')).textContent = '查询失败';
-          $('bal' + (is ? '2' : '1')).className = 'balance-value';
-        }
-      })();
-    }
-
-    /* ---------- Input Helpers ---------- */
-    function formatInput(el) {
-      let v = el.value.replace(/[^0-9.]/g, '');
-      const p = v.split('.');
-      if (p.length > 2) v = p[0] + '.' + p.slice(1).join('');
-      el.value = v;
-    }
-
-    function setMax() {
-      const bal = state.bridgeDir === 'l1tol2' ? state.l1Balance : state.l2Balance;
-      $('amountInput').value = fmtSHIB(bal).replace(/,/g, '');
-    }
-
-    function setSteps(n) {
-      for (let i = 1; i <= 3; i++) {
-        $('step' + i).className = 'step' + (i < n ? ' done' : i === n ? ' active' : '');
-      }
-    }
-
-    /* ---------- Main Action (Button Click) ---------- */
-    async function mainAction() {
+    // ========== 主按钮点击 ==========
+    function mainAction() {
       if (!state.connected) {
-        await connectWallet();
+        connectWallet();
         return;
       }
-
-      const is = state.bridgeDir === 'l1tol2';
-      const need = is ? CFG.L1_CHAIN_ID : CFG.L2_CHAIN_ID;
+      var is = state.bridgeDir === 'l1tol2';
+      var need = is ? CFG.L1_CHAIN_ID : CFG.L2_CHAIN_ID;
 
       if (state.currentChain !== need) {
-        showMsg('bridgeStatus', '<span class="spinner"></span>正在切换网络...', 'info');
-        try {
-          await window.ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: need }]
-          });
+        showMsg('<span class="spinner"></span>正在切换网络...', 'info');
+        window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: need }]
+        })
+        .then(function() {
           state.currentChain = need;
           updateBridgeButton();
-        } catch (e) {
-          showMsg('bridgeStatus', '切换网络失败: ' + (e.message || ''), 'error');
-        }
+        })
+        .catch(function(e) {
+          showMsg('切换网络失败: ' + (e.message || ''), 'error');
+        });
         return;
       }
 
-      const amt = $('amountInput').value.trim();
+      var amt = $('amountInput').value.trim();
       if (!amt || parseFloat(amt) <= 0) {
-        showMsg('bridgeStatus', '请输入有效的跨链数量', 'error');
+        showMsg('请输入有效的跨链数量', 'error');
         return;
       }
-
-      if (is) await doDeposit(amt);
+      if (is) doDeposit(amt);
     }
 
-    /* ---------- Deposit (L1 → L2) ---------- */
-    async function doDeposit(amountStr) {
-      if (typeof ethers === 'undefined') {
-        showMsg('bridgeStatus', 'ethers.js 尚未加载，请稍后再试', 'error');
-        return;
-      }
+    // ========== 存款 L1→L2 ==========
+    function doDeposit(amountStr) {
+      var amount = toWei(amountStr);
+      var provider = new ethers.providers.Web3Provider(window.ethereum);
+      var signer = provider.getSigner();
 
-      const amount = toWei(amountStr);
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
+      // 所有地址强制校验和
+      var shibAddr = ethers.utils.getAddress(CFG.SHIB_L1);
+      var inboxAddr = ethers.utils.getAddress(CFG.L1_INBOX);
 
-      // 确保所有地址都是校验和格式
-      const userAddress = ethers.utils.getAddress(state.account);
-      const shibAddress = ethers.utils.getAddress(CFG.SHIB_L1);
-      const inboxAddress = ethers.utils.getAddress(CFG.L1_INBOX);
+      setSteps(1);
+      showMsg('<span class="spinner"></span>第 1 步：检查并授权 Inbox 合约使用 SHIB...', 'info');
+      $('mainBtn').disabled = true;
 
-      console.log('存款地址:', { userAddress, shibAddress, inboxAddress });
+      var shib = new ethers.Contract(shibAddr, ERC20_ABI, signer);
 
-      try {
-        // Step 1: Approve
-        setSteps(1);
-        showMsg('bridgeStatus', '<span class="spinner"></span>第 1 步：检查并授权 Inbox 合约使用 SHIB...', 'info');
-        $('mainBtn').disabled = true;
-
-        const shib = new ethers.Contract(shibAddress, ERC20_ABI, signer);
-        const allowance = await shib.allowance(userAddress, inboxAddress);
-
-        if (allowance.lt(amount)) {
-          showMsg('bridgeStatus', '<span class="spinner"></span>授权中，请在钱包中确认交易...', 'info');
-          const tx = await shib.approve(inboxAddress, amount);
-          showMsg('bridgeStatus', '<span class="spinner"></span>等待授权交易上链确认...', 'info');
-          await tx.wait();
-          showMsg('bridgeStatus', '<span class="spinner"></span>授权成功！', 'success');
-        } else {
-          showMsg('bridgeStatus', '<span class="spinner"></span>已有足够授权额度，跳过授权', 'info');
-        }
-
-        // Step 2: Deposit
+      signer.getAddress().then(function(myAddr) {
+        return shib.allowance(myAddr, inboxAddr).then(function(allowance) {
+          if (allowance.lt(amount)) {
+            showMsg('<span class="spinner"></span>授权中，请在钱包中确认交易...', 'info');
+            return shib.approve(inboxAddr, amount).then(function(tx) {
+              showMsg('<span class="spinner"></span>等待授权交易上链确认...', 'info');
+              return tx.wait();
+            }).then(function() {
+              showMsg('<span class="spinner"></span>授权成功！', 'success');
+            });
+          } else {
+            showMsg('<span class="spinner"></span>已有足够授权额度，跳过授权', 'info');
+          }
+        });
+      })
+      .then(function() {
         setSteps(2);
-        showMsg('bridgeStatus', '<span class="spinner"></span>第 2 步：发起存款交易，请在钱包中确认...', 'info');
-
-        const inbox = new ethers.Contract(inboxAddress, INBOX_ABI, signer);
-        const depositTx = await inbox.depositERC20(amount);
-        showMsg('bridgeStatus', '<span class="spinner"></span>等待 L1 确认（约 10-15 分钟）...', 'info');
-
-        const receipt = await depositTx.wait();
-
-        // Step 3: Done
+        showMsg('<span class="spinner"></span>第 2 步：发起存款交易，请在钱包中确认...', 'info');
+        var inbox = new ethers.Contract(inboxAddr, INBOX_ABI, signer);
+        return inbox.depositERC20(amount).then(function(tx) {
+          showMsg('<span class="spinner"></span>等待 L1 确认（约 10-15 分钟）...', 'info');
+          return tx.wait();
+        });
+      })
+      .then(function(receipt) {
         setSteps(3);
         showMsg(
-          'bridgeStatus',
           '存款成功！交易哈希: <a href="https://etherscan.io/tx/' + receipt.transactionHash +
           '" target="_blank" style="color:var(--cyan)">' + receipt.transactionHash.slice(0, 16) + '...</a>' +
           '<br>SHIB 已存入 L2，将成为 L2 原生 Gas 余额' +
@@ -1085,56 +1015,57 @@
           'success'
         );
         $('mainBtn').disabled = false;
-        setTimeout(() => refreshBridgeBalances(), 5000);
-
-      } catch (e) {
-        console.error('存款失败详情:', e);
-        showMsg('bridgeStatus', '存款失败: ' + (e.reason || e.message || '未知错误'), 'error');
+        setTimeout(refreshBalances, 5000);
+      })
+      .catch(function(e) {
+        console.error('存款失败:', e);
+        showMsg('存款失败: ' + (e.reason || e.message || '未知错误'), 'error');
         $('mainBtn').disabled = false;
-      }
+      });
     }
 
-    /* ---------- Event Listeners ---------- */
-    // 主按钮点击事件
-    $('mainBtn').addEventListener('click', mainAction);
+    // ========== 全部按钮 ==========
+    function setMax() {
+      var bal = state.bridgeDir === 'l1tol2' ? state.l1Balance : state.l2Balance;
+      $('amountInput').value = fmtSHIB(bal).replace(/,/g, '');
+    }
 
-    // 方向切换箭头点击事件
-    $('dirArrow').addEventListener('click', toggleDirection);
+    // ========== 输入格式化 ==========
+    function formatInput(el) {
+      var v = el.value.replace(/[^0-9.]/g, '');
+      var p = v.split('.');
+      if (p.length > 2) v = p[0] + '.' + p.slice(1).join('');
+      el.value = v;
+    }
 
-    // 全部按钮点击事件
-    document.querySelector('.max-btn').addEventListener('click', setMax);
+    // ========== 绑定事件 ==========
+    document.addEventListener('DOMContentLoaded', function() {
+      $('mainBtn').addEventListener('click', mainAction);
+      $('dirArrow').addEventListener('click', toggleDirection);
+      document.querySelector('.max-btn').addEventListener('click', setMax);
+      $('amountInput').addEventListener('input', function() { formatInput(this); });
 
-    // 输入框格式化事件
-    $('amountInput').addEventListener('input', function() {
-      formatInput(this);
+      // 钱包事件
+      if (typeof window.ethereum !== 'undefined' && typeof window.ethereum.on === 'function') {
+        window.ethereum.on('accountsChanged', function(accounts) {
+          if (!accounts.length) {
+            state.connected = false;
+            state.account = null;
+            $('netDot').className = 'net-dot';
+            $('netLabel').textContent = '未连接';
+            $('walletBtn').textContent = '连接钱包';
+            $('mainBtn').textContent = '连接钱包';
+            $('mainBtn').className = 'btn btn-outline';
+          } else {
+            connectWallet();
+          }
+        });
+        window.ethereum.on('chainChanged', function(chainId) {
+          state.currentChain = chainId;
+          updateWalletUI();
+        });
+      }
     });
-
-    // 钱包事件监听
-    if (typeof window.ethereum !== 'undefined') {
-      try {
-        if (typeof window.ethereum.on === 'function') {
-          window.ethereum.on('accountsChanged', (accounts) => {
-            if (!accounts.length) {
-              state.connected = false;
-              state.account = null;
-              $('netDot').className = 'net-dot';
-              $('netLabel').textContent = '未连接';
-              $('walletBtn').textContent = '连接钱包';
-            } else {
-              state.account = ethers.utils.getAddress(accounts[0]);
-              connectWallet();
-            }
-          });
-
-          window.ethereum.on('chainChanged', (chainId) => {
-            state.currentChain = chainId;
-            updateWalletUI(chainId);
-          });
-        }
-      } catch (e) {
-        console.warn(e);
-      }
-    }
   </script>
 
 </body>
