@@ -1,172 +1,259 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><style rel="stylesheet" type="text/css">@charset "utf-8";
+
+*, ::before, ::after { box-sizing: border-box; margin: 0px; padding: 0px; }
+
+:root { --bg: #06080c; --bg2: #0c1018; --bg3: #141a24; --bg4: #1c2430; --green: #00e676; --green2: #69f0ae; --green3: #00c853; --amber: #ffab00; --amber2: #ffd740; --red: #ff5252; --cyan: #00e5ff; --cyan2: #84ffff; --text: #d8dce6; --text2: #8892a4; --text3: #4a5568; --border: #1e2a3a; --border2: #2a3a50; --mono: 'JetBrains Mono',monospace; --radius: 12px; --radius-sm: 8px; }
+
+html { font-size: 15px; scroll-behavior: smooth; }
+
+body { font-family: "Noto Sans SC", sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+body::before { content: ""; position: fixed; inset: 0px; z-index: 0; pointer-events: none; background: radial-gradient(70% 50% at 10% 0%, rgba(0, 230, 118, 0.04), transparent), radial-gradient(50% 40% at 90% 100%, rgba(0, 229, 255, 0.03), transparent); }
+
+.app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+.sidebar { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); padding: 20px 0px; flex-shrink: 0; position: fixed; top: 0px; left: 0px; bottom: 0px; overflow-y: auto; z-index: 10; }
+
+.main { flex: 1 1 0%; margin-left: 220px; padding: 24px 28px; max-width: 1200px; }
+
+.sidebar-logo { padding: 0px 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+
+.sidebar-logo .brand { font-family: Orbitron, sans-serif; font-weight: 900; font-size: 14px; color: var(--green); letter-spacing: 2px; }
+
+.sidebar-logo .sub { font-size: 10px; color: var(--text3); letter-spacing: 3px; margin-top: 4px; }
+
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; font-size: 13px; color: var(--text2); transition: 0.2s; border-left: 3px solid transparent; }
+
+.nav-item:hover { background: rgba(255, 255, 255, 0.02); color: var(--text); }
+
+.nav-item.active { background: rgba(0, 230, 118, 0.05); color: var(--green); border-left-color: var(--green); }
+
+.nav-icon { width: 18px; text-align: center; font-size: 14px; }
+
+.topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+
+.topbar-title { font-size: 20px; font-weight: 700; }
+
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.net-badge { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 12px; background: var(--bg3); border: 1px solid var(--border); }
+
+.net-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text3); }
+
+.net-dot.ok { background: var(--green); box-shadow: rgba(0, 230, 118, 0.5) 0px 0px 6px; }
+
+.wallet-btn { padding: 6px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; background: var(--bg3); border: 1px solid var(--border); color: var(--text2); font-family: var(--mono); transition: 0.2s; }
+
+.wallet-btn:hover { border-color: var(--green); color: var(--green); }
+
+.panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; position: relative; overflow: hidden; }
+
+.panel::before { content: ""; position: absolute; top: 0px; left: 0px; right: 0px; height: 1px; background: linear-gradient(90deg, transparent, rgba(0, 230, 118, 0.2), transparent); }
+
+.panel-title { font-size: 13px; font-weight: 700; color: var(--text2); letter-spacing: 2px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+.panel-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+
+.stat-card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }
+
+.stat-label { font-size: 11px; color: var(--text3); letter-spacing: 1px; margin-bottom: 8px; }
+
+.stat-value { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--text); }
+
+.stat-value.green { color: var(--green); }
+
+.stat-value.amber { color: var(--amber); }
+
+.stat-value.red { color: var(--red); }
+
+.stat-value.cyan { color: var(--cyan); }
+
+.stat-sub { font-size: 10px; color: var(--text3); margin-top: 4px; font-family: var(--mono); }
+
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+
+.data-table th { text-align: left; padding: 8px 12px; font-size: 11px; color: var(--text3); letter-spacing: 1px; font-weight: 500; border-bottom: 1px solid var(--border); }
+
+.data-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); font-family: var(--mono); font-size: 12px; color: var(--text2); }
+
+.data-table tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+.form-row { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 14px; flex-wrap: wrap; }
+
+.form-group { flex: 1 1 0%; min-width: 160px; }
+
+.form-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; display: block; letter-spacing: 1px; }
+
+.form-input { width: 100%; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; transition: border-color 0.2s; }
+
+.form-input:focus { border-color: var(--green); }
+
+.btn { padding: 10px 20px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 700; cursor: pointer; font-family: "Noto Sans SC", sans-serif; transition: 0.2s; letter-spacing: 1px; }
+
+.btn-green { background: linear-gradient(135deg,var(--green3),var(--green)); color: rgb(6, 8, 12); box-shadow: rgba(0, 230, 118, 0.2) 0px 2px 12px; }
+
+.btn-green:hover { box-shadow: rgba(0, 230, 118, 0.35) 0px 4px 20px; transform: translateY(-1px); }
+
+.btn-green:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text2); }
+
+.btn-outline:hover { border-color: var(--green); color: var(--green); }
+
+.btn-amber { background: linear-gradient(135deg,#e69500,var(--amber)); color: rgb(6, 8, 12); }
+
+.btn-red { background: var(--red); color: rgb(255, 255, 255); }
+
+.btn-sm { padding: 6px 14px; font-size: 11px; }
+
+.msg-bar { margin-top: 12px; padding: 12px 16px; border-radius: var(--radius-sm); font-size: 12px; display: none; border: 1px solid var(--border); }
+
+.msg-bar.show { display: block; animation: 0.3s ease 0s 1 normal none running fadeUp; }
+
+.msg-bar.info { background: rgba(0, 229, 255, 0.05); border-color: rgba(0, 229, 255, 0.15); color: var(--cyan2); }
+
+.msg-bar.success { background: rgba(0, 230, 118, 0.05); border-color: rgba(0, 230, 118, 0.15); color: var(--green2); }
+
+.msg-bar.error { background: rgba(255, 82, 82, 0.05); border-color: rgba(255, 82, 82, 0.15); color: var(--red2); }
+
+.msg-bar.warn { background: rgba(255, 171, 0, 0.05); border-color: rgba(255, 171, 0, 0.15); color: var(--amber2); }
+
+@keyframes fadeUp { 
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0px); }
+}
+
+.flow { display: flex; gap: 0px; margin: 16px 0px; }
+
+.flow-step { flex: 1 1 0%; text-align: center; padding: 14px 8px; background: var(--bg3); border: 1px solid var(--border); position: relative; font-size: 12px; color: var(--text3); }
+
+.flow-step:first-child { border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+
+.flow-step:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+
+.flow-step.active { background: rgba(0, 230, 118, 0.08); border-color: var(--green); color: var(--green); }
+
+.flow-step.done { background: rgba(0, 230, 118, 0.04); color: var(--green2); }
+
+.flow-step .step-num { font-family: var(--mono); font-weight: 700; font-size: 16px; display: block; margin-bottom: 4px; }
+
+.progress-bar { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; margin: 8px 0px; }
+
+.progress-fill { height: 100%; border-radius: 3px; transition: width 0.6s; background: linear-gradient(90deg,var(--green3),var(--green)); }
+
+.progress-fill.warn { background: linear-gradient(90deg,#e69500,var(--amber)); }
+
+.progress-fill.danger { background: linear-gradient(90deg,#d32f2f,var(--red)); }
+
+.spinner { display: inline-block; width: 14px; height: 14px; border-width: 2px; border-style: solid; border-right-color: rgba(0, 230, 118, 0.2); border-bottom-color: rgba(0, 230, 118, 0.2); border-left-color: rgba(0, 230, 118, 0.2); border-image: none; border-top-color: var(--green); border-radius: 50%; animation: 0.8s linear 0s infinite normal none running spin; vertical-align: middle; margin-right: 6px; }
+
+@keyframes spin { 
+  100% { transform: rotate(360deg); }
+}
+
+.section { display: none; }
+
+.section.active { display: block; }
+
+.bridge-card { margin: 0px auto; }
+
+.direction { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 24px; }
+
+.dir-chain { flex: 1 1 0%; text-align: center; padding: 14px 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: 0.3s; }
+
+.dir-chain.active { border-color: var(--green); background: rgba(0, 230, 118, 0.05); }
+
+.dir-chain-name { font-weight: 700; font-size: 15px; margin-bottom: 2px; }
+
+.dir-chain-sub { font-size: 11px; color: var(--text3); }
+
+.dir-arrow { width: 40px; height: 40px; border-radius: 50%; background: var(--bg3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.3s; }
+
+.dir-arrow:hover { background: rgba(0, 230, 118, 0.1); border-color: var(--green); }
+
+.dir-arrow svg { width: 20px; height: 20px; stroke: var(--green); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.3s; }
+
+.balance-row { display: flex; gap: 10px; margin-bottom: 20px; }
+
+.balance-box { flex: 1 1 0%; padding: 14px; border-radius: var(--radius-sm); background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); text-align: center; }
+
+.balance-label { font-size: 11px; color: var(--text3); margin-bottom: 6px; letter-spacing: 1px; }
+
+.balance-value { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--text); word-break: break-all; }
+
+.balance-value.loading { color: var(--text3); font-size: 12px; }
+
+.input-group { margin-bottom: 18px; }
+
+.input-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: var(--text2); }
+
+.input-label .max-btn { font-size: 11px; color: var(--green); cursor: pointer; padding: 2px 8px; border-radius: 4px; background: rgba(0, 230, 118, 0.08); border: 1px solid rgba(0, 230, 118, 0.15); transition: 0.2s; }
+
+.input-label .max-btn:hover { background: rgba(0, 230, 118, 0.18); }
+
+.input-wrap { display: flex; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); overflow: hidden; transition: border-color 0.3s; }
+
+.input-wrap:focus-within { border-color: var(--green); }
+
+.input-wrap input { flex: 1 1 0%; background: transparent; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; outline: none; padding: 14px 16px; font-size: 18px; color: var(--text); font-family: var(--mono); }
+
+.input-wrap input::placeholder { color: var(--text3); }
+
+.input-suffix { padding: 0px 16px; font-size: 13px; font-weight: 700; color: var(--green); letter-spacing: 1px; white-space: nowrap; }
+
+.info-rows { margin-bottom: 20px; }
+
+.info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0px; font-size: 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.03); }
+
+.info-row:last-child { border-width: medium; border-style: none; border-color: currentcolor; border-image: none; }
+
+.info-key { color: var(--text3); }
+
+.info-val { color: var(--text2); font-family: var(--mono); font-size: 11px; }
+
+.steps { display: flex; gap: 6px; margin-bottom: 20px; }
+
+.step { flex: 1 1 0%; height: 3px; border-radius: 2px; background: var(--border); transition: background 0.4s; }
+
+.step.done { background: var(--green); }
+
+.step.active { background: var(--green); animation: 1.5s ease-in-out 0s infinite normal none running step-pulse; }
+
+@keyframes step-pulse { 
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0px; padding: 16px; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .flow { flex-direction: column; }
+  .flow-step { border-radius: var(--radius-sm) !important; }
+}</style>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shib Mainnet 跨链桥 & 运营后台</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-/* === CSS === */
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#06080c;--bg2:#0c1018;--bg3:#141a24;--bg4:#1c2430;
-  --green:#00e676;--green2:#69f0ae;--green3:#00c853;
-  --amber:#ffab00;--amber2:#ffd740;
-  --red:#ff5252;--cyan:#00e5ff;--cyan2:#84ffff;
-  --text:#d8dce6;--text2:#8892a4;--text3:#4a5568;
-  --border:#1e2a3a;--border2:#2a3a50;
-  --mono:'JetBrains Mono',monospace;
-  --radius:12px;--radius-sm:8px;
-}
-html{font-size:15px;scroll-behavior:smooth}
-body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 10% 0%,rgba(0,230,118,0.04),transparent),radial-gradient(ellipse 50% 40% at 90% 100%,rgba(0,229,255,0.03),transparent)}
+<title>Shib Mainnet 跨链桥 &amp; 运营后台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&amp;family=Orbitron:wght@400;700;900&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
 
-.app{display:flex;min-height:100vh;position:relative;z-index:1}
-.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);padding:20px 0;flex-shrink:0;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:10}
-.main{flex:1;margin-left:220px;padding:24px 28px;max-width:1200px}
-
-.sidebar-logo{padding:0 20px 20px;border-bottom:1px solid var(--border);margin-bottom:16px}
-.sidebar-logo .brand{font-family:'Orbitron',sans-serif;font-weight:900;font-size:14px;color:var(--green);letter-spacing:2px}
-.sidebar-logo .sub{font-size:10px;color:var(--text3);letter-spacing:3px;margin-top:4px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;font-size:13px;color:var(--text2);transition:all .2s;border-left:3px solid transparent}
-.nav-item:hover{background:rgba(255,255,255,0.02);color:var(--text)}
-.nav-item.active{background:rgba(0,230,118,0.05);color:var(--green);border-left-color:var(--green)}
-.nav-icon{width:18px;text-align:center;font-size:14px}
-
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
-.topbar-title{font-size:20px;font-weight:700}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.net-badge{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;font-size:12px;background:var(--bg3);border:1px solid var(--border)}
-.net-dot{width:7px;height:7px;border-radius:50%;background:var(--text3)}
-.net-dot.ok{background:var(--green);box-shadow:0 0 6px rgba(0,230,118,0.5)}
-.wallet-btn{padding:6px 16px;border-radius:20px;font-size:12px;cursor:pointer;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-family:var(--mono);transition:all .2s}
-.wallet-btn:hover{border-color:var(--green);color:var(--green)}
-
-.panel{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:20px;position:relative;overflow:hidden}
-.panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,230,118,0.2),transparent)}
-.panel-title{font-size:13px;font-weight:700;color:var(--text2);letter-spacing:2px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
-.panel-title .dot{width:6px;height:6px;border-radius:50%;background:var(--green)}
-
-.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
-.stat-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px}
-.stat-label{font-size:11px;color:var(--text3);letter-spacing:1px;margin-bottom:8px}
-.stat-value{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--text)}
-.stat-value.green{color:var(--green)}
-.stat-value.amber{color:var(--amber)}
-.stat-value.red{color:var(--red)}
-.stat-value.cyan{color:var(--cyan)}
-.stat-sub{font-size:10px;color:var(--text3);margin-top:4px;font-family:var(--mono)}
-
-.data-table{width:100%;border-collapse:collapse;font-size:13px}
-.data-table th{text-align:left;padding:8px 12px;font-size:11px;color:var(--text3);letter-spacing:1px;font-weight:500;border-bottom:1px solid var(--border)}
-.data-table td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.02);font-family:var(--mono);font-size:12px;color:var(--text2)}
-.data-table tr:hover td{background:rgba(255,255,255,0.02)}
-
-.form-row{display:flex;gap:12px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap}
-.form-group{flex:1;min-width:160px}
-.form-label{font-size:11px;color:var(--text3);margin-bottom:6px;display:block;letter-spacing:1px}
-.form-input{width:100%;padding:10px 14px;border-radius:var(--radius-sm);background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .2s}
-.form-input:focus{border-color:var(--green)}
-.btn{padding:10px 20px;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans SC',sans-serif;transition:all .2s;letter-spacing:1px}
-.btn-green{background:linear-gradient(135deg,var(--green3),var(--green));color:#06080c;box-shadow:0 2px 12px rgba(0,230,118,0.2)}
-.btn-green:hover{box-shadow:0 4px 20px rgba(0,230,118,0.35);transform:translateY(-1px)}
-.btn-green:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
-.btn-outline{background:transparent;border:1px solid var(--border);color:var(--text2)}
-.btn-outline:hover{border-color:var(--green);color:var(--green)}
-.btn-amber{background:linear-gradient(135deg,#e69500,var(--amber));color:#06080c}
-.btn-red{background:var(--red);color:#fff}
-.btn-sm{padding:6px 14px;font-size:11px}
-
-.msg-bar{margin-top:12px;padding:12px 16px;border-radius:var(--radius-sm);font-size:12px;display:none;border:1px solid var(--border)}
-.msg-bar.show{display:block;animation:fadeUp .3s ease}
-.msg-bar.info{background:rgba(0,229,255,0.05);border-color:rgba(0,229,255,0.15);color:var(--cyan2)}
-.msg-bar.success{background:rgba(0,230,118,0.05);border-color:rgba(0,230,118,0.15);color:var(--green2)}
-.msg-bar.error{background:rgba(255,82,82,0.05);border-color:rgba(255,82,82,0.15);color:var(--red2)}
-.msg-bar.warn{background:rgba(255,171,0,0.05);border-color:rgba(255,171,0,0.15);color:var(--amber2)}
-@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-
-.flow{display:flex;gap:0;margin:16px 0}
-.flow-step{flex:1;text-align:center;padding:14px 8px;background:var(--bg3);border:1px solid var(--border);position:relative;font-size:12px;color:var(--text3)}
-.flow-step:first-child{border-radius:var(--radius-sm) 0 0 var(--radius-sm)}
-.flow-step:last-child{border-radius:0 var(--radius-sm) var(--radius-sm) 0}
-.flow-step.active{background:rgba(0,230,118,0.08);border-color:var(--green);color:var(--green)}
-.flow-step.done{background:rgba(0,230,118,0.04);color:var(--green2)}
-.flow-step .step-num{font-family:var(--mono);font-weight:700;font-size:16px;display:block;margin-bottom:4px}
-
-.progress-bar{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin:8px 0}
-.progress-fill{height:100%;border-radius:3px;transition:width .6s ease;background:linear-gradient(90deg,var(--green3),var(--green))}
-.progress-fill.warn{background:linear-gradient(90deg,#e69500,var(--amber))}
-.progress-fill.danger{background:linear-gradient(90deg,#d32f2f,var(--red))}
-
-.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,230,118,0.2);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle;margin-right:6px}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-.section{display:none}
-.section.active{display:block}
-
-.bridge-card{margin:0 auto}
-.direction{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:24px}
-.dir-chain{flex:1;text-align:center;padding:14px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:rgba(255,255,255,0.02);cursor:pointer;transition:all .3s}
-.dir-chain.active{border-color:var(--green);background:rgba(0,230,118,0.05)}
-.dir-chain-name{font-weight:700;font-size:15px;margin-bottom:2px}
-.dir-chain-sub{font-size:11px;color:var(--text3)}
-.dir-arrow{width:40px;height:40px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s}
-.dir-arrow:hover{background:rgba(0,230,118,0.1);border-color:var(--green)}
-.dir-arrow svg{width:20px;height:20px;stroke:var(--green);stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s}
-
-.balance-row{display:flex;gap:10px;margin-bottom:20px}
-.balance-box{flex:1;padding:14px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.02);border:1px solid var(--border);text-align:center}
-.balance-label{font-size:11px;color:var(--text3);margin-bottom:6px;letter-spacing:1px}
-.balance-value{font-family:var(--mono);font-size:16px;font-weight:500;color:var(--text);word-break:break-all}
-.balance-value.loading{color:var(--text3);font-size:12px}
-
-.input-group{margin-bottom:18px}
-.input-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px;color:var(--text2)}
-.input-label .max-btn{font-size:11px;color:var(--green);cursor:pointer;padding:2px 8px;border-radius:4px;background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.15);transition:all .2s}
-.input-label .max-btn:hover{background:rgba(0,230,118,0.18)}
-.input-wrap{display:flex;align-items:center;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);overflow:hidden;transition:border-color .3s}
-.input-wrap:focus-within{border-color:var(--green)}
-.input-wrap input{flex:1;background:transparent;border:none;outline:none;padding:14px 16px;font-size:18px;color:var(--text);font-family:var(--mono)}
-.input-wrap input::placeholder{color:var(--text3)}
-.input-suffix{padding:0 16px;font-size:13px;font-weight:700;color:var(--green);letter-spacing:1px;white-space:nowrap}
-
-.info-rows{margin-bottom:20px}
-.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12px;border-bottom:1px solid rgba(255,255,255,0.03)}
-.info-row:last-child{border:none}
-.info-key{color:var(--text3)}
-.info-val{color:var(--text2);font-family:var(--mono);font-size:11px}
-
-.steps{display:flex;gap:6px;margin-bottom:20px}
-.step{flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .4s}
-.step.done{background:var(--green)}
-.step.active{background:var(--green);animation:step-pulse 1.5s ease-in-out infinite}
-@keyframes step-pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-
-@media(max-width:768px){
-  .sidebar{display:none}
-  .main{margin-left:0;padding:16px}
-  .stat-grid{grid-template-columns:1fr 1fr}
-  .flow{flex-direction:column}
-  .flow-step{border-radius:var(--radius-sm)!important}
-}
-</style>
-</head>
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script></head>
 <body>
 <div class="app">
   <div class="sidebar">
     <div class="sidebar-logo">
       <div class="brand">SHIB ADMIN</div>
-      <div class="sub">跨链桥 & 运营后台</div>
+      <div class="sub">跨链桥 &amp; 运营后台</div>
     </div>
-    <div class="nav-item active" onclick="showSection('bridge',this)"><span class="nav-icon">⇄</span>跨链桥</div>
-    <div class="nav-item" onclick="showSection('overview',this)"><span class="nav-icon">◉</span>系统概览</div>
-    <div class="nav-item" onclick="showSection('economics',this)"><span class="nav-icon">◈</span>收益经济</div>
-    <div class="nav-item" onclick="showSection('owner',this)"><span class="nav-icon">⚙</span>Owner 控制</div>
-    <div class="nav-item" onclick="showSection('balances',this)"><span class="nav-icon">◐</span>余额管理</div>
-    <div class="nav-item" onclick="showSection('withdraw',this)"><span class="nav-icon">↗</span>资金提取</div>
-    <div class="nav-item" onclick="showSection('batch',this)"><span class="nav-icon">▣</span>Batch Poster</div>
+    <div class="nav-item active"><span class="nav-icon">⇄</span>跨链桥</div>
+    <div class="nav-item"><span class="nav-icon">◉</span>系统概览</div>
+    <div class="nav-item"><span class="nav-icon">◈</span>收益经济</div>
+    <div class="nav-item"><span class="nav-icon">⚙</span>Owner 控制</div>
+    <div class="nav-item"><span class="nav-icon">◐</span>余额管理</div>
+    <div class="nav-item"><span class="nav-icon">↗</span>资金提取</div>
+    <div class="nav-item"><span class="nav-icon">▣</span>Batch Poster</div>
   </div>
 
   <div class="main">
@@ -174,7 +261,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
       <div class="topbar-title" id="sectionTitle">跨链桥</div>
       <div class="topbar-right">
         <div class="net-badge"><span class="net-dot" id="netDot"></span><span id="netLabel">未连接</span></div>
-        <div class="wallet-btn" id="walletBtn" onclick="connectWallet()">连接钱包</div>
+        <div class="wallet-btn" id="walletBtn">连接钱包</div>
       </div>
     </div>
 
@@ -183,14 +270,14 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
       <div class="bridge-card">
         <div class="panel">
           <div class="direction">
-            <div class="dir-chain active" id="dirFrom" onclick="setDirection('l1tol2')">
+            <div class="dir-chain active" id="dirFrom">
               <div class="dir-chain-name" id="fromName">以太坊 L1</div>
               <div class="dir-chain-sub" id="fromSub">ETH 主网</div>
             </div>
-            <div class="dir-arrow" id="dirArrow" onclick="toggleDirection()">
-              <svg viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>
+            <div class="dir-arrow" id="dirArrow">
+              <svg viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"></path></svg>
             </div>
-            <div class="dir-chain" id="dirTo" onclick="setDirection('l2tol1')">
+            <div class="dir-chain" id="dirTo">
               <div class="dir-chain-name" id="toName">Shib Mainnet</div>
               <div class="dir-chain-sub" id="toSub">Chain ID 5816</div>
             </div>
@@ -216,10 +303,10 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
           <div class="input-group">
             <div class="input-label">
               <span>跨链数量</span>
-              <span class="max-btn" onclick="setMax()">全部</span>
+              <span class="max-btn">全部</span>
             </div>
             <div class="input-wrap">
-              <input type="text" id="amountInput" placeholder="0.00" oninput="formatInput(this)">
+              <input type="text" id="amountInput" placeholder="0.00">
               <span class="input-suffix">SHIB</span>
             </div>
           </div>
@@ -230,7 +317,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
             <div class="info-row"><span class="info-key">操作类型</span><span class="info-val" id="infoType">存款 (L1 → L2)</span></div>
           </div>
 
-          <button class="btn btn-outline" id="mainBtn" onclick="mainAction()" style="width:100%">连接钱包</button>
+          <button class="btn btn-outline" id="mainBtn" style="width:100%">连接钱包</button>
           <div class="msg-bar" id="bridgeStatus"></div>
         </div>
       </div>
@@ -258,7 +345,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
           </div>
           <div class="stat-card">
             <div class="stat-label">RPC 状态</div>
-            <div class="stat-value green" id="rpcStatus">--</div>
+            <div class="stat-value red" id="rpcStatus">异常</div>
             <div class="stat-sub">rpc.shib.world</div>
           </div>
         </div>
@@ -268,17 +355,17 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
         <div class="stat-grid">
           <div class="stat-card">
             <div class="stat-label">L1 Gas Price</div>
-            <div class="stat-value amber" id="l1GasPrice">--</div>
+            <div class="stat-value amber" id="l1GasPrice">0.08 gwei</div>
             <div class="stat-sub">以太坊主网</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">L1 区块高度</div>
-            <div class="stat-value" id="l1BlockHeight">--</div>
+            <div class="stat-value" id="l1BlockHeight">26,009,648</div>
             <div class="stat-sub">Chain ID: 1</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Batch Poster Nonce</div>
-            <div class="stat-value" id="bpNonce">--</div>
+            <div class="stat-value" id="bpNonce">134</div>
             <div class="stat-sub">L1 交易计数</div>
           </div>
         </div>
@@ -292,7 +379,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
         <div class="stat-grid">
           <div class="stat-card">
             <div class="stat-label">L1PricePerUnit</div>
-            <div class="stat-value green" id="l1PriceUnit">--</div>
+            <div class="stat-value green" id="l1PriceUnit">查询失败</div>
             <div class="stat-sub">ArbOwner 预编译 0x70</div>
           </div>
           <div class="stat-card">
@@ -326,13 +413,13 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">当前值</label>
-              <input class="form-input" id="currentL1PPU" readonly value="--">
+              <input class="form-input" id="currentL1PPU" readonly="" value="--">
             </div>
             <div class="form-group">
               <label class="form-label">新值 (wei)</label>
               <input class="form-input" id="newL1PPU" placeholder="139788888825">
             </div>
-            <button class="btn btn-amber" onclick="setL1PricePerUnit()">执行</button>
+            <button class="btn btn-amber">执行</button>
           </div>
           <div class="msg-bar" id="ownerMsg1"></div>
         </div>
@@ -362,7 +449,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
           </div>
         </div>
         <div style="margin-top:16px">
-          <button class="btn btn-outline btn-sm" onclick="refreshAllBalances()">刷新余额</button>
+          <button class="btn btn-outline btn-sm">刷新余额</button>
         </div>
       </div>
     </div>
@@ -390,7 +477,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
             <label class="form-label">提款数量 (SHIB)</label>
             <input class="form-input" id="wdAmount" placeholder="输入提款数量">
           </div>
-          <button class="btn btn-green" id="wdBtn" onclick="startWithdraw()">发起提款</button>
+          <button class="btn btn-green" id="wdBtn">发起提款</button>
         </div>
         <div class="msg-bar" id="wdMsg"></div>
       </div>
@@ -423,7 +510,7 @@ body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;bac
 const CFG = {
   L1_RPC: 'https://ethereum-rpc.publicnode.com',
   L2_RPC: 'https://rpc.shib.world/',
-  L2_CHAIN_ID: '0x16C0',
+  L2_CHAIN_ID: '0x16B8',
   L1_CHAIN_ID: '0x1',
   SHIB_L1: '0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce',
   SHIB_L2: '0x2dbf635e1589b3ec0d04aa8d94cce0551e81a8a2',
@@ -436,7 +523,7 @@ const CFG = {
   L1_CUSTOM_GW: '0x7a016eddB7E7a3004D639dd28bCEa6c6799d16CD',
   L2_CUSTOM_GW: '0xff1085ee9E76F3D3Be8035cD4b28C7B56674839A',
   L2_NETWORK: {
-    chainId: '0x16C0',
+    chainId: '0x16B8',
     chainName: 'Shib Mainnet',
     nativeCurrency: { name: 'SHIB', symbol: 'SHIB', decimals: 18 },
     rpcUrls: ['https://rpc.shib.world/'],
@@ -1097,5 +1184,6 @@ if (typeof window.ethereum !== 'undefined') {
 // Initial load
 refreshOverview();
 </script>
-</body>
-</html>
+
+
+</body></html>
