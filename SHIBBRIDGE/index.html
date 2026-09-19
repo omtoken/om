@@ -266,7 +266,7 @@ const INBOX_ABI = [
 ];
 
 const L2_GATEWAY_ABI = [
-  'function outboundTransfer(address l1Token, address to, uint256 amount, uint256 maxGas, uint256 gasPriceBid, bytes data) external returns (bytes memory)'
+  'function outboundTransfer(address l1Token, address to, uint256 amount, uint256 maxGas, uint256 gasPriceBid, bytes data) external payable returns (bytes memory)'
 ];
 
 let state = {
