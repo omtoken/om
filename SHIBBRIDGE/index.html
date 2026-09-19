@@ -280,15 +280,21 @@ let state = {
 
 const $ = id => document.getElementById(id);
 
-// RPC call with fallback support
-async function rpcWithFallback(urls, method, params) {
+// RPC call with fallback support and timeout
+async function rpcWithFallback(urls, method, params, timeoutMs = 10000) {
   for (const url of urls) {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params })
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       const json = await res.json();
       if (json.error) throw new Error(json.error.message);
       return json.result;
@@ -310,22 +316,23 @@ async function connectWallet() {
     state.account = accounts[0].toLowerCase();
     state.connected = true;
     
-    // Try to switch to L2, but don't force it
-    try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: CFG.L2_CHAIN_ID }]
-      });
-    } catch (e) {
-      if (e.code === 4902) {
+    // 获取当前网络
+    state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
+    
+    // 确保 L2 网络配置已添加（不切换）
+    if (state.currentChain !== CFG.L1_CHAIN_ID && state.currentChain !== CFG.L2_CHAIN_ID) {
+      try {
         await window.ethereum.request({
           method: 'wallet_addEthereumChain',
           params: [CFG.L2_NETWORK]
         });
+        // 重新获取链 ID
+        state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
+      } catch (e) {
+        console.warn('添加 L2 网络失败:', e.message);
       }
     }
     
-    state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
     updateWalletUI(state.currentChain);
     refreshBridgeBalances();
   } catch (e) {
@@ -398,16 +405,31 @@ function updateBridgeButton() {
   const is = state.bridgeDir === 'l1tol2';
   const need = is ? CFG.L1_CHAIN_ID : CFG.L2_CHAIN_ID;
   
-  if (state.currentChain !== need) {
-    btn.textContent = '切换到' + (is ? '以太坊 L1' : 'Shib Mainnet');
+  // 每次更新按钮时都重新获取链 ID
+  if (typeof window.ethereum !== 'undefined') {
+    window.ethereum.request({ method: 'eth_chainId' }).then(chainId => {
+      state.currentChain = chainId;
+      
+      if (state.currentChain !== need) {
+        btn.textContent = '切换到' + (is ? '以太坊 L1' : 'Shib Mainnet');
+        btn.className = 'btn btn-green';
+        btn.disabled = false;
+      } else {
+        btn.textContent = is ? '授权并存款' : '发起提款';
+        btn.className = 'btn btn-green';
+        btn.disabled = false;
+      }
+    }).catch(e => {
+      console.error('获取链 ID 失败:', e);
+      btn.textContent = is ? '授权并存款' : '发起提款';
+      btn.className = 'btn btn-green';
+      btn.disabled = false;
+    });
+  } else {
+    btn.textContent = is ? '授权并存款' : '发起提款';
     btn.className = 'btn btn-green';
     btn.disabled = false;
-    return;
   }
-  
-  btn.textContent = is ? '授权并存款' : '发起提款';
-  btn.className = 'btn btn-green';
-  btn.disabled = false;
 }
 
 async function refreshBridgeBalances() {
@@ -417,6 +439,8 @@ async function refreshBridgeBalances() {
   $('bal2').className = 'balance-value loading';
   $('bal1').textContent = '查询中...';
   $('bal2').textContent = '查询中...';
+  
+  let l1Failed = false, l2Failed = false;
   
   // Query L1 balance independently
   try {
@@ -429,6 +453,7 @@ async function refreshBridgeBalances() {
   } catch (e) {
     console.error('L1 balance query failed:', e);
     state.l1Balance = '0';
+    l1Failed = true;
   }
   
   // Query L2 balance independently
@@ -441,6 +466,7 @@ async function refreshBridgeBalances() {
   } catch (e) {
     console.error('L2 balance query failed:', e);
     state.l2Balance = '0';
+    l2Failed = true;
   }
   
   // Display balances based on direction
@@ -449,6 +475,14 @@ async function refreshBridgeBalances() {
   $('bal2').textContent = fmtSHIB(is ? state.l2Balance : state.l1Balance);
   $('bal1').className = 'balance-value';
   $('bal2').className = 'balance-value';
+  
+  // Show warning if RPC failed
+  if (l1Failed || l2Failed) {
+    const failedChains = [];
+    if (l1Failed) failedChains.push('L1');
+    if (l2Failed) failedChains.push('L2');
+    console.warn('余额查询失败:', failedChains.join(', '), '- 可能是 CORS 配置问题，请检查服务器 Nginx 配置');
+  }
 }
 
 function formatInput(el) {
@@ -484,18 +518,64 @@ async function mainAction() {
   
   const is = state.bridgeDir === 'l1tol2';
   const need = is ? CFG.L1_CHAIN_ID : CFG.L2_CHAIN_ID;
+  const needName = is ? '以太坊 L1' : 'Shib Mainnet';
+  
+  // 每次操作前都重新获取当前链 ID
+  try {
+    state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
+  } catch (e) {
+    console.error('获取链 ID 失败:', e);
+  }
   
   if (state.currentChain !== need) {
-    showMsg('bridgeStatus', '<span class="spinner"></span>正在切换网络...', 'info');
+    showMsg('bridgeStatus', '<span class="spinner"></span>请在钱包中确认切换到 ' + needName + '...', 'info');
+    
     try {
-      await window.ethereum.request({
+      // 添加超时机制
+      const switchPromise = window.ethereum.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: need }]
       });
-      state.currentChain = need;
-      updateBridgeButton();
+      
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('切换超时，请手动切换网络')), 30000);
+      });
+      
+      await Promise.race([switchPromise, timeoutPromise]);
+      
+      // 切换后重新获取链 ID
+      state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
+      updateWalletUI(state.currentChain);
+      
+      // 如果切换成功，继续执行操作
+      if (state.currentChain === need) {
+        const amt = $('amountInput').value.trim();
+        if (amt && parseFloat(amt) > 0) {
+          if (is) {
+            await doDeposit(amt);
+          } else {
+            await doWithdraw(amt);
+          }
+        }
+      }
     } catch (e) {
-      showMsg('bridgeStatus', '切换网络失败: ' + (e.message || ''), 'error');
+      if (e.code === 4001) {
+        showMsg('bridgeStatus', '已取消切换网络。请手动切换到 ' + needName + ' 后重试。', 'warn');
+      } else if (e.code === 4902 || e.message.includes('Unrecognized chain')) {
+        // 网络未添加，尝试添加
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [CFG.L2_NETWORK]
+          });
+          state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
+          updateWalletUI(state.currentChain);
+        } catch (e2) {
+          showMsg('bridgeStatus', '添加网络失败: ' + (e2.message || ''), 'error');
+        }
+      } else {
+        showMsg('bridgeStatus', '切换网络失败: ' + (e.message || '未知错误'), 'error');
+      }
     }
     return;
   }
@@ -628,6 +708,8 @@ if (typeof window.ethereum !== 'undefined') {
           $('netDot').className = 'net-dot';
           $('netLabel').textContent = '未连接';
           $('walletBtn').textContent = '连接钱包';
+          $('bal1').textContent = '--';
+          $('bal2').textContent = '--';
         } else {
           state.account = a[0].toLowerCase();
           connectWallet();
@@ -635,8 +717,13 @@ if (typeof window.ethereum !== 'undefined') {
       });
       
       window.ethereum.on('chainChanged', c => {
+        console.log('Chain changed to:', c);
         state.currentChain = c;
         updateWalletUI(c);
+        // 刷新余额
+        if (state.connected && state.account) {
+          refreshBridgeBalances();
+        }
       });
     }
   } catch (e) {
