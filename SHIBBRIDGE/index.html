@@ -140,6 +140,90 @@ body::before { content: ""; position: fixed; inset: 0px; z-index: 0; pointer-eve
 
 @keyframes spin { 100% { transform: rotate(360deg); } }
 
+.tx-hash-box {
+  margin: 10px 0;
+  padding: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 11px;
+  word-break: break-all;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tx-hash-box .hash-text {
+  flex: 1;
+  color: var(--text);
+}
+
+.copy-btn {
+  padding: 4px 10px;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: 0.2s;
+}
+
+.copy-btn:hover {
+  background: var(--green2);
+}
+
+.copy-btn.copied {
+  background: var(--text3);
+}
+
+.claim-section {
+  margin-top: 15px;
+  padding: 12px;
+  background: var(--amberBg);
+  border: 1px solid rgba(245, 124, 0, 0.2);
+  border-radius: var(--radius-sm);
+}
+
+.claim-section .claim-title {
+  font-weight: 600;
+  color: var(--amber);
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.claim-section .claim-status {
+  font-size: 11px;
+  color: var(--text2);
+  margin-bottom: 10px;
+}
+
+.claim-btn {
+  width: 100%;
+  padding: 10px;
+  background: linear-gradient(135deg, var(--amber), var(--amber2));
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.claim-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 124, 0, 0.3);
+}
+
+.claim-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .notice-box { padding: 14px 16px; border-radius: var(--radius-sm); background: var(--cyanBg); border: 1px solid rgba(0, 151, 167, 0.1); margin-bottom: 18px; font-size: 12px; color: var(--cyan); line-height: 1.7; }
 
 .notice-box strong { color: rgb(0, 131, 143); }
@@ -276,7 +360,8 @@ let state = {
   bridgeDir: 'l1tol2',
   l1Balance: '0',
   l2Balance: '0',
-  currentChain: null
+  currentChain: null,
+  lastWithdrawTx: null
 };
 
 const $ = id => document.getElementById(id);
@@ -634,15 +719,33 @@ async function doWithdraw(amountStr) {
     const receipt = await withdrawTx.wait();
     
     setSteps(3);
+    
+    const txHash = receipt.transactionHash;
+    
+    // Store withdraw tx hash for claiming later
+    state.lastWithdrawTx = txHash;
+    
     showMsg('bridgeStatus',
-      '提款发起成功！交易哈希: ' + receipt.transactionHash.slice(0,16) + '...' +
-      '<br><br><strong>重要提示：</strong>' +
+      '提款发起成功！<br><br>' +
+      '<div class="tx-hash-box">' +
+        '<span class="hash-text">' + txHash + '</span>' +
+        '<button class="copy-btn" onclick="copyTxHash(this, \'' + txHash + '\')">复制</button>' +
+      '</div>' +
+      '<br><strong>重要提示：</strong>' +
       '<br>1. 提款需要等待约 7 天的挑战期（Arbitrum 安全机制）' +
       '<br>2. 挑战期结束后，需要在 L1 执行最终确认交易' +
       '<br>3. 请保存此交易哈希，后续需要用到' +
-      '<br><br>提款流程已完成第一步，请耐心等待挑战期结束',
+      '<br><br>提款流程已完成第一步，请耐心等待挑战期结束' +
+      '<div class="claim-section" id="claimSection" style="display:none;">' +
+        '<div class="claim-title">挑战期已结束，可以领取 SHIB</div>' +
+        '<div class="claim-status" id="claimStatus"></div>' +
+        '<button class="claim-btn" id="claimBtn" onclick="claimWithdrawal()">在 L1 领取 SHIB</button>' +
+      '</div>',
       'warn'
     );
+    
+    // Check claim status after 5 seconds
+    setTimeout(() => checkClaimStatus(txHash), 5000);
     
     $('mainBtn').disabled = false;
     setTimeout(() => refreshBridgeBalances(), 3000);
@@ -684,6 +787,196 @@ if (typeof window.ethereum !== 'undefined') {
   } catch (e) {
     console.warn(e);
   }
+}
+
+// Copy transaction hash to clipboard
+function copyTxHash(btn, hash) {
+  navigator.clipboard.writeText(hash).then(() => {
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '复制';
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(err => {
+    console.error('复制失败:', err);
+    // Fallback for older browsers
+    const textArea = document.createElement('textarea');
+    textArea.value = hash;
+    document.body.appendChild(textArea);
+    textArea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textArea);
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '复制';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+// Check withdrawal claim status
+async function checkClaimStatus(txHash) {
+  if (!txHash) return;
+  
+  try {
+    const l2Provider = new ethers.providers.JsonRpcProvider(CFG.L2_RPC);
+    const l1Provider = new ethers.providers.JsonRpcProvider(CFG.L1_RPC);
+    
+    // Get the withdrawal transaction receipt
+    const receipt = await l2Provider.getTransactionReceipt(txHash);
+    if (!receipt) {
+      console.log('Transaction not found yet');
+      return;
+    }
+    
+    // For ArbSys.withdrawEth, we need to check the L2->L1 message status
+    // This is a simplified check - in production you'd use @arbitrum/sdk
+    
+    // Get the block number when the withdrawal was made
+    const withdrawBlock = receipt.blockNumber;
+    const l2Block = await l2Provider.getBlock(withdrawBlock);
+    
+    // Calculate approximate time since withdrawal (7 days = 604800 seconds)
+    const currentTime = Math.floor(Date.now() / 1000);
+    const withdrawTime = l2Block.timestamp;
+    const timePassed = currentTime - withdrawTime;
+    const sevenDays = 7 * 24 * 60 * 60;
+    
+    const claimSection = document.getElementById('claimSection');
+    const claimStatus = document.getElementById('claimStatus');
+    const claimBtn = document.getElementById('claimBtn');
+    
+    if (!claimSection) return;
+    
+    claimSection.style.display = 'block';
+    
+    if (timePassed >= sevenDays) {
+      claimStatus.innerHTML = '✅ 挑战期已结束，可以领取 SHIB 到 L1';
+      claimBtn.disabled = false;
+    } else {
+      const remaining = sevenDays - timePassed;
+      const days = Math.floor(remaining / (24 * 60 * 60));
+      const hours = Math.floor((remaining % (24 * 60 * 60)) / (60 * 60));
+      const minutes = Math.floor((remaining % (60 * 60)) / 60);
+      
+      claimStatus.innerHTML = `⏳ 挑战期剩余时间: ${days}天 ${hours}小时 ${minutes}分钟`;
+      claimBtn.disabled = true;
+      
+      // Check again in 1 minute
+      setTimeout(() => checkClaimStatus(txHash), 60000);
+    }
+  } catch (e) {
+    console.error('Check claim status error:', e);
+  }
+}
+
+// Claim withdrawal on L1
+async function claimWithdrawal() {
+  const txHash = state.lastWithdrawTx;
+  if (!txHash) {
+    showMsg('bridgeStatus', '没有找到提款交易哈希', 'error');
+    return;
+  }
+  
+  try {
+    showMsg('bridgeStatus', '<span class="spinner"></span>正在检查提款状态...', 'info');
+    
+    // Switch to L1 first
+    const currentChain = await window.ethereum.request({ method: 'eth_chainId' });
+    if (currentChain.toLowerCase() !== CFG.L1_CHAIN_ID) {
+      showMsg('bridgeStatus', '<span class="spinner"></span>请先切换到以太坊 L1 网络...', 'info');
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: CFG.L1_CHAIN_ID }]
+        });
+        // Wait for chain switch
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (e) {
+        if (e.code === 4001) {
+          showMsg('bridgeStatus', '已取消切换网络，请手动切换到以太坊 L1', 'warn');
+          return;
+        }
+        throw e;
+      }
+    }
+    
+    const l1Provider = new ethers.providers.Web3Provider(window.ethereum);
+    const l1Signer = l1Provider.getSigner();
+    const l2Provider = new ethers.providers.JsonRpcProvider(CFG.L2_RPC);
+    
+    // Get withdrawal receipt
+    const receipt = await l2Provider.getTransactionReceipt(txHash);
+    if (!receipt) {
+      showMsg('bridgeStatus', '找不到提款交易，请确认交易已上链', 'error');
+      return;
+    }
+    
+    // Find the L2->L1 message in the transaction logs
+    // ArbSys.withdrawEth emits a message to L1
+    // We need to use the Outbox contract to execute the message
+    
+    // For simplicity, we'll use a direct approach
+    // In production, use @arbitrum/sdk's L2ToL1Message
+    
+    showMsg('bridgeStatus', '<span class="spinner"></span>正在准备领取交易...', 'info');
+    
+    // Get the message data from the withdrawal transaction
+    // This is a simplified version - full implementation would parse the logs properly
+    
+    const L1_OUTBOX = '0xab7b02dB155b2edCE4b2BBea9ED527fDCa0df6F6';
+    const outboxABI = [
+      'function executeTransaction(bytes32[] proof, uint256 index, address l2Sender, address to, uint256 l2Block, uint256 l1Block, uint256 l2Timestamp, uint256 value, bytes data) external',
+      'function isSpent(uint256 index) external view returns (bool)',
+      'function roots(bytes256) external view returns (bytes32)'
+    ];
+    
+    const outbox = new ethers.Contract(L1_OUTBOX, outboxABI, l1Signer);
+    
+    // Note: This is a placeholder. The actual implementation requires:
+    // 1. Getting the Merkle proof from the L2->L1 message
+    // 2. Getting the message index
+    // 3. Calling executeTransaction with all parameters
+    
+    // For now, show a message that manual claiming is needed
+    showMsg('bridgeStatus',
+      '<strong>领取功能说明：</strong><br><br>' +
+      '自动领取功能需要 Arbitrum SDK 支持。<br>' +
+      '目前请手动执行以下步骤：<br><br>' +
+      '1. 安装 Arbitrum SDK: <code>npm install @arbitrum/sdk</code><br>' +
+      '2. 使用以下代码领取：<br>' +
+      '<div class="tx-hash-box" style="font-size:10px;margin:5px 0;">' +
+        '<span class="hash-text" style="white-space:pre;">' +
+        `import { L2TransactionReceipt } from "@arbitrum/sdk";
+const receipt = await l2Provider.getTransactionReceipt("${txHash}");
+const l2Tx = new L2TransactionReceipt(receipt);
+const messages = await l2Tx.getL2ToL1Messages(l1Wallet);
+await messages[0].execute(l2Provider);` +
+        '</span>' +
+        '<button class="copy-btn" onclick="copyCode(this)">复制</button>' +
+      '</div>' +
+      '<br>或者使用 Arbitrum 官方 Bridge UI 进行领取。',
+      'info'
+    );
+    
+  } catch (e) {
+    console.error('Claim error:', e);
+    showMsg('bridgeStatus', '领取失败: ' + (e.reason || e.message || '未知错误'), 'error');
+  }
+}
+
+function copyCode(btn) {
+  const code = btn.previousElementSibling.textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '已复制';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '复制';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
 }
 </script>
 </body>
