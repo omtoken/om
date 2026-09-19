@@ -262,8 +262,8 @@ const ERC20_ABI = [
 const L1_ROUTER_ABI = [
   'function outboundTransfer(address l1Token, address to, uint256 amount, uint256 maxGas, uint256 gasPriceBid, uint256 maxSubmissionCost) payable returns (bytes)'
 ];
-// L2 Router: outboundTransfer(l1Token, to, amount, maxGas, gasPriceBid, data)
-const L2_ROUTER_ABI = [
+// L2 StandardGateway: outboundTransfer(l1Token, to, amount, maxGas, gasPriceBid, data)
+const L2_GW_ABI = [
   'function outboundTransfer(address l1Token, address to, uint256 amount, uint256 maxGas, uint256 gasPriceBid, bytes data) returns (bytes)'
 ];
 
@@ -553,10 +553,10 @@ async function doDeposit(amountStr) {
     $('mainBtn').disabled = true;
 
     const shibContract = new ethers.Contract(CFG.SHIB_L1, ERC20_ABI, signer);
-    const allowance = await shibContract.allowance(state.account, CFG.L1_STD_GW);
+    const allowance = await shibContract.allowance(state.account, CFG.L1_ROUTER);
     if (allowance.lt(amount)) {
       showMsg('bridgeStatus', '<span class="spinner"></span>请在钱包中确认授权交易...', 'info');
-      const approveTx = await shibContract.approve(CFG.L1_STD_GW, amount);
+      const approveTx = await shibContract.approve(CFG.L1_ROUTER, amount);
       showMsg('bridgeStatus', '<span class="spinner"></span>等待授权上链确认...', 'info');
       await approveTx.wait();
     }
@@ -569,7 +569,12 @@ async function doDeposit(amountStr) {
     const l1Router = new ethers.Contract(CFG.L1_ROUTER, L1_ROUTER_ABI, signer);
     const maxGas = 200000;
     const gasPriceBid = ethers.utils.parseUnits('0.1', 'gwei');
-    const maxSubmissionCost = ethers.utils.parseEther('0');
+    // 对于自定义 Gas 代币链，maxSubmissionCost 可以设为 0
+    // 实际费用会在 L2 用 SHIB 扣除
+    const maxSubmissionCost = 0;
+
+    showMsg('bridgeStatus',
+      '<span class="spinner"></span>发起存款交易（L1 Gas 费由钱包自动支付）...', 'info');
 
     const depositTx = await l1Router.outboundTransfer(
       CFG.SHIB_L1,
@@ -578,7 +583,7 @@ async function doDeposit(amountStr) {
       maxGas,
       gasPriceBid,
       maxSubmissionCost,
-      { value: 0 }  // FIXED: custom fee token chain, no ETH needed
+      { value: 0 }  // 自定义 Gas 代币链不需要发送 ETH
     );
 
     showMsg('bridgeStatus', '<span class="spinner"></span>等待 L1 确认（约 10-15 分钟）...', 'info');
@@ -596,8 +601,10 @@ async function doDeposit(amountStr) {
     setTimeout(() => refreshBridgeBalances(), 5000);
   } catch (e) {
     console.error('Deposit error:', e);
-    const reason = e.reason || e.data?.message || e.message || '未知错误';
-    showMsg('bridgeStatus', '存款失败: ' + reason, 'error');
+    let reason = e.message || '未知错误';
+    if (e.data) reason = '合约错误: ' + (e.data.message || JSON.stringify(e.data));
+    if (e.reason) reason = e.reason;
+    showMsg('bridgeStatus', '❌ 存款失败: ' + reason, 'error');
     $('mainBtn').disabled = false;
     setSteps(0);
   }
@@ -628,10 +635,10 @@ async function doWithdraw(amountStr) {
     setSteps(2);
     showMsg('bridgeStatus', '<span class="spinner"></span>请在钱包中确认提款交易...', 'info');
 
-    const l2Router = new ethers.Contract(CFG.L2_ROUTER, L2_ROUTER_ABI, signer);
+    const l2Gateway = new ethers.Contract(CFG.L2_STD_GW, L2_GW_ABI, signer);
     const encodedData = ethers.utils.defaultAbiCoder.encode(['uint256'], [0]);
 
-    const withdrawTx = await l2Router.outboundTransfer(
+    const withdrawTx = await l2Gateway.outboundTransfer(
       CFG.SHIB_L1,       // l1Token address
       state.account,     // to
       amount,            // amount
