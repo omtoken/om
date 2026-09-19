@@ -1050,6 +1050,21 @@
     }
 
     /* ---------- Event Listeners ---------- */
+    // 主按钮点击事件
+    $('mainBtn').addEventListener('click', mainAction);
+
+    // 方向切换箭头点击事件
+    $('dirArrow').addEventListener('click', toggleDirection);
+
+    // 全部按钮点击事件
+    document.querySelector('.max-btn').addEventListener('click', setMax);
+
+    // 输入框格式化事件
+    $('amountInput').addEventListener('input', function() {
+      formatInput(this);
+    });
+
+    // 钱包事件监听
     if (typeof window.ethereum !== 'undefined') {
       try {
         if (typeof window.ethereum.on === 'function') {
