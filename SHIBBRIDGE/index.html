@@ -795,26 +795,28 @@
 
       // L1 SHIB 余额 (ERC20 balanceOf)
       var balanceOfSig = '0x70a08231' + state.account.slice(2).toLowerCase().padStart(64, '0');
-      rpcSafe(CFG.L1_RPC, 'eth_call', [{ to: CFG.SHIB_L1, data: balanceOfSig }, 'latest'])
+      rpcCall(CFG.L1_RPC, 'eth_call', [{ to: CFG.SHIB_L1, data: balanceOfSig }, 'latest'])
         .then(function(result) {
-          if (result) {
-            state.l1Balance = result;
-            $('bal' + (isL1 ? '1' : '2')).textContent = fmtSHIB(result);
-          } else {
-            $('bal' + (isL1 ? '1' : '2')).textContent = '0';
-          }
+          state.l1Balance = result || '0x0';
+          $('bal' + (isL1 ? '1' : '2')).textContent = fmtSHIB(state.l1Balance);
+          $('bal' + (isL1 ? '1' : '2')).className = 'balance-value';
+        })
+        .catch(function(e) {
+          console.error('L1余额查询失败:', e);
+          $('bal' + (isL1 ? '1' : '2')).textContent = '错误';
           $('bal' + (isL1 ? '1' : '2')).className = 'balance-value';
         });
 
       // L2 原生余额 (eth_getBalance)
-      rpcSafe(CFG.L2_RPC, 'eth_getBalance', [state.account, 'latest'])
+      rpcCall(CFG.L2_RPC, 'eth_getBalance', [state.account, 'latest'])
         .then(function(result) {
-          if (result) {
-            state.l2Balance = result;
-            $('bal' + (isL1 ? '2' : '1')).textContent = fmtSHIB(result);
-          } else {
-            $('bal' + (isL1 ? '2' : '1')).textContent = '0';
-          }
+          state.l2Balance = result || '0x0';
+          $('bal' + (isL1 ? '2' : '1')).textContent = fmtSHIB(state.l2Balance);
+          $('bal' + (isL1 ? '2' : '1')).className = 'balance-value';
+        })
+        .catch(function(e) {
+          console.error('L2余额查询失败:', e);
+          $('bal' + (isL1 ? '2' : '1')).textContent = '错误: ' + e.message;
           $('bal' + (isL1 ? '2' : '1')).className = 'balance-value';
         });
     }
