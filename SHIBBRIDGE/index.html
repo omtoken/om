@@ -1038,18 +1038,25 @@
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
 
+      // 确保所有地址都是校验和格式
+      const userAddress = ethers.utils.getAddress(state.account);
+      const shibAddress = ethers.utils.getAddress(CFG.SHIB_L1);
+      const inboxAddress = ethers.utils.getAddress(CFG.L1_INBOX);
+
+      console.log('存款地址:', { userAddress, shibAddress, inboxAddress });
+
       try {
         // Step 1: Approve
         setSteps(1);
         showMsg('bridgeStatus', '<span class="spinner"></span>第 1 步：检查并授权 Inbox 合约使用 SHIB...', 'info');
         $('mainBtn').disabled = true;
 
-        const shib = new ethers.Contract(CFG.SHIB_L1, ERC20_ABI, signer);
-        const allowance = await shib.allowance(state.account, CFG.L1_INBOX);
+        const shib = new ethers.Contract(shibAddress, ERC20_ABI, signer);
+        const allowance = await shib.allowance(userAddress, inboxAddress);
 
         if (allowance.lt(amount)) {
           showMsg('bridgeStatus', '<span class="spinner"></span>授权中，请在钱包中确认交易...', 'info');
-          const tx = await shib.approve(CFG.L1_INBOX, amount);
+          const tx = await shib.approve(inboxAddress, amount);
           showMsg('bridgeStatus', '<span class="spinner"></span>等待授权交易上链确认...', 'info');
           await tx.wait();
           showMsg('bridgeStatus', '<span class="spinner"></span>授权成功！', 'success');
@@ -1061,7 +1068,7 @@
         setSteps(2);
         showMsg('bridgeStatus', '<span class="spinner"></span>第 2 步：发起存款交易，请在钱包中确认...', 'info');
 
-        const inbox = new ethers.Contract(CFG.L1_INBOX, INBOX_ABI, signer);
+        const inbox = new ethers.Contract(inboxAddress, INBOX_ABI, signer);
         const depositTx = await inbox.depositERC20(amount);
         showMsg('bridgeStatus', '<span class="spinner"></span>等待 L1 确认（约 10-15 分钟）...', 'info');
 
@@ -1081,6 +1088,7 @@
         setTimeout(() => refreshBridgeBalances(), 5000);
 
       } catch (e) {
+        console.error('存款失败详情:', e);
         showMsg('bridgeStatus', '存款失败: ' + (e.reason || e.message || '未知错误'), 'error');
         $('mainBtn').disabled = false;
       }
