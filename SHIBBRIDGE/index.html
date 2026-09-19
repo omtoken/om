@@ -246,6 +246,7 @@ const CFG = {
   SHIB_L1: '0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce',
   L1_INBOX: '0xc470cff8a2e3f99e18d9b3899073653670ecb228',
   L2_CUSTOM_GATEWAY: '0xff1085ee9e76f3d3be8035cd4b28c7b56674839a',
+  ARBSYS: '0x0000000000000000000000000000000000000064',
   L2_NETWORK: {
     chainId: '0x16b8',
     chainName: 'Shib Mainnet',
@@ -384,7 +385,7 @@ function updateBridgeUI() {
   $('infoTime').textContent = is ? '约 10-15 分钟' : '即时发起 + 7天挑战期';
   $('infoGas').textContent = is ? '~$5-20 (L1 Gas)' : '~$0.01 (L2 Gas)';
   $('infoType').textContent = is ? '存款 (L1 → L2)' : '提款 (L2 → L1)';
-  $('infoMethod').textContent = is ? 'Inbox.depositERC20()' : 'CustomGateway.outboundTransfer()';
+  $('infoMethod').textContent = is ? 'Inbox.depositERC20()' : 'ArbSys.withdrawEth()';
   $('dirArrow').querySelector('svg').style.transform = is ? 'rotate(0deg)' : 'rotate(180deg)';
   
   if (state.connected) {
@@ -624,18 +625,10 @@ async function doWithdraw(amountStr) {
     showMsg('bridgeStatus', '<span class="spinner"></span>第 1 步：发起 L2→L1 提款交易...', 'info');
     $('mainBtn').disabled = true;
     
-    const gateway = new ethers.Contract(CFG.L2_CUSTOM_GATEWAY, L2_GATEWAY_ABI, signer);
+    const arbsys = new ethers.Contract(CFG.ARBSYS, ['function withdrawEth(address destination) external payable returns (uint256)'], signer);
     
-    // For custom fee token withdrawal, send SHIB as msg.value
-    const withdrawTx = await gateway.outboundTransfer(
-      CFG.SHIB_L1,           // l1Token: L1 SHIB address
-      state.account,         // to: recipient on L1
-      amount,                // amount
-      0,                     // maxGas (0 = auto)
-      0,                     // gasPriceBid (0 = auto)
-      '0x',                  // data
-      { value: amount }      // Send SHIB as value (native token)
-    );
+    // Withdraw native SHIB to L1
+    const withdrawTx = await arbsys.withdrawEth(state.account, { value: amount });
     
     showMsg('bridgeStatus', '<span class="spinner"></span>等待 L2 确认...', 'info');
     const receipt = await withdrawTx.wait();
