@@ -520,63 +520,25 @@ async function mainAction() {
   const need = is ? CFG.L1_CHAIN_ID : CFG.L2_CHAIN_ID;
   const needName = is ? '以太坊 L1' : 'Shib Mainnet';
   
-  // 每次操作前都重新获取当前链 ID
+  // 获取当前链 ID
   try {
     state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
   } catch (e) {
     console.error('获取链 ID 失败:', e);
+    showMsg('bridgeStatus', '无法获取当前网络，请刷新页面重试', 'error');
+    return;
   }
   
+  // 如果网络不对，提示用户手动切换
   if (state.currentChain !== need) {
-    showMsg('bridgeStatus', '<span class="spinner"></span>请在钱包中确认切换到 ' + needName + '...', 'info');
-    
-    try {
-      // 添加超时机制
-      const switchPromise = window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: need }]
-      });
-      
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('切换超时，请手动切换网络')), 30000);
-      });
-      
-      await Promise.race([switchPromise, timeoutPromise]);
-      
-      // 切换后重新获取链 ID
-      state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
-      updateWalletUI(state.currentChain);
-      
-      // 如果切换成功，继续执行操作
-      if (state.currentChain === need) {
-        const amt = $('amountInput').value.trim();
-        if (amt && parseFloat(amt) > 0) {
-          if (is) {
-            await doDeposit(amt);
-          } else {
-            await doWithdraw(amt);
-          }
-        }
-      }
-    } catch (e) {
-      if (e.code === 4001) {
-        showMsg('bridgeStatus', '已取消切换网络。请手动切换到 ' + needName + ' 后重试。', 'warn');
-      } else if (e.code === 4902 || e.message.includes('Unrecognized chain')) {
-        // 网络未添加，尝试添加
-        try {
-          await window.ethereum.request({
-            method: 'wallet_addEthereumChain',
-            params: [CFG.L2_NETWORK]
-          });
-          state.currentChain = await window.ethereum.request({ method: 'eth_chainId' });
-          updateWalletUI(state.currentChain);
-        } catch (e2) {
-          showMsg('bridgeStatus', '添加网络失败: ' + (e2.message || ''), 'error');
-        }
-      } else {
-        showMsg('bridgeStatus', '切换网络失败: ' + (e.message || '未知错误'), 'error');
-      }
-    }
+    showMsg('bridgeStatus', 
+      '<strong>请手动切换网络</strong><br>' +
+      '当前网络: ' + (state.currentChain === CFG.L1_CHAIN_ID ? '以太坊 L1' : state.currentChain === CFG.L2_CHAIN_ID ? 'Shib Mainnet' : '未知网络') + '<br>' +
+      '需要切换到: <strong>' + needName + '</strong><br><br>' +
+      '切换后点击按钮继续操作',
+      'warn'
+    );
+    updateBridgeButton();
     return;
   }
   
