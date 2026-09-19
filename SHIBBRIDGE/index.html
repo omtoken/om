@@ -610,7 +610,7 @@ function updateBridgeUI() {
   $('balLabel1').textContent = isL1toL2 ? 'L1 SHIB 余额' : 'L2 SHIB 余额';
   $('balLabel2').textContent = isL1toL2 ? 'L2 SHIB 余额' : 'L1 SHIB 余额';
   $('infoTime').textContent = isL1toL2 ? '约 10-15 分钟' : '约 7 天（含挑战期）';
-  $('infoGas').textContent = isL1toL2 ? '~$5-20 (L1 Gas)' : '~$0.01 (L2 Gas)';
+  $('infoGas').textContent = isL1toL2 ? '~$5-20 (L1 Gas) + ~0.01 ETH (L2 铸造)' : '~$0.01 (L2 Gas)';
   $('infoType').textContent = isL1toL2 ? '存款 (L1 → L2)' : '提款 (L2 → L1)';
   $('dirArrow').querySelector('svg').style.transform = isL1toL2 ? 'rotate(0deg)' : 'rotate(180deg)';
   if (state.connected) {
@@ -773,8 +773,13 @@ async function doDeposit(amountStr) {
     const l1Router = new ethers.Contract(CFG.L1_ROUTER, L1_ROUTER_ABI, signer);
     const maxGas = 200000;
     const gasPriceBid = ethers.utils.parseUnits('0.1', 'gwei');
-    // Custom fee token: maxSubmissionCost = 0, value = 0
-    const maxSubmissionCost = 0;
+    // 重试票创建需要 ETH（用于 L2 铸造操作），即使桥接的是自定义费用代币
+    // 多余的部分会退还给用户
+    const maxSubmissionCost = ethers.utils.parseEther('0.01');
+    const totalEthCost = maxSubmissionCost.add(gasPriceBid.mul(maxGas));
+
+    showMsg('bridgeStatus',
+      '<span class="spinner"></span>第 2 步：发起存款交易（需 ~0.01 ETH 用于 L2 铸造）...', 'info');
 
     const depositTx = await l1Router.outboundTransfer(
       CFG.SHIB_L1,
@@ -783,7 +788,7 @@ async function doDeposit(amountStr) {
       maxGas,
       gasPriceBid,
       maxSubmissionCost,
-      { value: 0 }
+      { value: totalEthCost }
     );
 
     showMsg('bridgeStatus', '<span class="spinner"></span>等待 L1 确认（约 10-15 分钟）...', 'info');
