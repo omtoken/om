@@ -695,6 +695,7 @@
     /* ---------- Configuration ---------- */
     const CFG = {
       L1_RPC:        'https://ethereum-rpc.publicnode.com',
+      L1_RPC_FALLBACK: 'https://eth.drpc.org',
       L2_RPC:        'https://rpc.shib.world/',
       L2_CHAIN_ID:   '0x16B8',
       L1_CHAIN_ID:   '0x1',
@@ -739,11 +740,15 @@
         alert('未检测到钱包，请安装 MetaMask 或 OKX Wallet');
         return;
       }
+      if (typeof ethers === 'undefined') {
+        alert('ethers.js 尚未加载，请刷新页面重试');
+        return;
+      }
       try {
         const accounts = await window.ethereum.request({
           method: 'eth_requestAccounts'
         });
-        state.account = accounts[0].toLowerCase();
+        state.account = ethers.utils.getAddress(accounts[0]); // 保留 EIP-55 校验和格式
         state.connected = true;
 
         // 根据跨链方向决定目标链：L1→L2 存款时保持 L1，L2→L1 提款时切到 L2
@@ -770,7 +775,8 @@
         updateWalletUI(state.currentChain);
         refreshBridgeBalances();
       } catch (e) {
-        console.error(e);
+        console.error('连接钱包失败:', e);
+        showMsg('bridgeStatus', '连接失败: ' + (e.message || ''), 'error');
       }
     }
 
@@ -804,6 +810,16 @@
       return json.result;
     }
 
+    // 带备用节点的 RPC 查询
+    async function rpcWithFallback(primaryUrl, fallbackUrl, method, params) {
+      try {
+        return await rpc(primaryUrl, method, params);
+      } catch (e) {
+        console.warn('主 RPC 失败，切换备用节点:', e.message);
+        return await rpc(fallbackUrl, method, params);
+      }
+    }
+
     function encodeCall(abi, funcName, args) {
       const sig = abi.find(a => a.includes(funcName));
       return new ethers.utils.Interface([sig]).encodeFunctionData(funcName, args);
@@ -811,6 +827,15 @@
 
     async function ethCall(url, to, data) {
       return rpc(url, 'eth_call', [{ to, data }, 'latest']);
+    }
+
+    async function ethCallWithFallback(primaryUrl, fallbackUrl, to, data) {
+      try {
+        return await ethCall(primaryUrl, to, data);
+      } catch (e) {
+        console.warn('主 RPC 失败，切换备用节点:', e.message);
+        return await ethCall(fallbackUrl, to, data);
+      }
     }
 
     /* ---------- Formatting ---------- */
@@ -914,27 +939,39 @@
     async function refreshBridgeBalances() {
       if (!state.account) return;
 
+      const is = state.bridgeDir === 'l1tol2';
+
       $('bal1').className = 'balance-value loading';
       $('bal2').className = 'balance-value loading';
       $('bal1').textContent = '查询中...';
       $('bal2').textContent = '查询中...';
 
-      try {
-        const l1Data = encodeCall(ERC20_ABI, 'balanceOf', [state.account]);
-        state.l1Balance = await ethCall(CFG.L1_RPC, CFG.SHIB_L1, l1Data);
-        state.l2Balance = await rpc(CFG.L2_RPC, 'eth_getBalance', [state.account, 'latest']);
+      // L1 SHIB 余额查询（独立处理，带备用节点）
+      (async () => {
+        try {
+          const l1Data = encodeCall(ERC20_ABI, 'balanceOf', [state.account]);
+          state.l1Balance = await ethCallWithFallback(CFG.L1_RPC, CFG.L1_RPC_FALLBACK, CFG.SHIB_L1, l1Data);
+          $('bal' + (is ? '1' : '2')).textContent = fmtSHIB(state.l1Balance);
+          $('bal' + (is ? '1' : '2')).className = 'balance-value';
+        } catch (e) {
+          console.error('L1 余额查询失败:', e);
+          $('bal' + (is ? '1' : '2')).textContent = '查询失败';
+          $('bal' + (is ? '1' : '2')).className = 'balance-value';
+        }
+      })();
 
-        const is = state.bridgeDir === 'l1tol2';
-        $('bal1').textContent = fmtSHIB(is ? state.l1Balance : state.l2Balance);
-        $('bal2').textContent = fmtSHIB(is ? state.l2Balance : state.l1Balance);
-        $('bal1').className = 'balance-value';
-        $('bal2').className = 'balance-value';
-      } catch (e) {
-        $('bal1').textContent = '查询失败';
-        $('bal2').textContent = '查询失败';
-        $('bal1').className = 'balance-value';
-        $('bal2').className = 'balance-value';
-      }
+      // L2 原生余额查询（独立处理）
+      (async () => {
+        try {
+          state.l2Balance = await rpc(CFG.L2_RPC, 'eth_getBalance', [state.account, 'latest']);
+          $('bal' + (is ? '2' : '1')).textContent = fmtSHIB(state.l2Balance);
+          $('bal' + (is ? '2' : '1')).className = 'balance-value';
+        } catch (e) {
+          console.error('L2 余额查询失败:', e);
+          $('bal' + (is ? '2' : '1')).textContent = '查询失败';
+          $('bal' + (is ? '2' : '1')).className = 'balance-value';
+        }
+      })();
     }
 
     /* ---------- Input Helpers ---------- */
@@ -1076,7 +1113,7 @@
               $('netLabel').textContent = '未连接';
               $('walletBtn').textContent = '连接钱包';
             } else {
-              state.account = accounts[0].toLowerCase();
+              state.account = ethers.utils.getAddress(accounts[0]);
               connectWallet();
             }
           });
