@@ -635,10 +635,8 @@ async function connectWallet() {
   try {
     provider = new ethers.BrowserProvider(window.ethereum);
     const accounts = await provider.send('eth_requestAccounts', []);
-    signer = await provider.getSigner();
-    userAddress = await signer.getAddress();
 
-    // 检查并切换网络
+    // 检查并切换网络（在获取 signer 之前）
     const network = await provider.getNetwork();
     if (Number(network.chainId) !== CONFIG.chainId) {
       try {
@@ -662,14 +660,29 @@ async function connectWallet() {
           throw switchErr;
         }
       }
+      // 切链后重建 provider 和 signer
+      provider = new ethers.BrowserProvider(window.ethereum);
     }
+
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
 
     $('btn-connect').textContent = shortAddr(userAddress);
     $('btn-connect').classList.add('connected');
     $('wallet-label').textContent = '已连接:';
     toast('钱包已连接: ' + shortAddr(userAddress), 'success');
 
-    loadAllData();
+    // 注册事件监听（连接完成后再注册，避免切链时触发刷新）
+    window.ethereum.on('accountsChanged', (accounts) => {
+      if (accounts.length === 0) {
+        location.reload();
+      } else {
+        location.reload();
+      }
+    });
+    window.ethereum.on('chainChanged', () => location.reload());
+
+    await loadAllData();
   } catch (e) {
     toast('连接失败: ' + (e.reason || e.message || String(e)), 'error');
     console.error(e);
@@ -681,6 +694,16 @@ async function connectWallet() {
 async function loadAllData() {
   if (!provider) return;
   try {
+    // 先验证网络
+    const net = await provider.getNetwork();
+    console.log('当前网络 chainId:', Number(net.chainId));
+    if (Number(net.chainId) !== CONFIG.chainId) {
+      toast('当前网络不正确，请切换到 Shib Mainnet', 'error');
+      return;
+    }
+    // 清空合约缓存，确保用最新的 provider
+    Object.keys(contracts).forEach(k => delete contracts[k]);
+
     // FactoryAdmin
     const fa = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
     const [faOwner, faPending, faTreasury, faRouter, faFee, faPaused] = await Promise.all([
@@ -891,11 +914,7 @@ async function mrRescue() {
   await safeCall(() => c.write.rescue(token, to), '代币已提取');
 }
 
-// 监听钱包和链变化
-if (window.ethereum) {
-  window.ethereum.on('accountsChanged', () => location.reload());
-  window.ethereum.on('chainChanged', () => location.reload());
-}
+
 </script>
 </body>
 </html>
