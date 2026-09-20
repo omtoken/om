@@ -635,8 +635,10 @@ async function connectWallet() {
   try {
     provider = new ethers.BrowserProvider(window.ethereum);
     const accounts = await provider.send('eth_requestAccounts', []);
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
 
-    // 检查并切换网络（在获取 signer 之前）
+    // 检查并切换网络
     const network = await provider.getNetwork();
     if (Number(network.chainId) !== CONFIG.chainId) {
       try {
@@ -660,29 +662,14 @@ async function connectWallet() {
           throw switchErr;
         }
       }
-      // 切链后重建 provider 和 signer
-      provider = new ethers.BrowserProvider(window.ethereum);
     }
-
-    signer = await provider.getSigner();
-    userAddress = await signer.getAddress();
 
     $('btn-connect').textContent = shortAddr(userAddress);
     $('btn-connect').classList.add('connected');
     $('wallet-label').textContent = '已连接:';
     toast('钱包已连接: ' + shortAddr(userAddress), 'success');
 
-    // 注册事件监听（连接完成后再注册，避免切链时触发刷新）
-    window.ethereum.on('accountsChanged', (accounts) => {
-      if (accounts.length === 0) {
-        location.reload();
-      } else {
-        location.reload();
-      }
-    });
-    window.ethereum.on('chainChanged', () => location.reload());
-
-    await loadAllData();
+    loadAllData();
   } catch (e) {
     toast('连接失败: ' + (e.reason || e.message || String(e)), 'error');
     console.error(e);
@@ -693,116 +680,7 @@ async function connectWallet() {
 // 加载所有数据
 async function loadAllData() {
   if (!provider) return;
-  
   try {
-    // 先测试 RPC 连通性
-    try {
-      const blockNum = await provider.getBlockNumber();
-      console.log('✓ RPC 连通，当前区块:', blockNum);
-    } catch (rpcErr) {
-      console.error('✗ RPC 连接失败:', rpcErr);
-      toast('RPC 连接失败: ' + (rpcErr.message || String(rpcErr)), 'error');
-      return;
-    }
-
-    // 验证网络
-    const net = await provider.getNetwork();
-    console.log('当前网络 chainId:', Number(net.chainId));
-    if (Number(net.chainId) !== CONFIG.chainId) {
-      toast('当前网络不正确 (chainId: ' + Number(net.chainId) + ')，请切换到 Shib Mainnet', 'error');
-      return;
-    }
-
-    // 清空合约缓存，确保用最新的 provider
-    Object.keys(contracts).forEach(k => delete contracts[k]);
-
-    // FactoryAdmin
-    try {
-      const fa = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
-      const [faOwner, faPending, faTreasury, faRouter, faFee, faPaused] = await Promise.all([
-        fa.read.owner(), fa.read.pendingOwner(), fa.read.treasury(),
-        fa.read.router(), fa.read.creationFee(), fa.read.paused()
-      ]);
-      $('fa-owner').innerHTML = shibLink(faOwner);
-      $('fa-pending-owner').innerHTML = shibLink(faPending);
-      $('fa-treasury').innerHTML = shibLink(faTreasury);
-      $('fa-router').innerHTML = shibLink(faRouter);
-      $('fa-creation-fee').textContent = ethers.formatEther(faFee) + ' SHIB';
-      $('fa-paused').innerHTML = faPaused ? '<span class="status-bad">已暂停</span>' : '<span class="status-ok">正常</span>';
-      console.log('✓ FactoryAdmin 加载成功');
-    } catch (e) {
-      console.error('✗ FactoryAdmin 加载失败:', e);
-      toast('FactoryAdmin 失败: ' + (e.shortMessage || e.message || String(e)), 'error');
-    }
-
-    // FeeEscrow
-    try {
-      const fe = getContract('FeeEscrow', ABI_FEE_ESCROW);
-      const [feOwner, fePending, feRecipient] = await Promise.all([
-        fe.read.owner(), fe.read.pendingOwner(), fe.read.platformRecipient()
-      ]);
-      $('fe-owner').innerHTML = shibLink(feOwner);
-      $('fe-pending-owner').innerHTML = shibLink(fePending);
-      $('fe-platform-recipient').innerHTML = shibLink(feRecipient);
-      console.log('✓ FeeEscrow 加载成功');
-    } catch (e) {
-      console.error('✗ FeeEscrow 加载失败:', e);
-      toast('FeeEscrow 失败: ' + (e.shortMessage || e.message || String(e)), 'error');
-    }
-
-    // LaunchFactory
-    try {
-      const lf = getContract('LaunchFactory', ABI_LAUNCH_FACTORY);
-      const [lfOwner, lfPending, lfCount] = await Promise.all([
-        lf.read.owner(), lf.read.pendingOwner(), lf.read.launchCount()
-      ]);
-      $('lf-owner').innerHTML = shibLink(lfOwner);
-      $('lf-pending-owner').innerHTML = shibLink(lfPending);
-      $('lf-launch-count').textContent = lfCount.toString();
-      console.log('✓ LaunchFactory 加载成功');
-    } catch (e) {
-      console.error('✗ LaunchFactory 加载失败:', e);
-      toast('LaunchFactory 失败: ' + (e.shortMessage || e.message || String(e)), 'error');
-    }
-
-    // LaunchHook
-    try {
-      const lh = getContract('LaunchHook', ABI_LAUNCH_HOOK);
-      const [lhOwner, lhPending, lhBps] = await Promise.all([
-        lh.read.owner(), lh.read.pendingOwner(), lh.read.trackerShareBps()
-      ]);
-      $('lh-owner').innerHTML = shibLink(lhOwner);
-      $('lh-pending-owner').innerHTML = shibLink(lhPending);
-      $('lh-tracker-share-bps').textContent = `${lhBps.toString()} (${Number(lhBps)/100}%)`;
-      console.log('✓ LaunchHook 加载成功');
-    } catch (e) {
-      console.error('✗ LaunchHook 加载失败:', e);
-      toast('LaunchHook 失败: ' + (e.shortMessage || e.message || String(e)), 'error');
-    }
-
-    // MuleRouter
-    try {
-      const mr = getContract('MuleRouter', ABI_MULE_ROUTER);
-      const [mrOwner, mrPending] = await Promise.all([
-        mr.read.owner(), mr.read.pendingOwner()
-      ]);
-      $('mr-owner').innerHTML = shibLink(mrOwner);
-      $('mr-pending-owner').innerHTML = shibLink(mrPending);
-      console.log('✓ MuleRouter 加载成功');
-    } catch (e) {
-      console.error('✗ MuleRouter 加载失败:', e);
-      toast('MuleRouter 失败: ' + (e.shortMessage || e.message || String(e)), 'error');
-    }
-
-    toast('链上数据已更新', 'success');
-  } catch (e) {
-    console.error('loadAllData 未知错误:', e);
-    toast('未知错误: ' + (e.message || String(e)), 'error');
-  }
-}
-    // 清空合约缓存，确保用最新的 provider
-    Object.keys(contracts).forEach(k => delete contracts[k]);
-
     // FactoryAdmin
     const fa = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
     const [faOwner, faPending, faTreasury, faRouter, faFee, faPaused] = await Promise.all([
@@ -1013,7 +891,11 @@ async function mrRescue() {
   await safeCall(() => c.write.rescue(token, to), '代币已提取');
 }
 
-
+// 监听钱包和链变化
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', () => location.reload());
+  window.ethereum.on('chainChanged', () => location.reload());
+}
 </script>
 </body>
 </html>
