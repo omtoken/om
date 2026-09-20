@@ -595,6 +595,14 @@ function shibLink(addr) {
 
 function $(id) { return document.getElementById(id); }
 
+// 地址规范化：自动处理校验和，避免 bad checksum 错误
+function normalizeAddr(addr) {
+  if (!addr) return null;
+  addr = addr.trim();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) return null;
+  return ethers.getAddress(addr.toLowerCase());
+}
+
 async function safeCall(fn, successMsg) {
   try {
     const tx = await fn();
@@ -627,10 +635,8 @@ async function connectWallet() {
   try {
     provider = new ethers.BrowserProvider(window.ethereum);
     const accounts = await provider.send('eth_requestAccounts', []);
-    signer = await provider.getSigner();
-    userAddress = await signer.getAddress();
 
-    // 检查并切换网络
+    // 检查并切换网络（在获取 signer 之前）
     const network = await provider.getNetwork();
     if (Number(network.chainId) !== CONFIG.chainId) {
       try {
@@ -654,14 +660,29 @@ async function connectWallet() {
           throw switchErr;
         }
       }
+      // 切链后重建 provider 和 signer
+      provider = new ethers.BrowserProvider(window.ethereum);
     }
+
+    signer = await provider.getSigner();
+    userAddress = await signer.getAddress();
 
     $('btn-connect').textContent = shortAddr(userAddress);
     $('btn-connect').classList.add('connected');
     $('wallet-label').textContent = '已连接:';
     toast('钱包已连接: ' + shortAddr(userAddress), 'success');
 
-    loadAllData();
+    // 注册事件监听（连接完成后再注册，避免切链时触发刷新）
+    window.ethereum.on('accountsChanged', (accounts) => {
+      if (accounts.length === 0) {
+        location.reload();
+      } else {
+        location.reload();
+      }
+    });
+    window.ethereum.on('chainChanged', () => location.reload());
+
+    await loadAllData();
   } catch (e) {
     toast('连接失败: ' + (e.reason || e.message || String(e)), 'error');
     console.error(e);
@@ -672,7 +693,116 @@ async function connectWallet() {
 // 加载所有数据
 async function loadAllData() {
   if (!provider) return;
+  
   try {
+    // 先测试 RPC 连通性
+    try {
+      const blockNum = await provider.getBlockNumber();
+      console.log('✓ RPC 连通，当前区块:', blockNum);
+    } catch (rpcErr) {
+      console.error('✗ RPC 连接失败:', rpcErr);
+      toast('RPC 连接失败: ' + (rpcErr.message || String(rpcErr)), 'error');
+      return;
+    }
+
+    // 验证网络
+    const net = await provider.getNetwork();
+    console.log('当前网络 chainId:', Number(net.chainId));
+    if (Number(net.chainId) !== CONFIG.chainId) {
+      toast('当前网络不正确 (chainId: ' + Number(net.chainId) + ')，请切换到 Shib Mainnet', 'error');
+      return;
+    }
+
+    // 清空合约缓存，确保用最新的 provider
+    Object.keys(contracts).forEach(k => delete contracts[k]);
+
+    // FactoryAdmin
+    try {
+      const fa = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
+      const [faOwner, faPending, faTreasury, faRouter, faFee, faPaused] = await Promise.all([
+        fa.read.owner(), fa.read.pendingOwner(), fa.read.treasury(),
+        fa.read.router(), fa.read.creationFee(), fa.read.paused()
+      ]);
+      $('fa-owner').innerHTML = shibLink(faOwner);
+      $('fa-pending-owner').innerHTML = shibLink(faPending);
+      $('fa-treasury').innerHTML = shibLink(faTreasury);
+      $('fa-router').innerHTML = shibLink(faRouter);
+      $('fa-creation-fee').textContent = ethers.formatEther(faFee) + ' SHIB';
+      $('fa-paused').innerHTML = faPaused ? '<span class="status-bad">已暂停</span>' : '<span class="status-ok">正常</span>';
+      console.log('✓ FactoryAdmin 加载成功');
+    } catch (e) {
+      console.error('✗ FactoryAdmin 加载失败:', e);
+      toast('FactoryAdmin 失败: ' + (e.shortMessage || e.message || String(e)), 'error');
+    }
+
+    // FeeEscrow
+    try {
+      const fe = getContract('FeeEscrow', ABI_FEE_ESCROW);
+      const [feOwner, fePending, feRecipient] = await Promise.all([
+        fe.read.owner(), fe.read.pendingOwner(), fe.read.platformRecipient()
+      ]);
+      $('fe-owner').innerHTML = shibLink(feOwner);
+      $('fe-pending-owner').innerHTML = shibLink(fePending);
+      $('fe-platform-recipient').innerHTML = shibLink(feRecipient);
+      console.log('✓ FeeEscrow 加载成功');
+    } catch (e) {
+      console.error('✗ FeeEscrow 加载失败:', e);
+      toast('FeeEscrow 失败: ' + (e.shortMessage || e.message || String(e)), 'error');
+    }
+
+    // LaunchFactory
+    try {
+      const lf = getContract('LaunchFactory', ABI_LAUNCH_FACTORY);
+      const [lfOwner, lfPending, lfCount] = await Promise.all([
+        lf.read.owner(), lf.read.pendingOwner(), lf.read.launchCount()
+      ]);
+      $('lf-owner').innerHTML = shibLink(lfOwner);
+      $('lf-pending-owner').innerHTML = shibLink(lfPending);
+      $('lf-launch-count').textContent = lfCount.toString();
+      console.log('✓ LaunchFactory 加载成功');
+    } catch (e) {
+      console.error('✗ LaunchFactory 加载失败:', e);
+      toast('LaunchFactory 失败: ' + (e.shortMessage || e.message || String(e)), 'error');
+    }
+
+    // LaunchHook
+    try {
+      const lh = getContract('LaunchHook', ABI_LAUNCH_HOOK);
+      const [lhOwner, lhPending, lhBps] = await Promise.all([
+        lh.read.owner(), lh.read.pendingOwner(), lh.read.trackerShareBps()
+      ]);
+      $('lh-owner').innerHTML = shibLink(lhOwner);
+      $('lh-pending-owner').innerHTML = shibLink(lhPending);
+      $('lh-tracker-share-bps').textContent = `${lhBps.toString()} (${Number(lhBps)/100}%)`;
+      console.log('✓ LaunchHook 加载成功');
+    } catch (e) {
+      console.error('✗ LaunchHook 加载失败:', e);
+      toast('LaunchHook 失败: ' + (e.shortMessage || e.message || String(e)), 'error');
+    }
+
+    // MuleRouter
+    try {
+      const mr = getContract('MuleRouter', ABI_MULE_ROUTER);
+      const [mrOwner, mrPending] = await Promise.all([
+        mr.read.owner(), mr.read.pendingOwner()
+      ]);
+      $('mr-owner').innerHTML = shibLink(mrOwner);
+      $('mr-pending-owner').innerHTML = shibLink(mrPending);
+      console.log('✓ MuleRouter 加载成功');
+    } catch (e) {
+      console.error('✗ MuleRouter 加载失败:', e);
+      toast('MuleRouter 失败: ' + (e.shortMessage || e.message || String(e)), 'error');
+    }
+
+    toast('链上数据已更新', 'success');
+  } catch (e) {
+    console.error('loadAllData 未知错误:', e);
+    toast('未知错误: ' + (e.message || String(e)), 'error');
+  }
+}
+    // 清空合约缓存，确保用最新的 provider
+    Object.keys(contracts).forEach(k => delete contracts[k]);
+
     // FactoryAdmin
     const fa = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
     const [faOwner, faPending, faTreasury, faRouter, faFee, faPaused] = await Promise.all([
@@ -740,8 +870,8 @@ document.querySelectorAll('.tab').forEach(tab => {
 
 // === FactoryAdmin 操作 ===
 async function faTransferOwnership() {
-  const addr = $('fa-transfer-to').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('fa-transfer-to').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
   await safeCall(() => c.write.transferOwnership(addr), '转让已发起');
 }
@@ -750,14 +880,14 @@ async function faAcceptOwnership() {
   await safeCall(() => c.write.acceptOwnership(), '已接受管理员权限');
 }
 async function faSetTreasury() {
-  const addr = $('fa-treasury-input').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('fa-treasury-input').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
   await safeCall(() => c.write.setTreasury(addr), '金库地址已更新');
 }
 async function faSetRouter() {
-  const addr = $('fa-router-input').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('fa-router-input').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
   await safeCall(() => c.write.setRouter(addr), '路由器地址已更新');
 }
@@ -769,14 +899,14 @@ async function faSetCreationFee() {
   await safeCall(() => c.write.setCreationFee(wei), '创建费用已更新');
 }
 async function faRegisterQuote() {
-  const addr = $('fa-register-quote-input').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('fa-register-quote-input').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
   await safeCall(() => c.write.registerQuote(addr), '报价代币已注册');
 }
 async function faDisableQuote() {
-  const addr = $('fa-disable-quote-input').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('fa-disable-quote-input').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
   await safeCall(() => c.write.disableQuote(addr), '报价代币已禁用');
 }
@@ -785,24 +915,24 @@ async function faSetPaused(v) {
   await safeCall(() => c.write.setPaused(v), v ? '已暂停创建' : '已恢复创建');
 }
 async function faSetBlacklist(status) {
-  const addr = $('fa-blacklist-input').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('fa-blacklist-input').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
   await safeCall(() => c.write.setBlacklist(addr, status), status ? '已加入黑名单' : '已移出黑名单');
 }
 async function faBatchBlacklist(status) {
   const raw = $('fa-blacklist-batch-input').value.trim();
   if (!raw) return toast('请输入地址列表', 'error');
-  const addrs = raw.split(',').map(s => s.trim()).filter(Boolean);
-  if (!addrs.length) return toast('地址列表为空', 'error');
+  const addrs = raw.split(',').map(s => normalizeAddr(s)).filter(Boolean);
+  if (!addrs.length) return toast('地址列表为空或格式错误', 'error');
   const c = getContract('FactoryAdmin', ABI_FACTORY_ADMIN);
   await safeCall(() => c.write.setBlacklistBatch(addrs, status), status ? '批量拉黑完成' : '批量解除完成');
 }
 
 // === FeeEscrow 操作 ===
 async function feTransferOwnership() {
-  const addr = $('fe-transfer-to').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('fe-transfer-to').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('FeeEscrow', ABI_FEE_ESCROW);
   await safeCall(() => c.write.transferOwnership(addr), '转让已发起');
 }
@@ -811,8 +941,8 @@ async function feAcceptOwnership() {
   await safeCall(() => c.write.acceptOwnership(), '已接受管理员权限');
 }
 async function feSetPlatformRecipient() {
-  const addr = $('fe-platform-recipient-input').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('fe-platform-recipient-input').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('FeeEscrow', ABI_FEE_ESCROW);
   await safeCall(() => c.write.setPlatformRecipient(addr), '收款地址已更新');
 }
@@ -836,8 +966,8 @@ async function feDistributeRange() {
 
 // === LaunchFactory 操作 ===
 async function lfTransferOwnership() {
-  const addr = $('lf-transfer-to').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('lf-transfer-to').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('LaunchFactory', ABI_LAUNCH_FACTORY);
   await safeCall(() => c.write.transferOwnership(addr), '转让已发起');
 }
@@ -848,8 +978,8 @@ async function lfAcceptOwnership() {
 
 // === LaunchHook 操作 ===
 async function lhTransferOwnership() {
-  const addr = $('lh-transfer-to').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('lh-transfer-to').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('LaunchHook', ABI_LAUNCH_HOOK);
   await safeCall(() => c.write.transferOwnership(addr), '转让已发起');
 }
@@ -866,8 +996,8 @@ async function lhSetTrackerShareBps() {
 
 // === MuleRouter 操作 ===
 async function mrTransferOwnership() {
-  const addr = $('mr-transfer-to').value.trim();
-  if (!addr) return toast('请输入地址', 'error');
+  const addr = normalizeAddr($('mr-transfer-to').value);
+  if (!addr) return toast('请输入有效地址', 'error');
   const c = getContract('MuleRouter', ABI_MULE_ROUTER);
   await safeCall(() => c.write.transferOwnership(addr), '转让已发起');
 }
@@ -876,18 +1006,14 @@ async function mrAcceptOwnership() {
   await safeCall(() => c.write.acceptOwnership(), '已接受管理员权限');
 }
 async function mrRescue() {
-  const token = $('mr-rescue-token').value.trim();
-  const to = $('mr-rescue-to').value.trim();
-  if (!token || !to) return toast('请填写完整', 'error');
+  const token = normalizeAddr($('mr-rescue-token').value);
+  const to = normalizeAddr($('mr-rescue-to').value);
+  if (!token || !to) return toast('请填写有效地址', 'error');
   const c = getContract('MuleRouter', ABI_MULE_ROUTER);
   await safeCall(() => c.write.rescue(token, to), '代币已提取');
 }
 
-// 监听钱包和链变化
-if (window.ethereum) {
-  window.ethereum.on('accountsChanged', () => location.reload());
-  window.ethereum.on('chainChanged', () => location.reload());
-}
+
 </script>
 </body>
 </html>
