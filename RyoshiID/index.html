@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RyoshiumID 管理面板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #FFF9F0;
+  --surface: #FFFFFF;
+  --surface-alt: #FFF4E6;
+  --border: #F0DCC0;
+  --border-focus: #E8832A;
+  --text: #2C1810;
+  --text-secondary: #8C6A50;
+  --accent: #E8832A;
+  --accent-hover: #D4721E;
+  --accent-light: rgba(232, 131, 42, 0.1);
+  --success: #2E9E5A;
+  --success-bg: #E8F8EE;
+  --danger: #D94452;
+  --danger-bg: #FDECEE;
+  --warning: #D4960A;
+  --warning-bg: #FFF8E1;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(44,24,16,0.04), 0 6px 24px rgba(44,24,16,0.06);
+  --shadow-lg: 0 4px 12px rgba(44,24,16,0.06), 0 20px 48px rgba(44,24,16,0.1);
+  --font: 'DM Sans', -apple-system, sans-serif;
+  --mono: 'Space Mono', monospace;
+}
+
+html { font-size: 16px; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Background pattern */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(232,131,42,0.06) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(232,131,42,0.04) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 0 32px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 32px;
+}
+
+.header-left { display: flex; align-items: center; gap: 14px; }
+
+.logo-mark {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #E8832A, #F5A623);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-weight: 700; font-size: 18px;
+  box-shadow: 0 4px 12px rgba(232,131,42,0.3);
+}
+
+.header-title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+.header-subtitle { font-size: 12px; color: var(--text-secondary); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  border: none; border-radius: var(--radius-sm);
+  font-family: var(--font); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s ease;
+  text-decoration: none;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(232,131,42,0.25);
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(232,131,42,0.35); }
+
+.btn-outline {
+  background: transparent;
+  color: var(--accent);
+  border: 1.5px solid var(--accent);
+}
+.btn-outline:hover:not(:disabled) { background: var(--accent-light); }
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover:not(:disabled) { background: #c23a46; }
+
+.btn-sm { padding: 7px 14px; font-size: 13px; }
+
+.btn-connect {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+.btn-connect:hover { border-color: var(--accent); color: var(--accent); }
+
+.wallet-info {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 16px 6px 8px;
+  font-size: 13px;
+}
+.wallet-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); }
+.wallet-addr { font-family: var(--mono); font-size: 12px; color: var(--text-secondary); }
+
+/* Cards */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s;
+}
+.card:hover { box-shadow: var(--shadow-lg); }
+
+.card-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.card-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.card-icon.orange { background: var(--accent-light); }
+.card-icon.green { background: var(--success-bg); }
+.card-icon.red { background: var(--danger-bg); }
+.card-icon.yellow { background: var(--warning-bg); }
+
+.card-title { font-size: 16px; font-weight: 700; }
+.card-desc { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+/* Stats grid */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 20px; }
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  text-align: center;
+}
+.stat-value { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--accent); }
+.stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Price grid */
+.price-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+
+.price-row {
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: border-color 0.2s;
+}
+.price-row:hover { border-color: var(--border); }
+
+.price-label {
+  font-weight: 700; font-size: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.price-badge {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.price-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.price-input {
+  width: 100%;
+  padding: 9px 60px 9px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color 0.2s;
+  outline: none;
+}
+.price-input:focus { border-color: var(--accent); }
+.price-input-suffix {
+  position: absolute;
+  right: 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Form */
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: var(--text-secondary); }
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.form-input:focus { border-color: var(--accent); }
+.form-hint { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+/* Alert / Toast */
+.toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+.toast {
+  padding: 14px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  animation: toastIn 0.3s ease;
+  max-width: 380px;
+}
+.toast-success { background: var(--success-bg); color: #1a6b35; border: 1px solid #b8e4c8; }
+.toast-error { background: var(--danger-bg); color: #a32f3a; border: 1px solid #f5c6cb; }
+.toast-info { background: #EBF3FE; color: #1a56db; border: 1px solid #bdd8fc; }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* Owner badge */
+.owner-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 12px; font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+.not-owner-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 12px; font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+/* Section divider */
+.divider { height: 1px; background: var(--border); margin: 24px 0; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .header { flex-direction: column; gap: 16px; align-items: flex-start; }
+  .price-row { grid-template-columns: 1fr; gap: 8px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .card { padding: 20px; }
+}
+
+/* Loading spinner */
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Pending owner section */
+.pending-section {
+  background: var(--warning-bg);
+  border: 1px solid #f0dfa0;
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  margin-top: 16px;
+}
+.pending-section .form-label { color: var(--warning); }
+
+/* Chain badge */
+.chain-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.chain-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+/* Actions row */
+.actions-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+/* Hidden */
+.hidden { display: none !important; }
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding: 32px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.footer a { color: var(--accent); text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="toast-container" id="toasts"></div>
+
+<div class="app">
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="logo-mark">R</div>
+      <div>
+        <div class="header-title">RyoshiumID 管理面板</div>
+        <div class="header-subtitle">合约 Owner 权限管理</div>
+      </div>
+    </div>
+    <div id="walletArea">
+      <button class="btn btn-connect" onclick="connectWallet()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z"/></svg>
+        连接钱包
+      </button>
+    </div>
+  </header>
+
+  <!-- Chain info bar -->
+  <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap;">
+    <span class="chain-badge"><span class="chain-dot"></span>Ryoshium 主网 · 链ID 5816</span>
+    <span class="chain-badge">合约: 0x1a1F...eAAc</span>
+    <span id="ownerBadge"></span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value" id="statSupply">--</div>
+      <div class="stat-label">已铸造总量</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statBalance">--</div>
+      <div class="stat-label">合约余额 (SHIB)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statOwner" style="font-size:13px;word-break:break-all;">--</div>
+      <div class="stat-label">当前 Owner</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statPending" style="font-size:13px;word-break:break-all;">--</div>
+      <div class="stat-label">待确认 Owner</div>
+    </div>
+  </div>
+
+  <!-- Price Management -->
+  <div class="card owner-only">
+    <div class="card-header">
+      <div class="card-icon orange">💰</div>
+      <div>
+        <div class="card-title">铸造价格管理</div>
+        <div class="card-desc">修改各等级 ID 的铸造价格（单位：SHIB）</div>
+      </div>
+    </div>
+    <div class="price-grid">
+      <div class="price-row">
+        <div class="price-label"><span class="price-badge">1位</span> 1D</div>
+        <div class="price-input-wrap">
+          <input class="price-input" id="price1D" type="text" placeholder="1,000,000,000">
+          <span class="price-input-suffix">SHIB</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="setPrice('1D')">修改</button>
+      </div>
+      <div class="price-row">
+        <div class="price-label"><span class="price-badge">2位</span> 2D</div>
+        <div class="price-input-wrap">
+          <input class="price-input" id="price2D" type="text" placeholder="500,000,000">
+          <span class="price-input-suffix">SHIB</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="setPrice('2D')">修改</button>
+      </div>
+      <div class="price-row">
+        <div class="price-label"><span class="price-badge">3位</span> 3D</div>
+        <div class="price-input-wrap">
+          <input class="price-input" id="price3D" type="text" placeholder="100,000,000">
+          <span class="price-input-suffix">SHIB</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="setPrice('3D')">修改</button>
+      </div>
+      <div class="price-row">
+        <div class="price-label"><span class="price-badge">4位</span> 4D</div>
+        <div class="price-input-wrap">
+          <input class="price-input" id="price4D" type="text" placeholder="50,000,000">
+          <span class="price-input-suffix">SHIB</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="setPrice('4D')">修改</button>
+      </div>
+      <div class="price-row">
+        <div class="price-label"><span class="price-badge">5位+</span> 5D+</div>
+        <div class="price-input-wrap">
+          <input class="price-input" id="price5DPlus" type="text" placeholder="10,000,000">
+          <span class="price-input-suffix">SHIB</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="setPrice('5DPlus')">修改</button>
+      </div>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" onclick="setAllPrices()">全部更新</button>
+    </div>
+  </div>
+
+  <!-- Ownership Transfer -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon yellow">🔑</div>
+      <div>
+        <div class="card-title">所有权转移</div>
+        <div class="card-desc">两步转移：先提议新 Owner，再由新 Owner 确认接受</div>
+      </div>
+    </div>
+    <div class="owner-only">
+      <div class="form-group">
+        <label class="form-label">新 Owner 地址</label>
+        <input class="form-input" id="newOwnerAddr" type="text" placeholder="0x...">
+        <div class="form-hint">输入要转移所有权的目标地址</div>
+      </div>
+      <div class="actions-row">
+        <button class="btn btn-primary" onclick="transferOwnership()">提议转移所有权</button>
+      </div>
+    </div>
+    <div id="pendingSection" class="pending-section hidden">
+      <div class="form-label" style="margin-bottom:8px;">⏳ 有待确认的所有权转移</div>
+      <div style="font-family:var(--mono);font-size:13px;word-break:break-all;margin-bottom:12px;" id="pendingAddr"></div>
+      <button class="btn btn-primary" id="acceptBtn" onclick="acceptOwnership()">确认接受所有权</button>
+    </div>
+  </div>
+
+  <!-- Withdraw -->
+  <div class="card owner-only">
+    <div class="card-header">
+      <div class="card-icon green">📤</div>
+      <div>
+        <div class="card-title">提取合约资金</div>
+        <div class="card-desc">提取合约中意外收到的 SHIB 资金</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:13px;color:var(--text-secondary);">可提取余额</div>
+        <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--accent);" id="withdrawBalance">--</div>
+      </div>
+      <button class="btn btn-primary" onclick="withdraw()">提取全部资金</button>
+    </div>
+  </div>
+
+  <!-- Danger Zone -->
+  <div class="card" style="border-color:#f5c6cb;">
+    <div class="card-header" style="border-bottom-color:#f5c6cb;">
+      <div class="card-icon red">⚠️</div>
+      <div>
+        <div class="card-title" style="color:var(--danger);">注意事项</div>
+        <div class="card-desc">请谨慎操作以下功能</div>
+      </div>
+    </div>
+    <ul style="font-size:13px;color:var(--text-secondary);list-style:none;display:flex;flex-direction:column;gap:8px;">
+      <li>• 本合约<strong>禁止放弃所有权</strong>（renounceOwnership 已被禁用）</li>
+      <li>• 所有权转移为<strong>两步操作</strong>，需新 Owner 主动确认接受</li>
+      <li>• 提取功能会将合约中所有 SHIB 发送到当前 Owner 地址</li>
+      <li>• 仅当前 Owner 可执行以上管理操作</li>
+    </ul>
+  </div>
+
+  <div class="footer">
+    <p>RyoshiumID · <a href="https://explorer.shib.club/address/0x1a1F8cC950e258b6B6A47f24Ef331BB8A8aaeAAc" target="_blank">查看合约</a> · Ryoshium 主网</p>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.1/dist/ethers.umd.min.js"></script>
+<script>
+// === Config ===
+const CHAIN_ID = 5816;
+const CHAIN_ID_HEX = '0x' + CHAIN_ID.toString(16);
+const RPC_URL = 'https://rpc.shib.club/';
+const EXPLORER_URL = 'https://explorer.shib.club/';
+const CONTRACT_ADDR = '0x1a1F8cC950e258b6B6A47f24Ef331BB8A8aaeAAc';
+
+const ABI = [
+  "function owner() view returns (address)",
+  "function pendingOwner() view returns (address)",
+  "function totalSupply() view returns (uint256)",
+  "function price1D() view returns (uint256)",
+  "function price2D() view returns (uint256)",
+  "function price3D() view returns (uint256)",
+  "function price4D() view returns (uint256)",
+  "function price5DPlus() view returns (uint256)",
+  "function setPrice1D(uint256)",
+  "function setPrice2D(uint256)",
+  "function setPrice3D(uint256)",
+  "function setPrice4D(uint256)",
+  "function setPrice5DPlus(uint256)",
+  "function transferOwnership(address)",
+  "function acceptOwnership()",
+  "function withdraw()"
+];
+
+let provider = null;
+let signer = null;
+let contract = null;
+let userAddress = null;
+let isOwner = false;
+
+// === Utils ===
+function shortAddr(addr) {
+  if (!addr) return '--';
+  return addr.slice(0, 6) + '...' + addr.slice(-4);
+}
+
+function formatSHIB(weiStr) {
+  if (!weiStr || weiStr === '0') return '0';
+  const wei = BigInt(weiStr);
+  const whole = wei / BigInt(10 ** 18);
+  return whole.toLocaleString();
+}
+
+function parseSHIB(input) {
+  const cleaned = input.replace(/[,，\s]/g, '');
+  if (!cleaned || isNaN(Number(cleaned))) return null;
+  const parts = cleaned.split('.');
+  const whole = parts[0] || '0';
+  let frac = parts[1] || '';
+  frac = frac.padEnd(18, '0').slice(0, 18);
+  return BigInt(whole) * BigInt(10 ** 18) + BigInt(frac);
+}
+
+function toast(msg, type = 'info') {
+  const el = document.createElement('div');
+  el.className = 'toast toast-' + type;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, 4000);
+}
+
+// === Wallet ===
+async function connectWallet() {
+  if (!window.ethereum) {
+    toast('未检测到钱包，请安装 MetaMask', 'error');
+    return;
+  }
+  try {
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send('eth_requestAccounts', []);
+    userAddress = accounts[0];
+
+    // Check & switch chain BEFORE creating signer/contract
+    const chainId = await provider.send('eth_chainId', []);
+    if (chainId !== CHAIN_ID_HEX) {
+      try {
+        await provider.send('wallet_switchEthereumChain', [{ chainId: CHAIN_ID_HEX }]);
+      } catch (e) {
+        if (e.code === 4902) {
+          await provider.send('wallet_addEthereumChain', [{
+            chainId: CHAIN_ID_HEX,
+            chainName: 'Ryoshium',
+            nativeCurrency: { name: 'SHIB', symbol: 'SHIB', decimals: 18 },
+            rpcUrls: [RPC_URL],
+            blockExplorerUrls: [EXPLORER_URL]
+          }]);
+        } else {
+          toast('请切换到 Ryoshium 主网', 'error');
+          return;
+        }
+      }
+      // 切换链后必须重新创建 provider，否则 signer 指向旧链
+      provider = new ethers.BrowserProvider(window.ethereum);
+    }
+
+    signer = await provider.getSigner();
+    contract = new ethers.Contract(CONTRACT_ADDR, ABI, signer);
+
+    updateWalletUI();
+    await loadData();
+    toast('钱包连接成功', 'success');
+  } catch (e) {
+    console.error(e);
+    toast('连接失败: ' + (e.message || e), 'error');
+  }
+}
+
+function updateWalletUI() {
+  const area = document.getElementById('walletArea');
+  area.innerHTML = `
+    <div class="wallet-info">
+      <span class="wallet-dot"></span>
+      <span class="wallet-addr">${shortAddr(userAddress)}</span>
+      <button class="btn btn-sm btn-outline" style="padding:4px 10px;font-size:11px;" onclick="disconnectWallet()">断开</button>
+    </div>
+  `;
+}
+
+function disconnectWallet() {
+  provider = null; signer = null; contract = null; userAddress = null; isOwner = false;
+  document.getElementById('walletArea').innerHTML = `
+    <button class="btn btn-connect" onclick="connectWallet()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4h-4z"/></svg>
+      连接钱包
+    </button>`;
+  document.getElementById('ownerBadge').innerHTML = '';
+  // 隐藏所有 owner-only 元素
+  document.querySelectorAll('.owner-only').forEach(el => { el.style.display = 'none'; });
+  // 隐藏 pending section
+  document.getElementById('pendingSection').classList.add('hidden');
+  // 重置统计区域
+  document.getElementById('statSupply').textContent = '--';
+  document.getElementById('statBalance').textContent = '--';
+  document.getElementById('statOwner').textContent = '--';
+  document.getElementById('statPending').textContent = '--';
+  document.getElementById('withdrawBalance').textContent = '--';
+  toast('已断开连接', 'info');
+}
+
+// === Data Loading ===
+async function loadData() {
+  if (!contract) return;
+  try {
+    const [owner, pending, supply, p1, p2, p3, p4, p5, bal] = await Promise.all([
+      contract.owner(),
+      contract.pendingOwner(),
+      contract.totalSupply(),
+      contract.price1D(),
+      contract.price2D(),
+      contract.price3D(),
+      contract.price4D(),
+      contract.price5DPlus(),
+      provider.getBalance(CONTRACT_ADDR)
+    ]);
+
+    isOwner = userAddress && userAddress.toLowerCase() === owner.toLowerCase();
+    const isPendingOwner = pending !== ethers.ZeroAddress && userAddress && userAddress.toLowerCase() === pending.toLowerCase();
+
+    // Stats
+    document.getElementById('statSupply').textContent = supply.toString();
+    document.getElementById('statBalance').textContent = formatSHIB(bal.toString());
+    document.getElementById('statOwner').textContent = shortAddr(owner);
+    document.getElementById('statPending').textContent = pending === ethers.ZeroAddress ? '无' : shortAddr(pending);
+    document.getElementById('withdrawBalance').textContent = formatSHIB(bal.toString()) + ' SHIB';
+
+    // Owner badge — 区分三种身份
+    const badge = document.getElementById('ownerBadge');
+    if (isOwner) {
+      badge.innerHTML = '<span class="owner-badge">✓ 当前 Owner</span>';
+    } else if (isPendingOwner) {
+      badge.innerHTML = '<span class="owner-badge" style="background:#FFF8E1;color:#D4960A;">⏳ 待确认 Owner</span>';
+    } else {
+      badge.innerHTML = '<span class="not-owner-badge">⚡ 非 Owner</span>';
+    }
+
+    // 管理按钮显隐：仅 Owner 可见管理操作
+    const ownerOnlyEls = document.querySelectorAll('.owner-only');
+    ownerOnlyEls.forEach(el => {
+      el.style.display = isOwner ? '' : 'none';
+    });
+
+    // Prices
+    document.getElementById('price1D').value = formatSHIB(p1.toString());
+    document.getElementById('price2D').value = formatSHIB(p2.toString());
+    document.getElementById('price3D').value = formatSHIB(p3.toString());
+    document.getElementById('price4D').value = formatSHIB(p4.toString());
+    document.getElementById('price5DPlus').value = formatSHIB(p5.toString());
+
+    // Pending owner section — 显示待确认信息，仅 pendingOwner 可点击接受
+    const pendingSec = document.getElementById('pendingSection');
+    if (pending !== ethers.ZeroAddress) {
+      pendingSec.classList.remove('hidden');
+      document.getElementById('pendingAddr').textContent = '待确认地址: ' + pending;
+      const acceptBtn = document.getElementById('acceptBtn');
+      if (isPendingOwner) {
+        acceptBtn.disabled = false;
+        acceptBtn.textContent = '确认接受所有权';
+      } else {
+        acceptBtn.disabled = true;
+        acceptBtn.textContent = '仅待确认地址可操作';
+      }
+    } else {
+      pendingSec.classList.add('hidden');
+    }
+  } catch (e) {
+    console.error(e);
+    toast('加载数据失败: ' + (e.message || e), 'error');
+  }
+}
+
+// === Owner Actions ===
+async function setPrice(tier) {
+  if (!isOwner) { toast('仅 Owner 可操作', 'error'); return; }
+  const input = document.getElementById('price' + tier);
+  const val = parseSHIB(input.value);
+  if (val === null) { toast('请输入有效数字', 'error'); return; }
+
+  const fnName = 'setPrice' + tier;
+  try {
+    toast('正在提交交易...', 'info');
+    const tx = await contract[fnName](val);
+    toast('交易已发送，等待确认...', 'info');
+    await tx.wait();
+    toast('价格更新成功', 'success');
+    await loadData();
+  } catch (e) {
+    console.error(e);
+    toast('交易失败: ' + (e.reason || e.message || e), 'error');
+  }
+}
+
+async function setAllPrices() {
+  if (!isOwner) { toast('仅 Owner 可操作', 'error'); return; }
+  const tiers = ['1D', '2D', '3D', '4D', '5DPlus'];
+  for (const tier of tiers) {
+    const input = document.getElementById('price' + tier);
+    const val = parseSHIB(input.value);
+    if (val === null) { toast(tier + ' 价格无效，请检查', 'error'); return; }
+  }
+  try {
+    toast('正在批量提交...', 'info');
+    for (const tier of tiers) {
+      const input = document.getElementById('price' + tier);
+      const val = parseSHIB(input.value);
+      const fnName = 'setPrice' + tier;
+      const tx = await contract[fnName](val);
+      await tx.wait();
+    }
+    toast('全部价格更新成功', 'success');
+    await loadData();
+  } catch (e) {
+    console.error(e);
+    toast('交易失败: ' + (e.reason || e.message || e), 'error');
+  }
+}
+
+async function transferOwnership() {
+  if (!isOwner) { toast('仅 Owner 可操作', 'error'); return; }
+  const addr = document.getElementById('newOwnerAddr').value.trim();
+  if (!ethers.isAddress(addr)) { toast('请输入有效地址', 'error'); return; }
+  if (addr === ethers.ZeroAddress) { toast('不能转移给零地址', 'error'); return; }
+  if (userAddress && addr.toLowerCase() === userAddress.toLowerCase()) { toast('不能转移给自己', 'error'); return; }
+
+  try {
+    toast('正在提议转移...', 'info');
+    const tx = await contract.transferOwnership(addr);
+    toast('交易已发送，等待确认...', 'info');
+    await tx.wait();
+    toast('已提议转移，等待新 Owner 确认接受', 'success');
+    await loadData();
+  } catch (e) {
+    console.error(e);
+    toast('交易失败: ' + (e.reason || e.message || e), 'error');
+  }
+}
+
+async function acceptOwnership() {
+  // 前端预检查：合约会校验 msg.sender == pendingOwner
+  try {
+    const pending = await contract.pendingOwner();
+    if (pending === ethers.ZeroAddress) {
+      toast('当前没有待确认的所有权转移', 'error');
+      return;
+    }
+    if (!userAddress || userAddress.toLowerCase() !== pending.toLowerCase()) {
+      toast('仅待确认地址可接受所有权', 'error');
+      return;
+    }
+  } catch (e) {
+    console.error(e);
+    toast('查询失败: ' + (e.message || e), 'error');
+    return;
+  }
+
+  try {
+    toast('正在确认接受...', 'info');
+    const tx = await contract.acceptOwnership();
+    toast('交易已发送，等待确认...', 'info');
+    await tx.wait();
+    toast('所有权转移成功，你已成为新 Owner', 'success');
+    await loadData();
+  } catch (e) {
+    console.error(e);
+    toast('交易失败: ' + (e.reason || e.message || e), 'error');
+  }
+}
+
+async function withdraw() {
+  if (!isOwner) { toast('仅 Owner 可操作', 'error'); return; }
+  if (!confirm('确定要提取合约中全部资金到当前 Owner 地址吗？')) return;
+
+  try {
+    toast('正在提取...', 'info');
+    const tx = await contract.withdraw();
+    toast('交易已发送，等待确认...', 'info');
+    await tx.wait();
+    toast('提取成功', 'success');
+    await loadData();
+  } catch (e) {
+    console.error(e);
+    toast('交易失败: ' + (e.reason || e.message || e), 'error');
+  }
+}
+
+// === Account change listener ===
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', async (accounts) => {
+    if (accounts.length === 0) { disconnectWallet(); return; }
+    userAddress = accounts[0];
+    // 重新获取 signer，确保签名使用新账户
+    if (provider) {
+      signer = await provider.getSigner();
+      if (contract) {
+        contract = new ethers.Contract(CONTRACT_ADDR, ABI, signer);
+      }
+    }
+    updateWalletUI();
+    if (contract) await loadData();
+  });
+  window.ethereum.on('chainChanged', () => { window.location.reload(); });
+}
+</script>
+</body>
+</html>
